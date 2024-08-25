@@ -39,8 +39,14 @@ def user_home(request):
     if request.user.is_superuser:
         messages.error(request, 'Admin users are not allowed to access the user home page.')
         return redirect('admin_page')  # Redirect to admin page or another appropriate page
-
-    return render(request, 'user_home/index.html')
+    categories = Category.objects.filter(is_active=True)
+    products = Product.objects.filter(is_active=True)
+    
+    context = {
+        'categories': categories,
+        'products': products,
+    }
+    return render(request, 'user_home/index.html',context)
 
 @login_required(login_url='accounts:user_login_view')  
 @never_cache

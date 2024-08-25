@@ -13,6 +13,17 @@
                         <form method='POST' action="{% url 'accounts:user_login_view' %}">
                             {% csrf_token %}
                             
+                            <!-- Displaying Messages -->
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            <!-- Displaying Form Errors -->
                             {% if form.non_field_errors %}
                                 <div class="alert alert-danger">
                                     {% for error in form.non_field_errors %}
@@ -56,10 +67,10 @@
                             </div>
                             
                             <!-- Forget Password Link -->
-                             <div>
-                            <p class="text-center  text-muted mt-4 mb-0">
-                                Forget Password? <a href="{% url 'accounts:password_reset_request' %}" class="fw-bold text-body "><u>Reset Password</u></a>
-                            </p>
+                            <div>
+                                <p class="text-center text-muted mt-4 mb-0">
+                                    Forget Password? <a href="{% url 'accounts:password_reset_request' %}" class="fw-bold text-body"><u>Reset Password</u></a>
+                                </p>
                             </div>
                             <hr>
                             <!-- Submit Button -->
@@ -72,7 +83,6 @@
                         </form>
                         <hr class="my-4">
                         <a href="{% provider_login_url 'google' %}">Login with Google</a>
-
                     </div>
                 </div>
             </div>
@@ -80,6 +90,7 @@
     </div>
 </section>
 {% endblock %}
+
 
 
 

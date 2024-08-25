@@ -61,24 +61,6 @@ def password_reset_verify(request, username):
 
     return render(request, 'accounts/password_reset_verify.html', {'user': user})
 
-# @never_cache
-# def password_reset_verify(request, username):
-#     user = User.objects.get(username=username)
-#     if request.method == 'POST':
-#         otp_code = request.POST.get('otp_code')
-#         otp_record = OtpToken.objects.filter(user=user).last()
-
-#         if otp_record and otp_record.otp_code == otp_code:
-#             if otp_record.otp_expires_at > timezone.now():
-#                 messages.success(request, "OTP verified! Please reset your password.")
-#                 return redirect('password_reset_form', username=user.username)
-#             else:
-#                 messages.error(request, "OTP has expired. Please request a new one.")
-#                 return redirect('password_reset_request')
-#         else:
-#             messages.error(request, "Invalid OTP. Please try again.")
-
-#     return render(request, 'accounts/password_reset_verify.html', {'user': user})
 
 @never_cache
 def password_reset_form(request, username):
@@ -108,7 +90,7 @@ def registration_view(request):
         form = UserSignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.is_active = True  # Deactivate account until it is verified
+            user.is_active = True  
             user.save()
 
             # Signal will handle OTP creation and email sending
@@ -198,12 +180,14 @@ def resend_otp(request):
 
     return render(request, "accounts/resend_otp.html")
 
+
 @never_cache
 def admin_login(request):
     if request.user.is_authenticated:
         if request.user.is_superuser:
             return redirect('admin_page')
         else:
+            messages.error(request,"You Are not allow to login ")
             return redirect('user_home')  # Redirect to user home if not authorized for admin
 
     form = AuthenticationForm(request, data=request.POST or None)
@@ -235,9 +219,13 @@ def user_login_view(request):
         password = form.cleaned_data.get('password')
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            login(request, user)
-            messages.success(request, 'You have successfully logged in.')
-            return redirect('user_home')
+            if user.is_superuser :
+                messages.error(request, "Admins cannot log in through this page. Go to the admin_login page")
+                return render(request,'accounts/user_login_view.html') 
+            else:
+                login(request, user)
+                messages.success(request, 'You have successfully logged in.')
+                return redirect('user_home')
         else:
             messages.error(request, "Invalid username or password.")
 

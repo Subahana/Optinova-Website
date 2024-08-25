@@ -5,6 +5,13 @@
 {% block content %}
 <main class="main-wrap">
     <section class="content-main">
+        {% if messages %}
+        <div class="alert">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div class="content-header">
             <h2 class="content-title card-title">Product Management</h2>
             <div>

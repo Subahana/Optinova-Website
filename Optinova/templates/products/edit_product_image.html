@@ -7,6 +7,13 @@
     <a href="{% url 'product_list' %}" class="btn btn-primary float-end">Back to Product Management</a>
 
     <section class="content-main">
+        {% if messages %}
+        <div class="alert">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div class="content-header">
             <h2 class="content-title card-title">Edit Images for {{ product.name }}</h2>
         </div>

@@ -16,6 +16,13 @@
                 <!-- Ensure the form's action URL correctly includes the product ID -->
                 <form method="post" action="{% url 'edit_product' product_id=product.id %}" enctype="multipart/form-data">
                     {% csrf_token %}
+                    {% if messages %}
+                    <div class="alert">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     <!-- Product Form Fields -->
                     <div class="row">

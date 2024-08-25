@@ -15,6 +15,13 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    {% if messages %}
+                    <div class="alert">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     
                     <!-- Product Form -->
                     <div class="row">

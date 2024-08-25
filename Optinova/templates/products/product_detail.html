@@ -6,6 +6,13 @@
 
 <main class="main-wrap">
     <section class="content-main">
+        {% if messages %}
+        <div class="alert">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <div>
             <a href="{% url 'product_list' %}" class="btn btn-primary float-end">Back to Product Management</a>
         </div>

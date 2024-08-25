@@ -4,6 +4,13 @@
 {% block content %}
 <main class="main-wrap">
     <section class="content-main">
+            {% if messages %}
+            <div class="alert">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+            {% endif %}
         <div class="content-header">
             <h2 class="content-title">User Details</h2>
             <a href="{% url 'user_management_page' %}" class="btn btn-primary float-end">Back to User Management</a>

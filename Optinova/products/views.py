@@ -74,12 +74,17 @@ def soft_delete_category(request, id):
 @never_cache
 def product_list(request):
     categories = Category.objects.filter(is_active=True)
-
+    
+    # Initial product query with only active categories
+    products = Product.objects.filter(
+        category__is_active=True  # Ensure the product's category is active
+    )
+    
     show_inactive = request.GET.get('show_inactive')
     if show_inactive:
-        products = Product.objects.all()
+        products = Product.objects.all()  # Include all products if show_inactive is set
     else:
-        products = Product.objects.filter(is_active=True)
+        products = products.filter(is_active=True)  # Filter active products
 
     category_id = request.GET.get('category')
     if category_id:
@@ -92,32 +97,47 @@ def product_list(request):
     }
     return render(request, 'products/product_list.html', context)
 
+
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def add_product(request):
     if request.method == 'POST':
         product_form = ProductForm(request.POST, request.FILES)
         if product_form.is_valid():
-            product_form.save()
+            # Save the new product instance with is_active set to True
+            new_product = product_form.save(commit=False)
+            new_product.is_active = True  # Set the product to be active
+            new_product.save()
             messages.success(request, 'Product added successfully.')
             return redirect('product_list')
     else:
         product_form = ProductForm()
+        
     return render(request, 'products/product_add.html', {'product_form': product_form})
+
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
+
     if request.method == 'POST':
         product_form = ProductForm(request.POST, request.FILES, instance=product)
         if product_form.is_valid():
-            product_form.save()
+            updated_product = product_form.save(commit=False)
+            # Ensure that active products do not become inactive
+            if product.is_active:
+                updated_product.is_active = True
+            else:
+                updated_product.is_active = product.is_active  # Preserve the current 'is_active' status if it was inactive
+            updated_product.save()
             messages.success(request, 'Product updated successfully.')
             return redirect('product_list')
     else:
         product_form = ProductForm(instance=product)
-    return render(request, 'products/product_edit.html', {'product_form': product_form ,'product': product})
+
+    return render(request, 'products/product_edit.html', {'product_form': product_form, 'product': product})
+
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache

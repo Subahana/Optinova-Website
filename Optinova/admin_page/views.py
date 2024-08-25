@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import get_user_model,authenticate, login, logout
+from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
@@ -16,13 +16,13 @@ def user_management_page(request):
     status = request.GET.get('status')
     search_query = request.GET.get('search', '')
     
-    # Start with filtering by status
+    # Start with filtering by status and exclude superusers
     if status == 'active':
-        users = User.objects.filter(is_active=True)
+        users = User.objects.filter(is_active=True, is_superuser=False)
     elif status == 'inactive':
-        users = User.objects.filter(is_active=False)
+        users = User.objects.filter(is_active=False, is_superuser=False)
     else:
-        users = User.objects.all()
+        users = User.objects.filter(is_superuser=False)
     
     # Apply search filter
     if search_query:
@@ -45,28 +45,38 @@ def user_management_page(request):
 def permanent_delete_user(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == "POST":
-        user.delete()
-        messages.success(request, 'User has been deleted permanently.')
+        # Ensure user is not a superuser before deleting
+        if not user.is_superuser:
+            user.delete()
+            messages.success(request, 'User has been deleted permanently.')
+        else:
+            messages.error(request, 'Superuser cannot be deleted.')
     return redirect('user_management_page')
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache
-def block_user(request,id):
+def block_user(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == "POST":
-        user.is_active = False
-        user.save()
-        messages.success(request, f"User {user.username} has been blocked.")
+        if not user.is_superuser:
+            user.is_active = False
+            user.save()
+            messages.success(request, f"User {user.username} has been blocked.")
+        else:
+            messages.error(request, 'Superuser cannot be blocked.')
     return redirect('user_details_page', id=id)  # Redirect back to the user's detail page
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache
-def unblock_user(request,id):
+def unblock_user(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == "POST":
-        user.is_active = True
-        user.save()
-        messages.success(request, f"User {user.username} has been unblocked.")
+        if not user.is_superuser:
+            user.is_active = True
+            user.save()
+            messages.success(request, f"User {user.username} has been unblocked.")
+        else:
+            messages.error(request, 'Superuser cannot be unblocked.')
     return redirect('user_details_page', id=id)  # Redirect back to the user's detail page
 
 @login_required(login_url='accounts:admin_login')  
@@ -80,11 +90,9 @@ def user_details_page(request, id):
 def admin_page(request):
     return render(request,'admin_page/index.html')
 
-
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def admin_logout_view(request):
     if request.user.is_authenticated:
         logout(request)
     return redirect('accounts:admin_login')
-

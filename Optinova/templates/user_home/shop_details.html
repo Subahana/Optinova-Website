@@ -60,7 +60,7 @@
                     <h3 class="mb-3">
                         ${{ product.price }}
                         {% if product.old_price %}
-                            <span class="text-muted"><del>${{ product.old_price }}</del></span>
+                            <span class="text-muted"><del>₹{{ product.old_price }}</del></span>
                         {% endif %}
                     </h3>
 
@@ -123,7 +123,7 @@
                     <div class="product__item__text">
                         <h6>{{ related_product.name }}</h6>
                         <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary">+ Add To Cart</a>
-                        <h5>${{ related_product.price }}</h5>
+                        <h5>₹{{ related_product.price }}</h5>
                     </div>
                 </div>
             </div>

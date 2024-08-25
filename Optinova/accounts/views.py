@@ -6,6 +6,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from .forms import UserSignupForm
 from .models import OtpToken
+from products.models import Product
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -187,7 +188,7 @@ def admin_login(request):
         if request.user.is_superuser:
             return redirect('admin_page')
         else:
-            messages.error(request,"You Are not allow to login ")
+            messages.error(request,"You Are not allow to log")
             return redirect('user_home')  # Redirect to user home if not authorized for admin
 
     form = AuthenticationForm(request, data=request.POST or None)
@@ -234,4 +235,8 @@ def user_login_view(request):
 
 @never_cache
 def first_page(request):
-    return render(request, 'user_home/index.html')
+    products = Product.objects.all()  # Fetch all products
+    context = {
+        'products': products,
+    }
+    return render(request, 'user_home/index.html',context)

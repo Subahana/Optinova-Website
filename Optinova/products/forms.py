@@ -22,9 +22,15 @@ class CategoryForm(forms.ModelForm):
         if not name:
             raise forms.ValidationError("Category name is required.")
         
+        if re.fullmatch(r'\d+', name):
+            raise forms.ValidationError("Category name cannot consist of numbers only.")
+        
         if not re.match(r'^[\w\s-]+$', name):
             raise forms.ValidationError("Product name should not contain special characters.")
-
+        
+        if len(name) < 4:
+            raise forms.ValidationError("Category name must be at least 4 characters long.")
+        
         if not self.instance or self.instance.name != name:
             if Category.objects.filter(name__iexact=name).exists():
                 raise forms.ValidationError("Product with this name already exists.")
@@ -34,14 +40,13 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'stock', 'category', 'is_active']
+        fields = ['name', 'description', 'price', 'stock', 'category']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter product name'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Enter product description'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter price'}),
             'stock': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter stock quantity'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -71,7 +76,7 @@ class ProductForm(forms.ModelForm):
 
     def clean_stock(self):
         stock = self.cleaned_data.get('stock')
-        if stock < 0:
+        if stock < 1:
             raise forms.ValidationError("Stock cannot be negative.")
         return stock
 

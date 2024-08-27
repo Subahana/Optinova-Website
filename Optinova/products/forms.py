@@ -81,13 +81,17 @@ class ProductForm(forms.ModelForm):
         return stock
 
 
+from django import forms
+from PIL import Image as PILImage
+import io
+
 class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
         fields = ['image']
         widgets = {
             'image': forms.FileInput(attrs={
-                'accept': 'image/*', 
+                'accept': 'image/*',
                 'class': 'form-control',
                 'required': 'true'  
             }),
@@ -95,6 +99,9 @@ class ProductImageForm(forms.ModelForm):
 
     def clean_image(self):
         image = self.cleaned_data.get('image')
+
+        if not image:
+            raise forms.ValidationError("Please upload an image.")
 
         max_size = 2 * 1024 * 1024  # 2MB
         if image.size > max_size:

@@ -7,7 +7,7 @@ from django.contrib.auth import logout
 
 @login_required(login_url='accounts:user_login_view')
 @never_cache
-def user_product_detail(request, product_id):
+def user_product_detail(request, product_id):   
     product = get_object_or_404(Product, id=product_id)
 
     # Check if the product is inactive

@@ -129,7 +129,6 @@ class ProductImageForm(forms.ModelForm):
         # Save the image back to the file field
         output = io.BytesIO()
 
-        # Correct the format
         img_format = image.name.split('.')[-1].upper()
         if img_format == 'JPG':
             img_format = 'JPEG'

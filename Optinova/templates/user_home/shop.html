@@ -2,30 +2,16 @@
 {% load static %}
 
 {% block content %}
-
-
-    <!-- Breadcrumb Section Begin -->
-    <section class="breadcrumb-option" style="height: 30px;">
-        <div class="container" >
-            <div class="row" >
-                <div class="col-sm-6" >
-                    <div class="breadcrumb__text" >
-                        <h4>Shop</h4>
-                        <div class="breadcrumb__links">
-                            <a href="{% url 'user_home' %}">Home</a>
-                            <span>Shop</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Breadcrumb Section End -->
-
     <!-- Shop Section Begin -->
     <section class="shop spad">
         <div class="container">
+                        <!-- Breadcrumb Section Begin -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'user_home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Shope</li>
+                </ol>
+            </nav>
             <div class="row">
                 <div class="col-lg-3">
                     <div class="shop__sidebar">

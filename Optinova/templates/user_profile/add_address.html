@@ -1,0 +1,103 @@
+{% extends "user_home/main.html" %}
+{% load static %}
+{% block content %}
+
+<div class="add-address-container">
+    <h2 class="page-title">Add New Address</h2>
+    <form method="post" action="{% url 'add_address' %}" class="address-form">
+        {% csrf_token %}
+        
+        <!-- Form Fields -->
+        <div class="form-group">
+            <label for="street">Street Address:</label>
+            <input type="text" id="street" name="street" value="{{ form.street.value }}" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="city">City:</label>
+            <input type="text" id="city" name="city" value="{{ form.city.value }}" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="state">State:</label>
+            <input type="text" id="state" name="state" value="{{ form.state.value }}" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="country">Country:</label>
+            <input type="text" id="country" name="country" value="{{ form.country.value }}" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="zip_code">ZIP Code:</label>
+            <input type="text" id="zip_code" name="zip_code" value="{{ form.zip_code.value }}" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="phone">Phone Number:</label>
+            <input type="text" id="phone" name="phone" value="{{ form.phone.value }}" class="form-control" required>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary">Add Address</button>
+    </form>
+</div>
+
+<style>
+    .add-address-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-title {
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    .address-form .form-group {
+        margin-bottom: 15px;
+    }
+
+    .address-form label {
+        display: block;
+        font-size: 16px;
+        margin-bottom: 5px;
+        color: #555;
+    }
+
+    .address-form .form-control {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    .address-form .form-control:focus {
+        border-color: #66b3ff;
+        outline: none;
+    }
+
+    .address-form .btn-primary {
+        background-color: #66b3ff;
+        color: #fff;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .address-form .btn-primary:hover {
+        background-color: #4a8fe6;
+    }
+</style>
+
+{% endblock %}

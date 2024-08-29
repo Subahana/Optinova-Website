@@ -1,0 +1,300 @@
+{% extends "user_home/main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="profile-pic">
+            <img src="{% if user.profile.profile_picture %}{{ user.profile.profile_picture.url }}{% else %}{% static 'images/default_profile_icon.png' %}{% endif %}" alt="User Profile Picture">
+        </div>
+        <div class="profile-info">
+            <h2 class="profile-name">{{ user.first_name }} {{ user.last_name }}</h2>
+            <p class="profile-email">{{ user.email }}</p>
+        </div>
+        <div class="profile-actions">
+            <a href="{% url 'edit_profile_pic' %}" class="btn btn-outline-primary">Change Picture</a>
+        </div>
+    </div>
+    
+    <!-- Profile Information Section -->
+    <div class="profile-section">
+        <h3 class="section-heading">
+            <span>Profile Information</span>
+            <a href="{% url 'edit_profile' %}" class="btn btn-primary edit-profile-btn">Edit Profile</a>
+        </h3>
+
+        <div class="profile-info">
+            <div class="profile-info-group">
+                <span class="profile-icon">
+                    <i class="fas fa-user"></i>
+                </span>
+                <div class="profile-info-text">
+                    <label class="profile-label">First Name:</label>
+                    <p>{{ user.first_name }}</p>
+                </div>
+            </div>
+            <div class="profile-info-group">
+                <span class="profile-icon">
+                    <i class="fas fa-user"></i>
+                </span>
+                <div class="profile-info-text">
+                    <label class="profile-label">Last Name:</label>
+                    <p>{{ user.last_name }}</p>
+                </div>
+            </div>
+            <div class="profile-info-group">
+                <span class="profile-icon">
+                    <i class="fas fa-envelope"></i>
+                </span>
+                <div class="profile-info-text">
+                    <label class="profile-label">Email:</label>
+                    <p>{{ user.email }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Addresses Section -->
+<div class="address-section">
+    <h3 class="section-heading">My Addresses</h3>
+    <div class="address-list">
+        {% if addresses %}
+            <ul class="list-group">
+                {% for address in addresses %}
+                    <li class="list-group-item address-item">
+                        <span>{{ address.street }}, {{ address.city }}, {{ address.state }}, {{ address.country }}</span>
+                        <a href="{% url 'edit_address' address.id %}" class="btn btn-sm btn-outline-primary edit-btn">Edit</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="no-addresses">You have no saved addresses.</p>
+        {% endif %}
+        <a href="{% url 'add_address' %}" class="btn btn-primary add-address-btn">Add New Address</a>
+    </div>
+</div>
+
+
+    <!-- Orders Section -->
+    <div class="orders-section">
+        <h3 class="section-heading">My Orders</h3>
+        <ul class="list-group">
+            {% if orders %}
+                {% for order in orders %}
+                    <li class="list-group-item order-item">
+                        <span>Order ID: {{ order.id }} - {{ order.product }} - {{ order.status }}</span>
+                        {% if order.status == 'Pending' %}
+                            <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger cancel-btn">Cancel Order</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            {% else %}
+                <p class="no-orders">You have no orders.</p>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<style>
+    .profile-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px;
+        background-color: #eaf2f8;
+        border-radius: 15px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        background-color: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .profile-pic {
+        flex-shrink: 0;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin-right: 20px;
+        border: 3px solid #66b3ff;
+    }
+
+    .profile-pic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-info {
+        flex-grow: 1;
+    }
+
+    .profile-name {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e2a38;
+    }
+
+    .profile-email {
+        font-size: 18px;
+        color: #5a6c7b;
+    }
+
+    .profile-actions {
+        flex-shrink: 0;
+    }
+
+    .btn-outline-primary {
+        background-color: transparent;
+        color: #66b3ff;
+        border: 2px solid #66b3ff;
+        border-radius: 50px;
+        padding: 10px 24px;
+        font-size: 14px;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #66b3ff;
+        color: #fff;
+    }
+
+    .profile-section,
+    .address-section,
+    .orders-section {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+    }
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 22px;
+        color: #1e2a38;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #66b3ff;
+        padding-bottom: 10px;
+        font-weight: 700;
+    }
+
+    .profile-info-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .profile-icon {
+        font-size: 20px;
+        color: #66b3ff;
+        margin-right: 15px;
+    }
+
+    .profile-info-text {
+        flex-grow: 1;
+    }
+
+    .profile-label {
+        display: block;
+        font-size: 18px;
+        color: #1e2a38;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+
+    .profile-info-text p {
+        font-size: 16px;
+        color: #34495e;
+        margin: 0;
+    }
+
+    .edit-profile-btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        border-radius: 8px;
+        background-color: #66b3ff;
+        color: #fff;
+        text-transform: uppercase;
+        box-shadow: 0 6px 12px rgba(102, 179, 255, 0.4);
+        transition: background-color 0.3s, box-shadow 0.3s;
+    }
+
+    .edit-profile-btn:hover {
+        background-color: #4a8fe6;
+        box-shadow: 0 8px 16px rgba(102, 179, 255, 0.6);
+    }
+
+    .btn-primary {
+        background-color: #66b3ff;
+        color: #fff;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 8px;
+        font-size: 18px;
+        box-shadow: 0 6px 12px rgba(102, 179, 255, 0.4);
+        transition: background-color 0.3s, box-shadow 0.3s;
+    }
+
+    .btn-primary:hover {
+        background-color: #4a8fe6;
+        box-shadow: 0 8px 16px rgba(102, 179, 255, 0.6);
+    }
+
+    .address-list {
+        margin-top: 20px;
+    }
+
+    .list-group-item {
+        padding: 18px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .order-item,
+    .address-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cancel-btn {
+        background-color: #e74c3c;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .edit-btn {
+        background-color: #3498db;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .no-addresses,
+    .no-orders {
+        font-size: 16px;
+        color: #7f8c8d;
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}

@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'admin_page',
     'user_home',
     'products',
+    'user_profile',
     'django.contrib.sites',  
     'allauth',
     'allauth.account',
@@ -142,6 +143,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.CustomUser'

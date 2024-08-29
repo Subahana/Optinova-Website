@@ -16,6 +16,8 @@
     rel="stylesheet">
     
     <!-- Other head content -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" />
 
     <!-- Css Styles -->
@@ -31,85 +33,101 @@
 
 </head>
 <body>
-  <div class="offcanvas-menu-overlay"></div>
-  <div class="offcanvas-menu-wrapper">
-      <div class="offcanvas__option">
-          <div class="offcanvas__links">
-              {% if user.is_authenticated %}
-                  <p style="display: inline; margin-right: 10px; color: aliceblue;"> Welcome, {{ user.username }}!</p>
-                  <a href="{% url 'logout_view' %}">Log Out</a>
-                {% else %}
-                      <a href="{% url 'accounts:user_login_view' %}">Log In</a>
-          {% endif %}
-          </div>
-     
-      </div>
-      <div class="offcanvas__nav__option">
-          <a href="#" class="search-switch"><img src="{% static 'img/icon/search.png' %}" alt=""></a>
-          <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a>
-          <a href="#"><img src="{% static 'img/icon/cart.png' %}" alt=""> <span>0</span></a>
-          <div class="price">$0.00</div>
-      </div>
-      <div id="mobile-menu-wrap"></div>
-      <div class="offcanvas__text">
-          <p>Free shipping, 30-day return or refund guarantee.</p>
-      </div>
-  </div>
-  <!-- Offcanvas Menu End -->
+ <!-- Offcanvas Menu Overlay -->
+<div class="offcanvas-menu-overlay"></div>
 
-  <!-- Header Section Begin -->
-  <header class="header">
-      <div class="header__top">
-          <div class="container">
-              <div class="row">
-                  <div class="col-lg-6 col-md-7">
-                  
-                  </div>
-                  <div class="col-lg-6 col-md-5">
-                      <div class="header__top__right">
-                          <div class="offcanvas__links">
-                              {% if user.is_authenticated %}
-                                  <p style="display: inline; margin-right: 10px; color: aliceblue;">Welcome, {{ user.username }}!</p>
-                                  <a href="{% url 'logout_view' %}">Log Out</a>
-                              {% else %}
-                                      <a href="{% url 'accounts:user_login_view' %}">Log In</a>
-                              {% endif %}
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </div>
-      <div class="container">
-          <div class="row">
-              <div class="col-lg-3 col-md-3">
-                  <div class="header__logo">
-                      <a href="{ % url 'user_home' %}"><img src="{% static 'img/logo.png' %}" alt=""></a>
-                  </div>
-              </div>
-              <div class="col-lg-6 col-md-6">
-                  <nav class="header__menu mobile-menu">
+<!-- Offcanvas Menu Wrapper -->
+<div class="offcanvas-menu-wrapper">
+    <div class="offcanvas__option">
+        <div class="offcanvas__links">
+            {% if user.is_authenticated %}
+            <p style="display: inline; margin-right: 10px; color: #fff;">
+                Welcome,
+                <a href="{% url 'user_profile' %}" style="color: #fff; text-decoration: none;">
+                    <i class="fas fa-user-circle"></i> <!-- Profile icon -->
+                    {{ user.username }}
+                </a>
+            </p>
+            <a href="{% url 'logout_view' %}" style="color: #ff6b6b;">Log Out</a>
+            {% else %}
+            <a href="{% url 'accounts:user_login_view' %}" style="color: #ff6b6b;">Log In</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="offcanvas__nav__option">
+        <a href="#" class="search-switch"><img src="{% static 'img/icon/search.png' %}" alt=""></a>
+        <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a>
+        <a href="#"><img src="{% static 'img/icon/cart.png' %}" alt=""> <span>0</span></a>
+        <div class="price">$0.00</div>
+    </div>
+
+    <div id="mobile-menu-wrap"></div>
+</div>
+<!-- Offcanvas Menu End -->
+
+<!-- Header Section Begin -->
+<header class="header">
+    <div class="header__top">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-6 col-md-7">
+                    <!-- Optional Left Side Content -->
+                </div>
+                <div class="col-lg-6 col-md-5">
+                    <div class="header__top__right">
+                        <div class="offcanvas__links">
+                            {% if user.is_authenticated %}
+                            <p style="display: inline; margin-right: 10px; color: #fff;">
+                                Welcome,
+                                <a href="{% url 'user_profile' %}" style="color: #fff; text-decoration: none;">
+                                    <i class="fas fa-user-circle"></i> <!-- Profile icon -->
+                                    {{ user.username }}
+                                </a>
+                            </p>
+                            <a href="{% url 'logout_view' %}" style="color: #ff6b6b;">Log Out</a>
+                            {% else %}
+                            <a href="{% url 'accounts:user_login_view' %}" style="color: #ff6b6b;">Log In</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-3 col-md-3">
+                <div class="header__logo">
+                    <a href="{% url 'user_home' %}"><img src="{% static 'img/optinova_logo.png' %}" alt="optinova_logo"></a>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-6">
+                <nav class="header__menu mobile-menu">
                     <ul>
-                      <li class="{% if request.path == '/' %}active{% endif %}">
-                          <a href="{% url 'user_home' %}">Home</a>
-                      </li>
-                      <li class="{% if request.path == '/shop/' %}active{% endif %}">
-                          <a href="{% url 'shop' %}">Shop</a>
-                      </li>
-                  </ul>                  
-                  </nav>
-              </div>
-              <div class="col-lg-3 col-md-3">
-                  <div class="header__nav__option">
-                      <a href="#" class="search-switch"><img src="{% static 'img/icon/search.png' %}" alt=""></a>
-                      <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a>
-                      <a href="#"><img src="{% static 'img/icon/cart.png' %}" alt=""> <span>0</span></a>
-                  </div>
-              </div>
-          </div>
-          <div class="canvas__open"><i class="fa fa-bars"></i></div>
-      </div>
-  </header>
+                        <li class="{% if request.path == '/' %}active{% endif %}">
+                            <a href="{% url 'user_home' %}">Home</a>
+                        </li>
+                        <li class="{% if request.path == '/shop/' %}active{% endif %}">
+                            <a href="{% url 'shop' %}">Shop</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="col-lg-3 col-md-3">
+                <div class="header__nav__option">
+                    <a href="#" class="search-switch"><img src="{% static 'img/icon/search.png' %}" alt="Search"></a>
+                    <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt="Favorites"></a>
+                    <a href="#"><img src="{% static 'img/icon/cart.png' %}" alt="Cart"> <span>0</span></a>
+                </div>
+            </div>
+        </div>
+        <div class="canvas__open"><i class="fa fa-bars"></i></div>
+    </div>
+</header>
+<!-- Header Section End -->
+
   <!-- Header Section End -->
     <!-- Your HTML content here -->
     {% block content %}

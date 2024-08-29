@@ -188,11 +188,10 @@ def admin_login(request):
         if request.user.is_superuser:
             return redirect('admin_page')
         else:
-            messages.error(request,"You Are not allow to log")
-            return redirect('user_home')  # Redirect to user home if not authorized for admin
+            messages.error(request, "You are not allowed to log in here.")
+            return redirect('user_home')
 
     form = AuthenticationForm(request, data=request.POST or None)
-
     if request.method == 'POST' and form.is_valid():
         username = form.cleaned_data.get('username')
         password = form.cleaned_data.get('password')
@@ -200,12 +199,13 @@ def admin_login(request):
         if user is not None and user.is_superuser:
             login(request, user)
             messages.success(request, 'You have successfully logged in as admin.')
-            return redirect('admin_page')
+            return redirect(request.GET.get('next', 'admin_page'))  # Redirect to the 'next' parameter or admin_page
         else:
             messages.error(request, 'Invalid credentials or not an admin.')
 
     context = {'form': form}
     return render(request, 'admin_page/admin_login.html', context)
+
 
 
 @never_cache
@@ -235,6 +235,8 @@ def user_login_view(request):
 
 @never_cache
 def first_page(request):
+    if request.user.is_authenticated and request.user.is_superuser:
+        return redirect('admin_page')  
     products = Product.objects.all()  # Fetch all products
     context = {
         'products': products,

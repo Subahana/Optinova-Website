@@ -81,10 +81,6 @@ class ProductForm(forms.ModelForm):
         return stock
 
 
-from django import forms
-from PIL import Image as PILImage
-import io
-
 class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
@@ -93,7 +89,9 @@ class ProductImageForm(forms.ModelForm):
             'image': forms.FileInput(attrs={
                 'accept': 'image/*',
                 'class': 'form-control',
-                'required': 'true'  
+                'required': 'true' ,
+            
+
             }),
         }
 

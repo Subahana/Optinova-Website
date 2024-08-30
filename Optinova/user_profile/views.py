@@ -1,13 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import UserProfileForm, AddressForm, ProfilePictureForm
+from .forms import UserProfileForm, AddressForm, ProfilePictureForm,CustomPasswordChangeForm
 from .models import Address, Order 
 from django.contrib.auth import get_user_model
+from django.contrib.auth import update_session_auth_hash
+
 
 User = get_user_model()
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
 def user_profile(request):
     user = request.user
     orders = user.orders.all()
@@ -31,6 +35,7 @@ def user_profile(request):
 
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
 def edit_profile(request):
     user = request.user  # Get the currently logged-in user
 
@@ -50,6 +55,7 @@ def edit_profile(request):
 
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
 def edit_profile_pic(request):
     if request.method == 'POST':
         form = ProfilePictureForm(request.POST, request.FILES, instance=request.user)
@@ -62,6 +68,23 @@ def edit_profile_pic(request):
 
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
+def change_password(request):
+    if request.method == 'POST':
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            return redirect('user_profile')
+        # Render the template with the form containing errors
+        return render(request, 'user_profile/change_password.html', {'form': form})
+    else:
+        # Render the template with an empty form
+        form = CustomPasswordChangeForm(user=request.user)
+        return render(request, 'user_profile/change_password.html', {'form': form})
+
+@login_required(login_url='accounts:user_login_view')
+@never_cache
 def add_address(request):
     if request.method == 'POST':
         form = AddressForm(request.POST)
@@ -69,12 +92,13 @@ def add_address(request):
             address = form.save(commit=False)
             address.user = request.user
             address.save()
-            return redirect('user_profile')  # or wherever you want to redirect after adding an address
+            return redirect('user_profile') 
     else:
         form = AddressForm()
     return render(request, 'user_profile/add_address.html', {'form': form})
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
 def edit_address(request, address_id):
     address = get_object_or_404(Address, id=address_id)
     if request.method == 'POST':
@@ -87,6 +111,18 @@ def edit_address(request, address_id):
     return render(request, 'user_profile/edit_address.html', {'form': form})
 
 @login_required(login_url='accounts:user_login_view')
+@never_cache
+def delete_address(request, address_id):
+    address = get_object_or_404(Address, id=address_id)
+    if request.method == 'POST':
+        address.delete()
+        messages.success(request, 'Address deleted successfully.')
+        return redirect('user_profile')  # or wherever you want to redirect after deletion
+    return redirect('user_profile')
+
+
+@login_required(login_url='accounts:user_login_view')
+@never_cache
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     if order.status == 'Pending':

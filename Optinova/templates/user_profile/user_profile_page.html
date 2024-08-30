@@ -21,7 +21,7 @@
     <div class="profile-section">
         <h3 class="section-heading">
             <span>Profile Information</span>
-            <a href="{% url 'edit_profile' %}" class="btn btn-primary edit-profile-btn">Edit Profile</a>
+            <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary edit-profile-btn">Edit Profile</a>
         </h3>
 
         <div class="profile-info">
@@ -30,8 +30,8 @@
                     <i class="fas fa-user"></i>
                 </span>
                 <div class="profile-info-text">
-                    <label class="profile-label">First Name:</label>
-                    <p>{{ user.first_name }}</p>
+                    <label class="profile-label">Name:</label>
+                    <p>{{ user.first_name }} {{ user.last_name }}</p>
                 </div>
             </div>
             <div class="profile-info-group">
@@ -39,8 +39,8 @@
                     <i class="fas fa-user"></i>
                 </span>
                 <div class="profile-info-text">
-                    <label class="profile-label">Last Name:</label>
-                    <p>{{ user.last_name }}</p>
+                    <label class="profile-label">Username:</label>
+                    <p>{{ user.username }}</p>
                 </div>
             </div>
             <div class="profile-info-group">
@@ -55,26 +55,45 @@
         </div>
     </div>
 
-<!-- Addresses Section -->
-<div class="address-section">
-    <h3 class="section-heading">My Addresses</h3>
-    <div class="address-list">
-        {% if addresses %}
-            <ul class="list-group">
-                {% for address in addresses %}
-                    <li class="list-group-item address-item">
-                        <span>{{ address.street }}, {{ address.city }}, {{ address.state }}, {{ address.country }}</span>
-                        <a href="{% url 'edit_address' address.id %}" class="btn btn-sm btn-outline-primary edit-btn">Edit</a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="no-addresses">You have no saved addresses.</p>
-        {% endif %}
-        <a href="{% url 'add_address' %}" class="btn btn-primary add-address-btn">Add New Address</a>
+    <!-- Addresses Section -->
+    <div class="address-section">
+        <h3 class="section-heading">
+            <span>My Addresses</span>
+            <a href="{% url 'add_address' %}" class="btn btn-outline-primary add-address-btn mt-4">Add New Address</a>
+        </h3>
+        <div class="address-list mt-4">
+            {% if addresses %}
+                <div class="row">
+                    {% for address in addresses %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card shadow-sm h-100 border-0">
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>{{ address.street }}</strong><br>
+                                        {{ address.city }}, {{ address.state }}<br>
+                                        {{ address.country }}<br>
+                                        <span class="text-muted">Postal Code: {{ address.pin_code }}</span>
+                                    </p>
+                                    <!-- Edit and Delete Options -->
+                                    <div class="address-actions">
+                                        <a href="{% url 'edit_address' address.id %}" class="btn btn-outline-primary me-2">Edit</a>
+                                        <form action="{% url 'delete_address' address.id %}" method="post" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this address?');">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    You have no saved addresses.
+                </div>
+            {% endif %}
+        </div>
     </div>
-</div>
-
 
     <!-- Orders Section -->
     <div class="orders-section">
@@ -94,7 +113,19 @@
             {% endif %}
         </ul>
     </div>
+    <!-- Change Password Section -->
+    <div class="change-password-section">
+        <h3 class="section-heading">Change Password</h3>
+        <form method="post" action="{% url 'change_password' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-outline-primary">Change Password</button>
+        </form>
+    </div>
 </div>
+
+</div>
+
 
 <style>
     .profile-container {
@@ -124,12 +155,17 @@
         overflow: hidden;
         margin-right: 20px;
         border: 3px solid #66b3ff;
+        transition: transform 0.3s;
     }
 
     .profile-pic img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+    }
+
+    .profile-pic:hover {
+        transform: scale(1.1);
     }
 
     .profile-info {
@@ -158,17 +194,19 @@
         border-radius: 50px;
         padding: 10px 24px;
         font-size: 14px;
-        transition: background-color 0.3s, color 0.3s;
+        transition: background-color 0.3s, color 0.3s, transform 0.3s;
     }
 
     .btn-outline-primary:hover {
         background-color: #66b3ff;
         color: #fff;
+        transform: translateY(-2px);
     }
 
     .profile-section,
     .address-section,
-    .orders-section {
+    .orders-section ,
+    .change-password-section{
         background-color: #ffffff;
         padding: 30px;
         border-radius: 12px;
@@ -214,87 +252,48 @@
 
     .profile-info-text p {
         font-size: 16px;
-        color: #34495e;
-        margin: 0;
-    }
-
-    .edit-profile-btn {
-        padding: 8px 16px;
-        font-size: 14px;
-        border-radius: 8px;
-        background-color: #66b3ff;
-        color: #fff;
-        text-transform: uppercase;
-        box-shadow: 0 6px 12px rgba(102, 179, 255, 0.4);
-        transition: background-color 0.3s, box-shadow 0.3s;
-    }
-
-    .edit-profile-btn:hover {
-        background-color: #4a8fe6;
-        box-shadow: 0 8px 16px rgba(102, 179, 255, 0.6);
-    }
-
-    .btn-primary {
-        background-color: #66b3ff;
-        color: #fff;
-        border: none;
-        padding: 15px 25px;
-        border-radius: 8px;
-        font-size: 18px;
-        box-shadow: 0 6px 12px rgba(102, 179, 255, 0.4);
-        transition: background-color 0.3s, box-shadow 0.3s;
-    }
-
-    .btn-primary:hover {
-        background-color: #4a8fe6;
-        box-shadow: 0 8px 16px rgba(102, 179, 255, 0.6);
+        color: #344952;
     }
 
     .address-list {
-        margin-top: 20px;
+        margin-top: 15px;
     }
 
-    .list-group-item {
-        padding: 18px;
-        margin-bottom: 15px;
-        border-radius: 8px;
-        background-color: #f9f9f9;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    .card {
+        border-radius: 10px;
+        overflow: hidden;
     }
 
-    .order-item,
-    .address-item {
+    .card-body {
+        padding: 15px;
+    }
+
+    .address-actions {
+        margin-top: 15px;
+    }
+
+    .address-actions .btn {
+        margin-right: 10px;
+    }
+
+    .order-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
     .cancel-btn {
-        background-color: #e74c3c;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        color: #fff;
-        font-size: 12px;
-        cursor: pointer;
+        background-color: #ff4d4d;
+        border-color: #ff4d4d;
     }
 
-    .edit-btn {
-        background-color: #3498db;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        color: #fff;
-        font-size: 12px;
-        cursor: pointer;
-    }
-
-    .no-addresses,
     .no-orders {
-        font-size: 16px;
-        color: #7f8c8d;
-        text-align: center;
-        margin-top: 20px;
+        font-size: 18px;
+        color: #5a6c7b;
+    }
+
+    .add-address-btn {
+        margin-top: 15px;
     }
 </style>
 {% endblock %}

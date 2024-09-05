@@ -2,7 +2,7 @@
 .env
 
 # Virtual environment
-env_OPTINOVA/
+nenv/
 
 # Other files and directories to ignore
 *.pyc

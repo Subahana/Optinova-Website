@@ -1,0 +1,50 @@
+{% extends "admin_page/main.html" %}
+{% block title %}Add Images{% endblock %}
+
+{% block content %}
+<main class="main-wrap">
+    <section class="content-main">
+        <div class="content-header">
+            <h2>Add Images for Variant: {{ variant.name }}</h2>
+        </div>
+        <div class="card mb-4">
+            <div class="card-body">
+                <form action="{% url 'add_images' variant.id %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ image_formset.management_form }}
+                    {{ image_formset.as_p }}
+                    <button type="submit">Upload Images</button>
+                </form>
+                 type="submit" class="btn btn-primary">Upload Images</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+document.getElementById('image-input').addEventListener('change', function(event) {
+    const preview = document.getElementById('image-preview');
+    preview.innerHTML = ''; // Clear existing previews
+    const files = event.target.files;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const imgElement = document.createElement('img');
+                imgElement.src = e.target.result;
+                imgElement.style.maxWidth = '150px';
+                imgElement.style.marginRight = '10px';
+                preview.appendChild(imgElement);
+            }
+
+            reader.readAsDataURL(file);
+        }
+    }
+});
+</script>
+{% endblock %}

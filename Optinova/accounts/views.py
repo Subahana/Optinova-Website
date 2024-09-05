@@ -10,8 +10,13 @@ from products.models import Product
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 User = get_user_model()
 
@@ -97,7 +102,7 @@ def registration_view(request):
             # Signal will handle OTP creation and email sending
 
             messages.success(request, 'Account created successfully! Please check your email to verify your account.')
-            return redirect('accounts:email_verify', username=user.username)
+            return redirect('accounts:otp_verify', username=user.username)
         else:
             messages.warning(request, 'Invalid form submission')
             print(f"Form errors during registration: {form.errors}")
@@ -108,19 +113,20 @@ def registration_view(request):
     return render(request, 'accounts/registration.html', context)
 
 @never_cache
-def email_verify(request, username):
+def otp_verify(request, username):
     if request.user.is_authenticated:
         return redirect('user_home') 
+
     user = get_object_or_404(User, username=username)
     user_otp = OtpToken.objects.filter(user=user).last()
 
     if not user_otp:
         messages.error(request, "No OTP found for this user.")
-        return redirect('accounts:resend_otp')
+        return redirect('accounts:otp_verify', username=user.username)
 
     if request.method == 'POST':
         input_otp = request.POST.get('otp_code')
-        
+
         # Validate OTP
         if user_otp.otp_code == input_otp:
             # Check for OTP expiration
@@ -131,56 +137,54 @@ def email_verify(request, username):
                 return redirect("accounts:user_login_view")
             else:
                 messages.warning(request, "The OTP has expired. Please request a new OTP.")
-                return redirect("accounts:resend_otp")
+                return redirect("accounts:otp_verify", username=user.username)
         else:
             messages.warning(request, "Invalid OTP entered. Please enter a valid OTP.")
-            return redirect("accounts:email_verify", username=user.username)
+            return redirect("accounts:otp_verify", username=user.username)
 
     context = {'user': user}
-    return render(request, "accounts/email_verify.html", context)
+    return render(request, "accounts/otp_verify.html", context)
 
 @never_cache
 def resend_otp(request):
-    if request.user.is_authenticated:
-        return redirect('user_home') 
+    logger.debug(f"Headers received: {request.headers}")
+    
     if request.method == 'POST':
-        user_email = request.POST.get("otp_email")
-        user = User.objects.filter(email=user_email).first()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            logger.debug("Request recognized as AJAX.")
+            username = request.POST.get("username")
+            logger.debug(f"Username received: {username}")
+            
+            user = User.objects.filter(username=username).first()
+            if user:
+                user_otp = OtpToken.objects.filter(user=user).last()
 
-        if user:
-            # Get the latest OTP for the user
-            user_otp = OtpToken.objects.filter(user=user).last()
+                # If the OTP has not yet expired, prevent resending
+                if user_otp and user_otp.otp_expires_at > timezone.now():
+                    return JsonResponse({'status': 'error', 'message': 'Current OTP is still valid'})
 
-            if user_otp and user_otp.otp_expires_at > timezone.now():
-                messages.warning(request, "Your current OTP is still valid. Please wait until it expires to request a new one.")
-            else:
-                # If no OTP or expired OTP, create a new one
+                # Create a new OTP token
                 otp = OtpToken.objects.create(
                     user=user,
-                    otp_expires_at=timezone.now() + timezone.timedelta(minutes=1)  # Set expiration time
+                    otp_expires_at=timezone.now() + timezone.timedelta(minutes=1)
                 )
 
-                # Email content
+                # Send email with the new OTP
                 subject = "Email Verification"
-                message = f"""
-                    Hi {user.username}, here is your new OTP {otp.otp_code}.
-                    It expires in 1 minutes. Use the URL below to verify your email:
-                    http://127.0.0.1:8000/email_verify/{user.username}
-                """
-                sender = settings.DEFAULT_FROM_EMAIL
-                receiver = [user.email]
+                message = f"Hi {user.username}, here is your new OTP {otp.otp_code}. It expires in 1 minute."
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
 
-                # Send email
-                send_mail(subject, message, sender, receiver, fail_silently=False)
+                logger.debug(f"New OTP generated for {username}: {otp.otp_code}")
 
-                messages.success(request, "A new OTP has been sent to your email address.")
-            return redirect('accounts:email_verify', username=user.username)
+                return JsonResponse({'status': 'success', 'message': 'OTP resent successfully'})
+            else:
+                logger.error(f"User with username {username} not found.")
+                return JsonResponse({'status': 'error', 'message': "Username does not exist"})
         else:
-            messages.warning(request, "This email doesn't exist in our database.")
-            return redirect("accounts:resend_otp")
+            logger.error("Request is not recognized as AJAX.")
+            return JsonResponse({'status': 'error', 'message': "Invalid request"})
 
-    return render(request, "accounts/resend_otp.html")
-
+    return JsonResponse({'status': 'error', 'message': "Invalid request"})
 
 @never_cache
 def admin_login(request):

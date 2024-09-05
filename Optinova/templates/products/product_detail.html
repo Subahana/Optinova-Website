@@ -27,7 +27,7 @@
                 <div class="row mb-50 mt-20 order-info-wrap">
                     <div class="col-md-4">
                         <article class="icontext align-items-start">
-                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" style="width: 50px; height: 50px;">
+                            <img src="{{ variant.images.first.image.url }}" alt="{{ product.name }}" style="width: 50px; height: 50px;">
                             <div class="text-center">
                                 <input type="image" name="images_to_delete" value="{{ image.id }}" id="img-{{ image.id }}">
                             </div>
@@ -35,8 +35,9 @@
                             <div class="text">
                                 <h6 class="mb-2">Product Information</h6>
                                 <p class="mb-2">
-                                    <strong>Price:</strong> ${{ product.price }} <br>
-                                    <strong>Stock:</strong> {{ product.stock }} units <br>
+                                    <strong>Name:</strong>{{ product.name }} <br>
+                                    <strong>Price:</strong>{{ variant.price }} <br>
+                                    <strong>Stock:</strong> {{ variant.stock }} units <br>
                                     <strong>Category:</strong> {{ product.category.name }}
                                 </p>
                                 <a href="{% url 'edit_product' product.id %}" class="btn btn-primary btn-sm mt-3">Edit Product</a>
@@ -64,8 +65,8 @@
                             <form method="POST" action="{% url 'delete_selected_images' product.id %}" class="mb-4">
                                 {% csrf_token %}
                                 <div class="row">
-                                    {% if product.images.all %}
-                                        {% for image in product.images.all %}
+                                    {% if variant.images.all %}
+                                        {% for image in variant.images.all %}
                                             <div class="col-md-3 mb-3">
                                                 <div class="image-card bg-white p-2 rounded shadow-sm">
                                                     <img src="{{ image.image.url }}" alt="{{ product.name }}" class="img-fluid rounded mb-2" style="max-width: 100%; height: auto;">
@@ -87,7 +88,7 @@
 
                             <!-- Link to upload images -->
                             <div class="text-center">
-                                <a href="{% url 'upload_product_image' product.id %}" class="btn btn-primary btn-sm">Upload Images</a>
+                                <a href="{% url 'add_images' variant.id %}" class="btn btn-primary btn-sm">Upload Images</a>
                             </div>
                         </div>
                     </div>

@@ -34,8 +34,7 @@ class ProductVariant(models.Model):
 
 class ProductImage(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='product_images/', max_length=150)
-    alt_text = models.CharField(max_length=255, blank=True, null=True)
+    image = models.ImageField(upload_to='product_images/', max_length=500)
 
     def __str__(self):
-        return self.alt_text if self.alt_text else f'Image for {self.variant.product.name} ({self.variant.color})'
+        return f'Image for {self.variant.product.name} ({self.variant.color})'

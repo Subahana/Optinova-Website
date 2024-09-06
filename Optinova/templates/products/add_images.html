@@ -9,19 +9,31 @@
         </div>
         <div class="card mb-4">
             <div class="card-body">
-                <form action="{% url 'add_images' variant.id %}" method="post" enctype="multipart/form-data">
+                <form action="{% url 'add_images' variant.id %}" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
+                    
+                    <!-- Management form required for formsets -->
                     {{ image_formset.management_form }}
-                    {{ image_formset.as_p }}
-                    <button type="submit">Upload Images</button>
-                </form>
-                 type="submit" class="btn btn-primary">Upload Images</button>
+                    
+                    <!-- Loop over formset forms to display individual file fields -->
+                    <div class="form-group">
+                        <label for="image-input">Select Images</label>
+                        <input type="file" id="image-input" name="images" accept="image/*" multiple required>
+                    </div>
+
+                    <!-- Preview Container for Selected Images -->
+                    <div id="image-preview" style="margin-top: 20px;">
+                        <!-- Image previews will be inserted here -->
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Upload Images</button>
                 </form>
             </div>
         </div>
     </section>
 </main>
 
+<!-- JavaScript for handling image preview -->
 <script>
 document.getElementById('image-input').addEventListener('change', function(event) {
     const preview = document.getElementById('image-preview');
@@ -39,10 +51,14 @@ document.getElementById('image-input').addEventListener('change', function(event
                 imgElement.src = e.target.result;
                 imgElement.style.maxWidth = '150px';
                 imgElement.style.marginRight = '10px';
+                imgElement.style.marginBottom = '10px';
+                imgElement.style.border = '1px solid #ddd';
+                imgElement.style.padding = '5px';
+                imgElement.style.borderRadius = '5px';
                 preview.appendChild(imgElement);
             }
 
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(file); // Read the image file as data URL
         }
     }
 });

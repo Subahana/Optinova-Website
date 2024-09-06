@@ -3,6 +3,9 @@ from .models import *
 import re
 from PIL import Image as PILImage
 import io
+import sys
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 class CategoryForm(forms.ModelForm):
@@ -48,15 +51,36 @@ class ProductForm(forms.ModelForm):
             'base_price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
         }
 
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        if len(name) < 3:
+            raise ValidationError("Product name must be at least 3 characters long.")
+        if Product.objects.filter(name__iexact=name).exists():
+            raise ValidationError("A product with this name already exists.")
+        return name
 
+    # Custom field validation for 'base_price'
+    def clean_base_price(self):
+        base_price = self.cleaned_data.get('base_price')
+        if base_price is None or base_price <= 0:
+            raise ValidationError("Base price must be greater than zero.")
+        return base_price
 
+    # Custom field validation for 'description'
+    def clean_description(self):
+        description = self.cleaned_data.get('description')
+        if not description:
+            raise ValidationError("Description cannot be empty.")
+        if len(description) < 10:
+            raise ValidationError("Description must be at least 10 characters long.")
+        return description
+    
 
 class ProductVariantForm(forms.ModelForm):
-    # Define a list of colors as choices for the dropdown
     COLORS = [
         ('', 'Select a color'),  # Placeholder option
         ('red', 'Red'),
-        ('pink', 'pink'),
+        ('pink', 'Pink'),
         ('blue', 'Blue'),
         ('green', 'Green'),
         ('yellow', 'Yellow'),
@@ -64,28 +88,24 @@ class ProductVariantForm(forms.ModelForm):
         ('White', 'White'),
         ('Gold', 'Gold'),
         ('Silver', 'Silver'),
-        # Add more colors if needed
     ]
 
-    # Create a ChoiceField for color with the options and placeholder
     color = forms.ChoiceField(
         choices=COLORS,
         widget=forms.Select(attrs={'class': 'form-control'}),
         error_messages={'required': 'Please select a color'}
     )
 
-    # Price field with a placeholder
     price = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': 'Enter price'}),
+        widget=forms.NumberInput(attrs={ 'class': 'form-control', 'placeholder': 'Enter price'}),
         error_messages={
             'required': 'Please enter a valid price',
             'invalid': 'Enter a valid decimal number for the price'
         }
     )
 
-    # Stock field with a placeholder
     stock = forms.IntegerField(
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter stock quantity'}),
         min_value=0,
@@ -98,17 +118,23 @@ class ProductVariantForm(forms.ModelForm):
 
     class Meta:
         model = ProductVariant
-        fields = ['color', 'price', 'stock']  # Specify fields in the form
-        widgets = {
-            'price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control', 'placeholder': 'Enter price'}),
-            'stock': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter stock quantity'}),
-        }
+        fields = ['color', 'price', 'stock']
 
-    # Custom validation for color
+    def __init__(self, *args, **kwargs):
+        self.product = kwargs.pop('product', None)  # Expect the product to be passed to the form
+        super(ProductVariantForm, self).__init__(*args, **kwargs)
+
+    # Custom validation for color to ensure uniqueness per product
     def clean_color(self):
         color = self.cleaned_data.get('color')
+        
         if not color:
             raise forms.ValidationError("You must choose a color.")
+        
+        # Check if a product variant with the same color already exists for this product
+        if ProductVariant.objects.filter(product=self.product, color=color).exists():
+            raise forms.ValidationError(f"The color '{color}' is already used for another variant of this product.")
+        
         return color
 
     # Custom validation for price
@@ -125,63 +151,69 @@ class ProductVariantForm(forms.ModelForm):
             raise forms.ValidationError("Stock cannot be negative.")
         return stock
 
-# Form for adding product images
+
 class ProductImageForm(forms.ModelForm):
     class Meta:
         model = ProductImage
-        fields = ['image', 'alt_text']
+        fields = ['image']
         widgets = {
             'image': forms.FileInput(attrs={
                 'accept': 'image/*',
                 'class': 'form-control',
                 'required': 'true',
             }),
-            'alt_text': forms.TextInput(attrs={'placeholder': 'Enter alt text for the image', 'class': 'form-control'}),
         }
 
     def clean_image(self):
         image = self.cleaned_data.get('image')
 
         if not image:
-            raise forms.ValidationError("Please upload an image.")
+            raise ValidationError("Please upload an image.")
 
+        # Check image size
         max_size = 2 * 1024 * 1024  # 2MB
         if image.size > max_size:
-            raise forms.ValidationError(f"The image file size cannot exceed {max_size / (1024 * 1024)}MB.")
+            raise ValidationError(f"The image file size cannot exceed {max_size / (1024 * 1024)}MB.")
 
+        # Check image format
         valid_mime_types = ['image/jpeg', 'image/png', 'image/webp']
         if image.content_type not in valid_mime_types:
-            raise forms.ValidationError("Please upload a JPEG, PNG, or WebP image.")
+            raise ValidationError("Please upload a JPEG, PNG, or WebP image.")
 
-        # Open the image using Pillow
-        img = PILImage.open(image)
+        try:
+            # Open the image using Pillow
+            img = PILImage.open(image)
 
-        # Crop the image to the center and resize it to 800x800
-        width, height = img.size
-        new_size = min(width, height)  # Get the smaller dimension
-        left = (width - new_size) / 2
-        top = (height - new_size) / 2
-        right = (width + new_size) / 2
-        bottom = (height + new_size) / 2
+            # Crop the image to the center and resize it to 800x800
+            width, height = img.size
+            new_size = min(width, height)
+            left = (width - new_size) / 2
+            top = (height - new_size) / 2
+            right = (width + new_size) / 2
+            bottom = (height + new_size) / 2
 
-        # Crop and resize the image
-        img = img.crop((left, top, right, bottom))
-        img = img.resize((800, 800), PILImage.Resampling.LANCZOS)
+            img = img.crop((left, top, right, bottom))
+            img = img.resize((800, 800), PILImage.Resampling.LANCZOS)
 
-        # Save the image back to the file field
-        output = io.BytesIO()
+            # Save the image back to a BytesIO object
+            output = io.BytesIO()
+            img_format = image.name.split('.')[-1].upper()
+            if img_format == 'JPG':
+                img_format = 'JPEG'
 
-        img_format = image.name.split('.')[-1].upper()
-        if img_format == 'JPG':
-            img_format = 'JPEG'
+            img.save(output, format=img_format)
+            output.seek(0)
 
-        img.save(output, format=img_format)
-        output.seek(0)
-        image.file = output
+            # Create a new InMemoryUploadedFile to replace the original
+            image = InMemoryUploadedFile(output, 'image', image.name, image.content_type, sys.getsizeof(output), None)
+
+        except Exception as e:
+            raise ValidationError(f"Error processing the image: {e}")
+
+        if not image:
+            raise ValidationError("Image saving failed. Please try again.")
 
         return image
-
-
 
 # Formset for handling multiple product images
 ProductImageFormSet = forms.modelformset_factory(

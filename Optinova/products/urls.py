@@ -15,8 +15,9 @@ urlpatterns = [
     path('products/images/<int:variant_id>/', add_images, name='add_images'),
     path('products/edit/<int:product_id>/', edit_product, name='edit_product'),
     path('products/delete/soft/<int:product_id>/', soft_delete_product, name='soft_delete_product'),
-    path('products/images/delete/<int:variant_id>/', delete_selected_images, name='delete_selected_images'),
-    path('products/activate/<int:product_id>/', activate_product, name='activate_product'),
+    path('products/delete/permanent/<int:product_id>/', permanent_delete_product, name='permanent_delete_product'),
+    path('images/delete/<int:variant_id>/', delete_selected_images, name='delete_selected_images'),
+    path('products/products/activate/<int:product_id>/', activate_product, name='activate_product'),
     path('products/detail/<int:product_id>/<int:variant_id>/', product_detail, name='product_detail'),
 
     path('images/delete/<int:product_id>/', delete_selected_images, name='delete_selected_images'),

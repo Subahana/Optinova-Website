@@ -49,76 +49,91 @@
                             <tr>
                                 <th>Image</th>
                                 <th>Product Name</th>
-                                <th>Variant</th>
+                                <th>Variants</th>
                                 <th>Status</th>
-                                <th>Details</th>
                                 <th class="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% if products %}
                                 {% for product in products %}
-                                    {% for variant in product.variants.all %}
-                                    <tr>
-                                        <td>
-                                            {% if variant.images.exists %}
-                                                <img src="{{ variant.images.first.image.url }}"  style="width: 50px; height: 50px;">
-                                            {% else %}
-                                                <img src="{% static 'default_image.jpg' %}" style="width: 50px; height: 50px;" alt="No Image">
-                                            {% endif %}
-                                        </td>
-                                        <td><b>{{ product.name }}</b></td>
-                                        <td>{{ variant.color }}</td>
-                                        <td>{{ variant.price }}</td>
-                                        <td>{{ variant.stock }}</td>
-                                        <td>
-                                            {% if product.is_active %}
-                                                <span class="badge rounded-pill alert-success">Active</span>
-                                            {% else %}
-                                                <span class="badge rounded-pill alert-danger">Inactive</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text">
-                                            <a href="{% if variant.id %}{% url 'product_detail' product.id variant.id %}{% else %}{% url 'add_variant' product.id %}{% endif %}" class="btn btn-primary btn-sm">View Details</a>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="dropdown">
-                                                <a href="#" data-bs-toggle="dropdown" class="btn btn-light rounded btn-sm font-sm" aria-label="Actions">
-                                                    <i class="material-icons md-more_horiz"></i>
-                                                </a>
-                                                <div class="dropdown-menu">
-                                                    <a class="dropdown-item" href="{% url 'edit_product' product.id %}">Edit</a>
-                                                    
-                                                    <a class="dropdown-item" href="{% url 'add_variant' product.id %}">Add Variant</a>
-
-                                                    {% if product.is_active %}
-                                                        <form action="{% url 'soft_delete_product' product.id %}" method="post" class="dropdown-item p-0 m-0">
-                                                            {% csrf_token %}
-                                                            <button type="submit" class="btn w-100 text-start">Deactivate</button>
-                                                        </form>
-                                                    {% else %}
-                                                        <form action="{% url 'activate_product' product.id %}" method="post" class="dropdown-item p-0 m-0">
-                                                            {% csrf_token %}
-                                                            <button type="submit" class="btn w-100 text-start">Activate</button>
-                                                        </form>
-                                                    {% endif %}
-                                                    <form action="{% url 'permanent_delete_product' product.id %}" method="POST" class="dropdown-item p-0 m-0">
-                                                        {% csrf_token %}
-                                                        <button type="submit" class="btn w-100 text-start text-danger">Delete</button>
-                                                    </form>
-                                                </div>
+                                <tr>
+                                    <td>
+                                        {% if product.variants.exists %}
+                                            <img src="{{ product.variants.first.images.first.image.url }}" style="width: 50px; height: 50px;">
+                                        {% else %}
+                                            <img src="{% static 'default_image.jpg' %}" style="width: 50px; height: 50px;" alt="No Image">
+                                        {% endif %}
+                                    </td>
+                                    <td><b>{{ product.name }}</b></td>
+                                    <td>
+                                        {% if product.variants.exists %}
+                                            <div class="variant-container">
+                                                {% for variant in product.variants.all %}
+                                                    <div class="custom-option" data-value="{{ variant.color }}" style="display: inline-block; margin-right: 10px;">
+                                                        <span class="color-circle" style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 20px; height: 20px; border-radius: 50%; display: inline-block;"></span>
+                                                    </div>
+                                                {% endfor %}
                                             </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+                                        {% else %}
+                                            No Variants Available
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td>
+                                        {% if product.is_active %}
+                                            <span class="badge rounded-pill alert-success">Active</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill alert-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text">
+                                        {% if product.variants.all %}
+                                        {% with first_variant=product.variants.all.0 %}
+                                            <a href="{% url 'product_detail' product.id first_variant.id %}" class="btn btn-primary">View Details</a>
+                                        {% endwith %}
+                                    {% else %}
+                                        <p>No variants available for this product.</p>
+                                    {% endif %}
+                                    
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="dropdown">
+                                            <a href="#" data-bs-toggle="dropdown" class="btn btn-light rounded btn-sm font-sm" aria-label="Actions">
+                                                <i class="material-icons md-more_horiz"></i>
+                                            </a>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="{% url 'edit_product' product.id %}">Edit</a>
+                                                <a class="dropdown-item" href="{% url 'add_variant' product.id %}">Add Variant</a>
+                                                
+                                                {% if product.is_active %}
+                                                    <form action="{% url 'soft_delete_product' product.id %}" method="post" class="dropdown-item p-0 m-0">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn w-100 text-start">Deactivate</button>
+                                                    </form>
+                                                {% else %}
+                                                    <form action="{% url 'activate_product' product.id %}" method="post" class="dropdown-item p-0 m-0">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn w-100 text-start">Activate</button>
+                                                    </form>
+                                                {% endif %}
+                                                <form action="{% url 'permanent_delete_product' product.id %}" method="post" class="dropdown-item p-0 m-0">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn w-100 text-start">Delete Permanently</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center">No products available.</td>
+                                    <td colspan="5" class="text-center">No products available.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
                     </table>
+                    
                 </div>
             </div>
         </div>

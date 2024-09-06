@@ -5,8 +5,12 @@ from .forms import *
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from django.views.decorators.http import require_POST
+from django.core.files.storage import default_storage
 
-# Define the custom login URL
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache
@@ -114,26 +118,17 @@ def add_product(request):
 @login_required(login_url='accounts:admin_login')
 @never_cache
 def add_variant(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-
+    product = get_object_or_404(Product, id=product_id)  # Get the product by its ID
+    
     if request.method == 'POST':
-        variant_form = ProductVariantForm(request.POST)
-        print("Form Data:", request.POST)
-
-        if variant_form.is_valid():
-            print("Form Data:", request.POST)
-
+        variant_form = ProductVariantForm(request.POST, product=product)
+        if variant_form.is_valid():            
             variant = variant_form.save(commit=False)
-            variant.product = product  # Set the product
-            variant.save()  # Save the variant
-            print("Variant saved:", variant)  # Debugging: Confirm that the variant is saved
-
+            variant.product = product 
+            variant.save()             
             return redirect('add_images', variant_id=variant.id)
-        else:
-            print(variant_form.errors)  # Print form errors for debugging
     else:
-        variant_form = ProductVariantForm()
-
+        variant_form = ProductVariantForm(product=product)
     return render(request, 'products/add_variant.html', {
         'product': product,
         'variant_form': variant_form,
@@ -144,18 +139,28 @@ def add_variant(request, product_id):
 @never_cache
 def add_images(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
-    product = variant.product
-    
+    print(variant)
     if request.method == 'POST':
+        print(request.FILES)  # Log the uploaded files
+        logger.info(f'Uploaded files: {request.FILES}')
         image_formset = ProductImageFormSet(request.POST, request.FILES)
+        print(image_formset)
         if image_formset.is_valid():
-            images = image_formset.save(commit=False)
-            for image in images:
-                image.variant = variant
-                image.save()
-            return redirect(reverse('product_detail', args=[product.id, variant.id]))
+            print(image_formset)
+            for form in image_formset:
+                print(form)
+                if form.cleaned_data:
+                    image = form.save(commit=False)
+                    print(f'Form is valid, image: {image}')
+                    logger.info(f'Form is valid, image: {image}')
+                    image.variant = variant  # Associate the image with the correct variant
+                    image.save()
+                    print(image)
+            return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
         else:
-            print(image_formset.errors)
+            print(image_formset.errors)  # Ensure formset errors are printed
+            logger.error(f'Form errors: {form.errors}')
+
     else:
         image_formset = ProductImageFormSet(queryset=ProductImage.objects.none())
     
@@ -175,46 +180,48 @@ def edit_product(request, product_id):
         product_form = ProductForm(request.POST, request.FILES, instance=product)
         if product_form.is_valid():
             updated_product = product_form.save(commit=False)
-            # Ensure that active products do not become inactive
-            if product.is_active:
-                updated_product.is_active = True
-            else:
-                updated_product.is_active = product.is_active  # Preserve the current 'is_active' status if it was inactive
+            updated_product.is_active = product.is_active
             updated_product.save()
             messages.success(request, 'Product updated successfully.')
             return redirect('product_list')
+        else:
+            # Debugging: Print form errors to console
+            print(product_form.errors)  # Check why form validation is failing
     else:
         product_form = ProductForm(instance=product)
 
     return render(request, 'products/product_edit.html', {'product_form': product_form, 'product': product})
 
 
-@login_required(login_url='accounts:admin_login')  
+@login_required(login_url='accounts:admin_login')
 @never_cache
+@require_POST
 def soft_delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     product.is_active = False
     product.save()
-    messages.success(request, 'Product deactivated successfully!')
+    messages.success(request, 'Product deactivated successfully.')
     return redirect('product_list')
 
-@login_required(login_url='accounts:admin_login')  
+@login_required(login_url='accounts:admin_login')
 @never_cache
+@require_POST
 def permanent_delete_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    if request.method == "POST":
-        product.delete()
-        messages.success(request, 'Product deleted permanently.')
+    product = get_object_or_404(Product, id=product_id)    
+    product.delete()    
+    messages.success(request, 'Product deleted permanently.')    
     return redirect('product_list')
 
-@login_required(login_url='accounts:admin_login')  
+@login_required(login_url='accounts:admin_login')
 @never_cache
+@require_POST
 def activate_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     product.is_active = True
     product.save()
-    messages.success(request, 'Product activated successfully!')
+    messages.success(request, 'Product activated successfully.')
     return redirect('product_list')
+
 
 @login_required(login_url='accounts:admin_login')
 @never_cache
@@ -225,21 +232,19 @@ def product_detail(request, product_id, variant_id):
 
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 def delete_selected_images(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
     
     if request.method == "POST":
         image_ids = request.POST.getlist('images_to_delete')
         if image_ids:
-            # Delete images related to the specific variant
             ProductImage.objects.filter(id__in=image_ids, variant=variant).delete()
             messages.success(request, 'Selected images deleted successfully.')
         else:
             messages.warning(request, 'No images were selected for deletion.')
     
-    # Redirect to the product detail page
-    return redirect(reverse('product_detail', args=[variant.id]))
+    # Pass both product_id and variant_id to reverse()
+    return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache

@@ -55,15 +55,15 @@ def shop(request):
 @login_required(login_url='accounts:user_login_view')
 @never_cache
 def user_home(request):
-    
     if request.user.is_superuser:
         messages.error(request, 'Admin users are not allowed to access the user home page.')
-        return redirect('admin_page')  # Redirect to admin page or another appropriate page
+        return redirect('admin_page')  
 
     products = Product.objects.filter(
         is_active=True,
         category__is_active=True
-    )  # Fetch all products with active categories
+    )
+
 
     context = {
         'products': products,

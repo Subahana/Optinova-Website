@@ -41,9 +41,9 @@
                     </div>
                 </div>
                 <!-- Thumbnails -->
-                <div class="product__details__thumbs d-flex justify-content-center">
+                <div class="product__details__thumbs d-flex justify-content-center flex-wrap">
                     {% for image in product.images.all %}
-                    <div class="thumb-item mx-1">
+                    <div class="thumb-item mx-1 mb-2">
                         <a href="javascript:void(0);" class="thumbnail-link" data-image="{{ image.image.url }}">
                             <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter }}" class="img-thumbnail rounded">
                         </a>
@@ -58,29 +58,56 @@
 
                     <!-- Price and Availability -->
                     <h3 class="mb-3">
-                        ${{ product.price }}
-                        {% if product.old_price %}
-                            <span class="text-muted"><del>₹{{ product.old_price }}</del></span>
-                        {% endif %}
+                        ₹<span id="product-price">{{ product.main_variant.price }}</span>
                     </h3>
 
-                    {% if product.is_sold_out %}
-                        <p class="text-danger">Sold Out</p>
-                    {% elif product.is_unavailable %}
-                        <p class="text-warning">Currently Unavailable</p>
-                    {% elif product.stock_quantity == 0 %}
-                        <p class="text-danger">Out of Stock</p>
-                    {% else %}
+                    <!-- Availability based on stock -->
+                    <div id="availability-message">
+                        {% if product.stock_quantity == 0 %}
+                            <p class="text-danger">Out of Stock</p>
+                        {% else %}
+                            <p class="text-success">In Stock</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Variants -->
+                    {% if product.variants.all %}
+                        <div class="product__variants mb-4">
+                            <h5>Variants:</h5>
+                            <div class="row">
+                                {% for variant in product.variants.all %}
+                                    <div class="col-4 mb-2">
+                                        <div class="variant-item d-flex align-items-center justify-content-center p-2 border rounded"
+                                            style="cursor: pointer;" 
+                                            data-price="{{ variant.price }}"
+                                            data-stock="{{ variant.stock }}"
+                                            data-image="{{ variant.image.url }}">
+                                            <!-- Showing the color visually -->
+                                            <div class="variant-color" 
+                                                style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 20px; height: 20px; border-radius: 50%;"></div>
+                                            <span class="ml-2">{{ variant.name }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Quantity selection -->
+                    {% if product.stock_quantity > 0 %}
                         <div class="product__details__cart__option mb-4">
                             <div class="quantity d-flex align-items-center mb-3">
                                 <span class="mr-3">Quantity:</span>
                                 <div class="pro-qty">
-                                    <input type="number" value="1" min="1" max="{{ product.stock_quantity }}">
+                                    <input id="quantity-input" type="number" value="1" min="1" max="{{ product.stock_quantity }}">
                                 </div>
                             </div>
                             <a href="#" class="btn btn-primary">Add to Cart</a>
                         </div>
+                    {% else %}
+                        <p class="text-danger">This product is currently out of stock.</p>
                     {% endif %}
+
                     <!-- Description -->
                     <p class="mb-4">{{ product.description }}</p>
 
@@ -166,6 +193,27 @@
             link.addEventListener('click', function () {
                 const newImageSrc = link.getAttribute('data-image');
                 updateZoomImage(newImageSrc);
+            });
+        });
+
+        // Handle variant selection
+        document.querySelectorAll('.variant-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                const price = item.getAttribute('data-price');
+                const stock = item.getAttribute('data-stock');
+                const image = item.getAttribute('data-image');
+                
+                document.getElementById('product-price').textContent = price;
+                document.getElementById('quantity-input').setAttribute('max', stock);
+                updateZoomImage(image);
+
+                // Update stock availability message
+                const availabilityMessage = document.getElementById('availability-message');
+                if (stock == 0) {
+                    availabilityMessage.innerHTML = '<p class="text-danger">Out of Stock</p>';
+                } else {
+                    availabilityMessage.innerHTML = `<p class="text-success">In Stock</p>`;
+                }
             });
         });
     });

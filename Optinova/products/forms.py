@@ -40,7 +40,6 @@ class CategoryForm(forms.ModelForm):
         
         return name
 
-# Form for adding a new product
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
@@ -51,22 +50,29 @@ class ProductForm(forms.ModelForm):
             'base_price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        self.instance = kwargs.get('instance', None)  # Get the instance (for edit case)
+        super(ProductForm, self).__init__(*args, **kwargs)
+
     def clean_name(self):
         name = self.cleaned_data.get('name')
+        
+        # Validate name length
         if len(name) < 3:
             raise ValidationError("Product name must be at least 3 characters long.")
-        if Product.objects.filter(name__iexact=name).exists():
+        
+        # Uniqueness check, excluding the current product when editing
+        if Product.objects.filter(name__iexact=name).exclude(id=self.instance.id).exists():
             raise ValidationError("A product with this name already exists.")
+        
         return name
 
-    # Custom field validation for 'base_price'
     def clean_base_price(self):
         base_price = self.cleaned_data.get('base_price')
         if base_price is None or base_price <= 0:
             raise ValidationError("Base price must be greater than zero.")
         return base_price
 
-    # Custom field validation for 'description'
     def clean_description(self):
         description = self.cleaned_data.get('description')
         if not description:
@@ -74,11 +80,11 @@ class ProductForm(forms.ModelForm):
         if len(description) < 10:
             raise ValidationError("Description must be at least 10 characters long.")
         return description
-    
+
 
 class ProductVariantForm(forms.ModelForm):
     COLORS = [
-        ('', 'Select a color'),  # Placeholder option
+        ('', 'Select a color'),
         ('red', 'Red'),
         ('pink', 'Pink'),
         ('blue', 'Blue'),
@@ -99,7 +105,7 @@ class ProductVariantForm(forms.ModelForm):
     price = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={ 'class': 'form-control', 'placeholder': 'Enter price'}),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter price'}),
         error_messages={
             'required': 'Please enter a valid price',
             'invalid': 'Enter a valid decimal number for the price'
@@ -116,40 +122,31 @@ class ProductVariantForm(forms.ModelForm):
         }
     )
 
+    is_main_variant = forms.BooleanField(required=False, label="Set as Main Variant")
+
     class Meta:
         model = ProductVariant
-        fields = ['color', 'price', 'stock']
+        fields = ['color', 'price', 'stock', 'is_main_variant']
 
     def __init__(self, *args, **kwargs):
-        self.product = kwargs.pop('product', None)  # Expect the product to be passed to the form
+        self.product = kwargs.pop('product', None)
         super(ProductVariantForm, self).__init__(*args, **kwargs)
 
-    # Custom validation for color to ensure uniqueness per product
-    def clean_color(self):
-        color = self.cleaned_data.get('color')
-        
-        if not color:
-            raise forms.ValidationError("You must choose a color.")
-        
-        # Check if a product variant with the same color already exists for this product
-        if ProductVariant.objects.filter(product=self.product, color=color).exists():
-            raise forms.ValidationError(f"The color '{color}' is already used for another variant of this product.")
-        
-        return color
+    def clean(self):
+        cleaned_data = super().clean()
+        color = cleaned_data.get('color')
+        is_main_variant = cleaned_data.get('is_main_variant')
 
-    # Custom validation for price
-    def clean_price(self):
-        price = self.cleaned_data.get('price')
-        if price is not None and price <= 0:
-            raise forms.ValidationError("Price must be greater than 0.")
-        return price
+        if color:
+            if ProductVariant.objects.filter(product=self.product, color=color).exclude(id=self.instance.id).exists():
+                self.add_error('color', "The color '{}' is already used for another variant of this product.".format(color))
 
-    # Custom validation for stock
-    def clean_stock(self):
-        stock = self.cleaned_data.get('stock')
-        if stock is not None and stock < 0:
-            raise forms.ValidationError("Stock cannot be negative.")
-        return stock
+        if is_main_variant:
+            if ProductVariant.objects.filter(product=self.product, is_main_variant=True).exclude(id=self.instance.id).exists():
+                self.add_error(None, "A main variant already exists for this product. Only one main variant is allowed.")
+
+        return cleaned_data
+
 
 
 class ProductImageForm(forms.ModelForm):
@@ -219,6 +216,6 @@ class ProductImageForm(forms.ModelForm):
 ProductImageFormSet = forms.modelformset_factory(
     ProductImage, 
     form=ProductImageForm, 
-    extra=1,  # Adjust this for multiple images
+    extra=5,  # Adjust this for multiple images
     can_delete=True  # Allow the option to delete images
 )

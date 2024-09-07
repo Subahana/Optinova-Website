@@ -12,12 +12,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+        #   category_listt   
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def category_list(request):
     categories = Category.objects.all()
     return render(request, 'products/category_list.html', {'categories': categories})
 
+        #    add_category
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def add_category(request):
@@ -31,6 +33,7 @@ def add_category(request):
         form = CategoryForm()   
     return render(request, 'products/category_add_form.html', {'form': form})
 
+          #   edit_category      
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def edit_category(request, id):
@@ -45,6 +48,7 @@ def edit_category(request, id):
         form = CategoryForm(instance=category)
     return render(request, 'products/category_edit_form.html', {'form': form})
 
+         #    activate_category
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def activate_category(request, id):
@@ -55,6 +59,7 @@ def activate_category(request, id):
         messages.success(request, 'Category activated successfully.')
     return redirect('category_list')
 
+        #  permanent_delete_category
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def permanent_delete_category(request, id):
@@ -64,6 +69,7 @@ def permanent_delete_category(request, id):
         messages.success(request, 'Category deleted permanently.')
     return redirect('category_list')
 
+        #   Deactivating Category
 @login_required(login_url='accounts:admin_login')  
 @never_cache
 def soft_delete_category(request, id):
@@ -127,6 +133,8 @@ def add_variant(request, product_id):
             variant.product = product 
             variant.save()             
             return redirect('add_images', variant_id=variant.id)
+        else:
+            print(variant_form.errors)
     else:
         variant_form = ProductVariantForm(product=product)
     return render(request, 'products/add_variant.html', {
@@ -192,6 +200,28 @@ def edit_product(request, product_id):
 
     return render(request, 'products/product_edit.html', {'product_form': product_form, 'product': product})
 
+@login_required(login_url='accounts:admin_login')
+@never_cache
+def edit_variant(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)  # Get the variant by its ID
+    product = variant.product  # Get the associated product
+
+    if request.method == 'POST':
+        variant_form = ProductVariantForm(request.POST, instance=variant)  # Populate the form with the existing variant
+        if variant_form.is_valid():            
+            updated_variant = variant_form.save(commit=False)
+            updated_variant.product = product  # Reassociate with the product
+            updated_variant.save()             
+            messages.success(request, 'Variant updated successfully.')
+            return redirect('product_detail', product_id=product.id, variant_id=variant.id)  # Redirect to the product detail page
+    else:
+        variant_form = ProductVariantForm(instance=variant)  # Pre-fill form with current variant data
+    
+    return render(request, 'products/edit_variant.html', {
+        'product': product,
+        'variant_form': variant_form,
+    })
+
 
 @login_required(login_url='accounts:admin_login')
 @never_cache
@@ -206,6 +236,16 @@ def soft_delete_product(request, product_id):
 @login_required(login_url='accounts:admin_login')
 @never_cache
 @require_POST
+def activate_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    product.is_active = True
+    product.save()
+    messages.success(request, 'Product activated successfully.')
+    return redirect('product_list')
+
+@login_required(login_url='accounts:admin_login')
+@never_cache
+@require_POST
 def permanent_delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)    
     product.delete()    
@@ -215,20 +255,70 @@ def permanent_delete_product(request, product_id):
 @login_required(login_url='accounts:admin_login')
 @never_cache
 @require_POST
-def activate_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    product.is_active = True
-    product.save()
-    messages.success(request, 'Product activated successfully.')
-    return redirect('product_list')
+def activate_variant(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    variant.is_active = True  # Activate the variant
+    variant.save()
+    messages.success(request, 'Variant activated successfully.')
+    return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
+
+@login_required(login_url='accounts:admin_login')
+@never_cache
+@require_POST
+def deactivate_variant(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    variant.is_active = False  # Deactivate the variant
+    variant.save()
+    messages.success(request, 'Variant deactivated successfully.')
+    
+    # Make sure both product_id and variant_id are passed correctly
+    return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
 
 
 @login_required(login_url='accounts:admin_login')
 @never_cache
-def product_detail(request, product_id, variant_id):
-    product = get_object_or_404(Product, id=product_id)
+@require_POST
+def delete_variant(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
-    return render(request, 'products/product_detail.html', {'product': product, 'variant': variant})
+    product_id = variant.product.id  # Store product ID before deleting
+    variant.delete()  # Permanently delete the variant
+    messages.success(request, 'Variant deleted permanently.')
+    return redirect('product_detail', product_id=product_id, variant_id=variant_id)
+
+
+@login_required(login_url='accounts:admin_login')
+def product_detail(request, product_id, variant_id=None):
+    # Get the product
+    product = get_object_or_404(Product, id=product_id)
+
+    # Check if the product has active variants
+    variants = product.variants.filter(is_active=True)
+    # Handle the case where there are no active variants
+    if not variants.exists():
+        # No active variants, render the product details with a message or without variant info
+        return render(request, 'products/product_detail.html', {
+            'product': product,
+            'variant': None,
+            'error': 'No variants available for this product.'
+        })
+
+    # If a specific variant is requested, try to fetch it
+    if variant_id:
+        try:
+            variant = variants.get(id=variant_id)
+        except ProductVariant.DoesNotExist:
+            # If the variant doesn't exist, fallback to the first available variant
+            variant = variants.first()
+            # Redirect to the product detail page with the first available variant
+            return redirect('product_detail', product_id=product_id, variant_id=variant.id)
+    else:
+        # If no variant_id is provided, use the first available variant
+        variant = variants.first()
+
+    return render(request, 'products/product_detail.html', {
+        'product': product,
+        'variant': variant,
+    })
 
 
 @login_required(login_url='accounts:admin_login')

@@ -199,25 +199,38 @@
                     <div class="row">
                         {% if products %}
                             {% for product in products %}
-                                <div class="col-lg-4 col-md-6 col-sm-6">
+                                <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
                                     <a href="{% url 'user_product_detail' product.id %}">
-                                    <div class="product__item">
-                                        <!-- Product Image -->
-                                        <div class="product__item__pic">
-                                            <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="img-fluid">
-                                            <ul class="product__hover">
-                                                <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
-                                            </ul>
+                                        <div class="product__item">
+                                            <!-- Product Image -->
+                                            <div class="product__item__pic">
+                                                <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="img-fluid">
+                                                <ul class="product__hover">
+                                                    <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
+                                                </ul>
+                                            </div>
+                                            <div class="product__item__text">
+                                                <!-- Product Name -->
+                                                <h6>{{ product.name }}</h6>
+                                                <!-- Display Product Variants -->
+                                                {% if product.variants.all %}
+                                                    <div class="product__variants">
+                                                        <div class="row">
+                                                            {% for variant in product.variants.all %}
+                                                                <div class="variant-item d-flex align-items-center justify-content-center p-2 border rounded">
+                                                                    <div class="variant-color" style="background-color: {{ variant.color|default:'#FFFFFF' }};"></div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                                <!-- Add to Cart Button -->
+                                                <a href="#" class="add-cart mt-2 btn btn-primary">+ Add To Cart</a>
+                                                <!-- Main Variant Price -->
+                                                <h5 class="mt-2">₹{{ product.main_variant.price }}</h5>
+                                            </div>
                                         </div>
-                                        <div class="product__item__text">
-                                            <!-- Product Name -->
-                                            <h6>{{ product.name }}</h6>
-                                            <!-- Add to Cart Button -->
-                                            <a href="#" class="add-cart">+ Add To Cart</a>
-                                            <!-- Product Price -->
-                                            <h5>${{ product.price }}</h5>
-                                        </div>
-                                    </div>
+                                    </a>
                                 </div>
                             {% endfor %}
                         {% else %}
@@ -242,4 +255,45 @@
     </section>
     <!-- Shop Section End -->
 
+    <style>
+        .product__variants {
+            margin-top: 15px;
+        }
+
+        .variant-item {
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            max-width: 80px; /* Ensure the container doesn’t exceed this width */
+        }
+
+        .variant-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .variant-color {
+            width: 25px; /* Small size for color circle */
+            height: 25px; /* Small size for color circle */
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+
+        .product__item__text h6 {
+            font-weight: bold;
+        }
+
+        .add-cart {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+            color: #fff;
+            text-decoration: none;
+            background-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-cart:hover {
+            background-color: #0056b3;
+        }
+    </style>
 {% endblock content %}

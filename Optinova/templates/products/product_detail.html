@@ -4,7 +4,14 @@
 
 {% block content %}
 <main class="main-wrap">
+    <!-- Hero Section -->
+    <section class="content-hero mb-4 text-center p-4" style="background-color: #f5f5f5;">
+        <h2 class="hero-title">{{ product.name }}</h2>
+        <p class="hero-subtitle text-muted">{{ product.category.name }}</p>
+    </section>
+
     <section class="content-main">
+        <!-- Notification Messages -->
         {% if messages %}
         <div class="alert">
             {% for message in messages %}
@@ -13,84 +20,147 @@
         </div>
         {% endif %}
 
-        <div>
-            <a href="{% url 'product_list' %}" class="btn btn-primary float-end">Back to Product Management</a>
-        </div>
-
-        <div class="content-header">
-            <h2 class="content-title card-title">{{ product.name }}</h2>
-        </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="row mb-50 mt-20 order-info-wrap">
-                    <div class="col-md-12">
-                        <article class="icontext align-items-start">
-                            <i class="text-primary material-icons md-info"></i>
-                            <div class="text">
-                                <h6 class="mb-2">Product Information</h6>
-                                <p class="mb-2">
-                                    <strong>Name:</strong> {{ product.name }} <br>
-                                    <strong>Category:</strong> {{ product.category.name }} <br>
-                                    <strong>Description:</strong> {{ product.description }}
-                                </p>
-                                <a href="{% url 'edit_product' product.id %}" class="btn btn-primary btn-sm mt-3">Edit Product</a>
-                            </div>
-                        </article>
-                    </div>
+        <!-- Product Info Card -->
+        <div class="card shadow-sm mb-4 p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="product-info">
+                    <h5 class="text-primary mb-3">{{ product.name }}</h5>
+                    <p><strong>Category:</strong> {{ product.category.name }}</p>
+                    <p><strong>Description:</strong> {{ product.description }}</p>
+                    <a href="{% url 'edit_product' product.id %}" class="btn btn-primary btn-sm mt-3">
+                        <i class="material-icons md-edit me-1"></i> Edit Product
+                    </a>
                 </div>
-
-                <!-- Loop through each variant -->
-                <div class="row">
-                    {% for variant in product.variants.all %}
-                    <div class="col-md-6">
-                        <div class="box shadow-sm bg-light p-4 rounded mb-4">
-                            <h6 class="mb-4">Variant: {{ variant.color }}
-                                <div class="custom-option" data-value="{{ variant.color }}" style="display: inline-block; margin-right: 10px;">
-                                    <span class="color-circle" style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 20px; height: 20px; border-radius: 50%; display: inline-block;"></span>
-                                </div>
-                            </h6>
-                            <p><strong>Price:</strong> {{ variant.price }} <br>
-                               <strong>Stock:</strong> {{ variant.stock }} units</p>
-
-                            <!-- Images for the current variant -->
-                            <h6 class="mb-3">Images</h6>
-                            <div class="row">
-                                {% if variant.images.all %}
-                                <p>Total images for this variant: {{ variant.images.count }}</p>
-
-                                    {% for image in variant.images.all %}
-                                    <div class="col-md-4 mb-3">
-                                        <div class="image-card">
-                                            <!-- Display image with proper styling -->
-                                            <img src="{{ image.image.url }}" alt="{{ variant.name }}" class="img-fluid rounded mb-2" style="max-width: 100%; height: auto;">
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted text-center">No images available for this variant.</p>
-                                {% endif %}
-                            </div>
-                            <!-- Actions for the variant -->
+                <a href="{% url 'product_list' %}" class="btn btn-secondary">
+                    <i class="material-icons md-arrow-back"></i> Back to Product Management
+                </a>
+            </div>
+        </div>
+        <!-- Variant Cards -->
+        <div class="row">
+            {% for variant in product.variants.all %}
+            <div class="col-md-6">
+                <div class="variant-card card shadow-sm p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="text-secondary">
+                            Variant: {{ variant.color|default:"No Color Specified" }}
+                        </h6>
+                        <div class="custom-option" data-value="{{ variant.color }}">
+                            <!-- Display color if available, otherwise default to white -->
+                            <span class="color-circle" 
+                                  style="background-color: {{ variant.color|default:'#FFFFFF' }}; 
+                                         width: 20px; 
+                                         height: 20px; 
+                                         border-radius: 50%; 
+                                         display: inline-block;">
+                            </span>
                         </div>
                     </div>
-                    {% endfor %}
+                    
+                    
+                    <p class="mt-3">
+                        <strong>Price:</strong> {{ variant.price }} <br>
+                        <p><strong>Status:</strong>
+                            {% if variant.is_active %}
+                                <span class="badge rounded-pill alert-success">Active</span>
+                            {% else %}
+                                <span class="badge rounded-pill alert-danger">Inactive</span>
+                            {% endif %}
+                        </p>
+                        <strong>Stock: {{ variant.stock }} units</strong> 
+
+                    </p>
+
+                    <!-- Images for the Variant -->
+                    <h6 class="mb-3">Images</h6>
+                    <div class="row">
+                        {% if variant.images.all %}
+                            {% for image in variant.images.all %}
+                            <div class="col-4">
+                                <div class="image-card">
+                                    <img src="{{ image.image.url }}" alt="{{ variant.name }}" class="img-fluid rounded mb-2">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <p class="text-muted text-center">No images available for this variant.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions for the Variant -->
+                    <div class="d-flex justify-content-between mt-3">
+                        <a href="{% url 'edit_variant' variant.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="material-icons md-edit"></i> Edit
+                        </a>
+
+                        <!-- Activate/Deactivate Button -->
+                        {% if variant.is_active %}
+                        <form method="POST" action="{% url 'deactivate_variant' variant.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-warning btn-sm">Deactivate</button>
+                        </form>
+                        {% else %}
+                        <form method="POST" action="{% url 'activate_variant' variant.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-success btn-sm">Activate</button>
+                        </form>
+                        {% endif %}
+
+                        <!-- Delete Button -->
+                        <form method="POST" action="{% url 'delete_variant' variant_id=variant.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </div>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+        <!-- Add Variant Button -->
+        <div class="mb-4">
+            <a href="{% url 'add_variant' product.id %}" class="btn btn-primary float-end">
+                <i class="material-icons md-add me-2"></i> Add Variant
+            </a>
         </div>
     </section>
 </main>
 
 <!-- Add custom styling -->
 <style>
+    .hero-title {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    .hero-subtitle {
+        font-size: 18px;
+        color: #777;
+    }
     .image-card {
         border: 1px solid #ddd;
         border-radius: 5px;
         overflow: hidden;
-        position: relative;
+        transition: box-shadow 0.3s ease;
+    }
+    .image-card img {
+        width: 100%;
+        height: auto;
     }
     .image-card:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .variant-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .variant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    }
+    .btn-outline-warning, .btn-outline-success, .btn-outline-danger {
+        border-width: 2px;
+        font-weight: 600;
     }
 </style>
 

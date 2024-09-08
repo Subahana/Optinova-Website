@@ -2,95 +2,95 @@
 {% load static %}
 
 {% block content %}
-<section class="shop-details">
+<!-- Breadcrumbs Section -->
+<nav aria-label="breadcrumb" class="bg-light py-3">
     <div class="container">
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-4">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'user_home' %}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'shop' %}">Shop</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Product Details</li>
-            </ol>
-        </nav>
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'user_home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'shop' %}">Shop</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </div>
+</nav>
 
-        <!-- Product Details -->
+<!-- Product Details Section -->
+<section class="product-details py-5">
+    <div class="container">
         <div class="row">
-            <div class="col-lg-5 col-md-6 mb-4">
-                <!-- Main Image with Custom Zoom -->
-                <div class="product__details__pic mb-3" style="position: relative;">
-                    <img id="zoom-image" src="{{ product.images.first.image.url }}" 
-                         alt="Main Product Image" 
-                         class="img-fluid rounded shadow-sm" 
-                         style="width: 100%; height: auto; cursor: crosshair;">
-                    <!-- Zoomed Image -->
-                    <div id="zoomed-image" 
-                         style="background-image: url('{{ product.images.first.image.url }}'); 
-                                background-repeat: no-repeat; 
-                                display: none; 
-                                position: absolute; 
-                                top: 0; 
-                                left: 100%; 
-                                transform: translateX(10px); 
-                                background-size: 200%; 
-                                border: 1px solid #000; 
-                                background-color: white; 
-                                cursor: zoom-out; 
-                                z-index: 10; 
-                                width: 400px; 
-                                height: 400px;">
+            <!-- Product Image Gallery -->
+            <div class="col-lg-6 col-md-6 mb-4">
+                <div class="product-gallery">
+                    <!-- Main Image with Zoom -->
+                    <div class="main-image-wrapper mb-3" style="position: relative;">
+                        <img id="zoom-image" src="{{ product.main_variant.images.all.0.image.url }}" 
+                             alt="Main Product Image" 
+                             class="img-fluid rounded shadow-sm" 
+                             style="width: 90%; height: auto; cursor: crosshair; max-width: 400px;">
+                        <!-- Zoomed Image -->
+                        <div id="zoomed-image" 
+                             style="background-image: url('{{ product.main_variant.images.all.0.image.url }}'); 
+                                    background-repeat: no-repeat; 
+                                    display: none; 
+                                    position: absolute; 
+                                    top: 0; 
+                                    left: 105%; 
+                                    transform: translateX(10px); 
+                                    background-size: 200%; 
+                                    border: 1px solid #000; 
+                                    background-color: white; 
+                                    cursor: zoom-out; 
+                                    z-index: 10; 
+                                    width: 300px; 
+                                    height: 300px;">
+                        </div>
                     </div>
-                </div>
-                <!-- Thumbnails -->
-                <div class="product__details__thumbs d-flex justify-content-center flex-wrap">
-                    {% for image in product.images.all %}
-                    <div class="thumb-item mx-1 mb-2">
-                        <a href="javascript:void(0);" class="thumbnail-link" data-image="{{ image.image.url }}">
-                            <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter }}" class="img-thumbnail rounded">
-                        </a>
+
+                    <!-- Thumbnails -->
+                    <div class="thumbnail-container d-flex justify-content-between">
+                        {% for image in product.main_variant.images.all %}
+                        <div class="thumbnail-item mx-1">
+                            <a href="javascript:void(0);" class="thumbnail-link" data-image="{{ image.image.url }}">
+                                <img src="{{ image.image.url }}" alt="Thumbnail {{ forloop.counter }}" class="img-thumbnail rounded shadow-sm" style="width: 70px; height: 70px; object-fit: cover;">
+                            </a>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
-            
-            <div class="col-lg-7 col-md-6">
-                <div class="product__details__content">
-                    <h4 class="mb-3">{{ product.name }}</h4>
 
-                    <!-- Price and Availability -->
-                    <h3 class="mb-3">
-                        ₹<span id="product-price">{{ product.main_variant.price }}</span>
-                    </h3>
+            <!-- Product Information -->
+            <div class="col-lg-6 col-md-6">
+                <div class="product-info">
+                    <h2 class="product-title">{{ product.name }}</h2>
+                    <h3 class="product-price">₹<span id="product-price">{{ product.main_variant.price }}</span></h3>
 
-                    <!-- Availability based on stock -->
-                    <div id="availability-message">
-                        {% if product.stock_quantity == 0 %}
-                            <p class="text-danger">Out of Stock</p>
+                    <!-- Availability -->
+                    <div id="availability-message" class="mb-4">
+                        {% if product.main_variant.stock_quantity == 0 %}
+                            <p class="text-danger font-weight-bold">Out of Stock</p>
                         {% else %}
-                            <p class="text-success">In Stock</p>
+                            <p class="text-success font-weight-bold">In Stock</p>
                         {% endif %}
                     </div>
 
                     <!-- Product Variants -->
                     {% if product.variants.all %}
-                        <div class="product__variants mb-4">
-                            <h5>Variants:</h5>
-                            <div class="row">
-                                {% for variant in product.variants.all %}
-                                    <div class="col-4 mb-2">
-                                        <div class="variant-item d-flex align-items-center justify-content-center p-2 border rounded"
-                                            style="cursor: pointer;" 
-                                            data-price="{{ variant.price }}"
-                                            data-stock="{{ variant.stock }}"
-                                            data-image="{{ variant.image.url }}">
-                                            <!-- Showing the color visually -->
-                                            <div class="variant-color" 
-                                                style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 20px; height: 20px; border-radius: 50%;"></div>
-                                            <span class="ml-2">{{ variant.name }}</span>
-                                        </div>
-                                    </div>
-                                {% endfor %}
+                    <div class="product-variants mb-4">
+                        <h5 class="font-weight-bold">Variants:</h5>
+                        <div class="variant-list d-flex flex-wrap">
+                            {% for variant in product.variants.all %}
+                            <div class="variant-item p-2 mb-2" 
+                                 data-price="{{ variant.price }}" 
+                                 data-stock="{{ variant.stock_quantity }}" 
+                                 data-images="{% for img in variant.images.all %}{{ img.image.url }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                 style="cursor: pointer; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background: #fff; transition: background 0.3s;">
+                                <div class="variant-color" 
+                                     style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #000; margin-right: 10px;"></div>
+                                <span>{{ variant.name }}</span>
                             </div>
+                            {% endfor %}
                         </div>
+                    </div>
                     {% endif %}
 
                     <!-- Quantity selection -->
@@ -109,8 +109,10 @@
                     {% endif %}
 
                     <!-- Description -->
-                    <p class="mb-4">{{ product.description }}</p>
-
+                    <div class="product-description mt-4">
+                        <h5 class="font-weight-bold">Description:</h5>
+                        <p>{{ product.description }}</p>
+                    </div>
                     <!-- Wishlist and Compare -->
                     <div class="product__details__btns__option mb-4">
                         <a href="#" class="btn btn-outline-primary mr-2"><i class="fa fa-heart"></i> Wishlist</a>
@@ -127,32 +129,28 @@
     </div>
 </section>
 
-<!-- Related Products -->
-<section class="related spad">
+<!-- Related Products Section -->
+<section class="related-products py-5 bg-light">
     <div class="container">
-        <h3 class="related-title mb-4">Related Products</h3>
+        <h3 class="related-title mb-4 text-center">Related Products</h3>
         <div class="row">
             {% for related_product in related_products %}
             <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                 <a href="{% url 'user_product_detail' related_product.id %}">
-                <div class="product__item">
-                    <div class="product__item__pic">
-                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded">
+                <div class="product-item border rounded bg-white shadow-sm">
+                    <div class="product-item-image position-relative">
+                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded" style="width: 100%; height: auto;">
                         {% if related_product.is_new %}
-                        <span class="badge badge-success">New</span>
+                        <span class="badge badge-success position-absolute top-0 start-0 m-2">New</span>
                         {% endif %}
-                        <div class="product__hover">
-                            <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt="Wishlist"></a>
-                            <a href="#"><img src="{% static 'img/icon/compare.png' %}" alt="Compare"></a>
-                            <a href="#"><img src="{% static 'img/icon/search.png' %}" alt="Quick View"></a>
-                        </div>
                     </div>
-                    <div class="product__item__text">
-                        <h6>{{ related_product.name }}</h6>
-                        <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary">+ Add To Cart</a>
-                        <h5>₹{{ related_product.price }}</h5>
+                    <div class="product-item-info p-3">
+                        <h6 class="product-item-title">{{ related_product.name }}</h6>
+                        <p class="product-item-price">₹{{ related_product.price }}</p>
+                        <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary btn-sm">+ Add To Cart</a>
                     </div>
                 </div>
+                </a>
             </div>
             {% endfor %}
         </div>
@@ -171,6 +169,29 @@
             zoomedImage.style.backgroundImage = `url(${src})`;
         }
 
+        // Function to update thumbnails for the selected variant
+        function updateThumbnails(images) {
+            const thumbnailContainer = document.querySelector('.thumbnail-container');
+            thumbnailContainer.innerHTML = '';
+            images.split(', ').forEach(imageUrl => {
+                const thumbHtml = `
+                    <div class="thumbnail-item mx-1">
+                        <a href="javascript:void(0);" class="thumbnail-link" data-image="${imageUrl}">
+                            <img src="${imageUrl}" alt="Thumbnail" class="img-thumbnail rounded shadow-sm" style="width: 70px; height: 70px; object-fit: cover;">
+                        </a>
+                    </div>`;
+                thumbnailContainer.insertAdjacentHTML('beforeend', thumbHtml);
+            });
+
+            // Re-apply event listeners to the new thumbnails
+            document.querySelectorAll('.thumbnail-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    const newImageSrc = link.getAttribute('data-image');
+                    updateZoomImage(newImageSrc);
+                });
+            });
+        }
+
         // Event listener for mouse movement on the zoom image
         zoomImage.addEventListener('mousemove', function (e) {
             const rect = zoomImage.getBoundingClientRect();
@@ -184,11 +205,12 @@
             zoomedImage.style.display = 'block';
         });
 
+        // Hide zoomed image when not hovering
         zoomImage.addEventListener('mouseleave', function () {
             zoomedImage.style.display = 'none';
         });
 
-        // Event listener for clicking on thumbnails
+        // Thumbnail click event
         thumbnailLinks.forEach(function (link) {
             link.addEventListener('click', function () {
                 const newImageSrc = link.getAttribute('data-image');
@@ -196,24 +218,17 @@
             });
         });
 
-        // Handle variant selection
-        document.querySelectorAll('.variant-item').forEach(function (item) {
-            item.addEventListener('click', function () {
-                const price = item.getAttribute('data-price');
-                const stock = item.getAttribute('data-stock');
-                const image = item.getAttribute('data-image');
+        // Variant click event
+        document.querySelectorAll('.variant-item').forEach(function (variantItem) {
+            variantItem.addEventListener('click', function () {
+                const newPrice = variantItem.getAttribute('data-price');
+                const newStock = variantItem.getAttribute('data-stock');
+                const newImages = variantItem.getAttribute('data-images');
                 
-                document.getElementById('product-price').textContent = price;
-                document.getElementById('quantity-input').setAttribute('max', stock);
-                updateZoomImage(image);
+                document.getElementById('product-price').textContent = newPrice;
+                document.getElementById('availability-message').innerHTML = newStock == 0 ? '<p class="text-danger font-weight-bold">Out of Stock</p>' : '<p class="text-success font-weight-bold">In Stock</p>';
 
-                // Update stock availability message
-                const availabilityMessage = document.getElementById('availability-message');
-                if (stock == 0) {
-                    availabilityMessage.innerHTML = '<p class="text-danger">Out of Stock</p>';
-                } else {
-                    availabilityMessage.innerHTML = `<p class="text-success">In Stock</p>`;
-                }
+                updateThumbnails(newImages);
             });
         });
     });

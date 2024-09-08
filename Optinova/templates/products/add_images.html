@@ -9,25 +9,23 @@
         </div>
         <div class="card mb-4">
             <div class="card-body">
-                <form action="{% url 'add_images' variant.id %}" method="POST" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     <!-- Management form required for formsets -->
                     {{ image_formset.management_form }}
-                    
+                
                     <!-- Loop over formset forms to display individual file fields -->
-                    <div class="form-group">
-                        <label for="image-input">Select Images</label>
-                        <input type="file" id="image-input" name="images" accept="image/*" multiple required>
-                    </div>
-
-                    <!-- Preview Container for Selected Images -->
-                    <div id="image-preview" style="margin-top: 20px;">
-                        <!-- Image previews will be inserted here -->
-                    </div>
-
+                    {% for form in image_formset %}
+                        <div class="form-group">
+                            {{ form.image.label_tag }} <!-- This will label the input field correctly -->
+                            {{ form.image }}           <!-- This will generate the file input field for each form -->
+                        </div>
+                    {% endfor %}
+                
                     <button type="submit" class="btn btn-primary">Upload Images</button>
                 </form>
+                
             </div>
         </div>
     </section>

@@ -10,13 +10,18 @@
                     <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
                         <a href="{% url 'user_product_detail' product.id %}">
                             <div class="product__item">
-                                <!-- Product Image -->
-                                <div class="product__item__pic">
-                                    <img src="{{ product.images.first.image.url }}" alt="{{ product.name }}" class="img-fluid">
-                                    <ul class="product__hover">
-                                        <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
-                                    </ul>
-                                </div>
+                                <!-- Main Variant Image -->
+                                {% if product.main_variant and product.main_variant.images.all %}
+                                    <div class="product__item__pic">
+                                        <img src="{{ product.main_variant.images.all.0.image.url }}" alt="{{ product.name }}" class="img-fluid">
+                                        <ul class="product__hover">
+                                            <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted text-center">No images available for the main variant.</p>
+                                {% endif %}
+
                                 <div class="product__item__text">
                                     <!-- Product Name -->
                                     <h6>{{ product.name }}</h6>

@@ -216,6 +216,6 @@ class ProductImageForm(forms.ModelForm):
 ProductImageFormSet = forms.modelformset_factory(
     ProductImage, 
     form=ProductImageForm, 
-    extra=5,  # Adjust this for multiple images
+    extra=4,  # Adjust this for multiple images
     can_delete=True  # Allow the option to delete images
 )

@@ -146,32 +146,31 @@ def add_variant(request, product_id):
 @login_required(login_url='accounts:admin_login')
 @never_cache
 def add_images(request, variant_id):
+    # Get the variant to which the images will be associated
     variant = get_object_or_404(ProductVariant, id=variant_id)
-    print(variant)
+
     if request.method == 'POST':
-        print(request.FILES)  # Log the uploaded files
-        logger.info(f'Uploaded files: {request.FILES}')
+        # Bind the formset with request data and files
         image_formset = ProductImageFormSet(request.POST, request.FILES)
-        print(image_formset)
+
         if image_formset.is_valid():
-            print(image_formset)
+            # Iterate over each form in the formset
             for form in image_formset:
-                print(form)
-                if form.cleaned_data:
-                    image = form.save(commit=False)
-                    print(f'Form is valid, image: {image}')
-                    logger.info(f'Form is valid, image: {image}')
-                    image.variant = variant  # Associate the image with the correct variant
-                    image.save()
-                    print(image)
+                if form.cleaned_data:  # Ensure the form has valid data
+                    image = form.save(commit=False)  # Don't commit yet
+                    image.variant = variant  # Set the foreign key here
+                    image.save()  # Now save the image with the associated variant
+
+            # Redirect to product details or another relevant page after saving
             return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
         else:
-            print(image_formset.errors)  # Ensure formset errors are printed
-            logger.error(f'Form errors: {form.errors}')
+            # Print or log errors if the formset is invalid
+            print(image_formset.errors)
 
     else:
+        # Instantiate an empty formset for GET requests
         image_formset = ProductImageFormSet(queryset=ProductImage.objects.none())
-    
+
     return render(request, 'products/add_images.html', {
         'variant': variant,
         'image_formset': image_formset

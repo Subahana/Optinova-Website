@@ -112,7 +112,7 @@ def product_list(request):
 def add_product(request):
     if request.method == 'POST':
         product_form = ProductForm(request.POST)
-        if product_form.is_valid():
+        if product_form.is_valid() :
             product = product_form.save()
             return redirect('add_variant', product_id=product.id)
     else:

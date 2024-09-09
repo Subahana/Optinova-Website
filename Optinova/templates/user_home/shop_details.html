@@ -66,12 +66,31 @@
 
                     <!-- Availability -->
                     <div id="availability-message" class="mb-4">
-                        {% if product.main_variant.stock_quantity == 0 %}
-                            <p class="text-danger font-weight-bold">Out of Stock</p>
-                        {% else %}
-                            <p class="text-success font-weight-bold">In Stock</p>
-                        {% endif %}
+                        <div class="variant-stock" data-variant-id="{{ product.main_variant.id }}">
+                            <h5>{{ product.main_variant.name }}</h5>
+                            {% if product.main_variant.stock_quantity == 0 %}
+                                <p class="text-danger font-weight-bold">{{ product.main_variant.name }}: Out of Stock</p>
+                            {% else %}
+                                <p class="text-success font-weight-bold">{{ product.main_variant.name }}: In Stock ({{ product.main_variant.stock }} left)</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div id="other-variants" style="display: none;">
+                            {% for variant in product.variants.all %}
+                                {% if variant.id != product.main_variant.id %}
+                                <div class="variant-stock" data-variant-id="{{ variant.id }}">
+                                    <h5>{{ variant.name }}</h5>
+                                    {% if variant.stock_quantity == 0 %}
+                                        <p class="text-danger font-weight-bold">{{ variant.name }}: Out of Stock</p>
+                                    {% else %}
+                                    <p class="text-success font-weight-bold">{{ variant.name }}: In Stock ({{variant.stock }} left)</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
+
 
                     <!-- Product Variants -->
                     {% if product.variants.all %}
@@ -81,8 +100,9 @@
                             {% for variant in product.variants.all %}
                             <div class="variant-item p-2 mb-2" 
                                  data-price="{{ variant.price }}" 
-                                 data-stock="{{ variant.stock_quantity }}" 
+                                 data-stock="{{ variant.stock }}" 
                                  data-images="{% for img in variant.images.all %}{{ img.image.url }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                 data-variant-id="{{ variant.id }}"
                                  style="cursor: pointer; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background: #fff; transition: background 0.3s;">
                                 <div class="variant-color" 
                                      style="background-color: {{ variant.color|default:'#FFFFFF' }}; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #000; margin-right: 10px;"></div>
@@ -94,29 +114,27 @@
                     {% endif %}
 
                     <!-- Quantity selection -->
-                    {% if product.stock_quantity > 0 %}
-                        <div class="product__details__cart__option mb-4">
-                            <div class="quantity d-flex align-items-center mb-3">
-                                <span class="mr-3">Quantity:</span>
-                                <div class="pro-qty">
-                                    <input id="quantity-input" type="number" value="1" min="1" max="{{ product.stock_quantity }}">
-                                </div>
+                    <div class="product__details__cart__option mb-4">
+                        <div class="quantity d-flex align-items-center mb-3">
+                            <span class="mr-3">Quantity:</span>
+                            <div class="pro-qty">
+                                <input id="quantity-input" type="number" value="1" min="1" max="{{ product.stock_quantity }}">
                             </div>
-                            <a href="#" class="btn btn-primary">Add to Cart</a>
                         </div>
-                    {% else %}
-                        <p class="text-danger">This product is currently out of stock.</p>
-                    {% endif %}
+                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                    </div>
 
                     <!-- Description -->
                     <div class="product-description mt-4">
                         <h5 class="font-weight-bold">Description:</h5>
                         <p>{{ product.description }}</p>
                     </div>
+                    
                     <!-- Wishlist and Compare -->
                     <div class="product__details__btns__option mb-4">
                         <a href="#" class="btn btn-outline-primary mr-2"><i class="fa fa-heart"></i> Wishlist</a>
                     </div>
+
                     <!-- Additional Information -->
                     <div class="product__details__last__option">
                         <h5 class="mb-3">Guaranteed Safe Checkout</h5>
@@ -137,19 +155,19 @@
             {% for related_product in related_products %}
             <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                 <a href="{% url 'user_product_detail' related_product.id %}">
-                <div class="product-item border rounded bg-white shadow-sm">
-                    <div class="product-item-image position-relative">
-                        <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded" style="width: 100%; height: auto;">
-                        {% if related_product.is_new %}
-                        <span class="badge badge-success position-absolute top-0 start-0 m-2">New</span>
-                        {% endif %}
+                    <div class="product-item border rounded bg-white shadow-sm">
+                        <div class="product-item-image position-relative">
+                            <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded" style="width: 100%; height: auto;">
+                            {% if related_product.is_new %}
+                            <span class="badge badge-success position-absolute top-0 start-0 m-2">New</span>
+                            {% endif %}
+                        </div>
+                        <div class="product-item-info p-3">
+                            <h6 class="product-item-title">{{ related_product.name }}</h6>
+                            <p class="product-item-price">₹{{ related_product.price }}</p>
+                            <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary btn-sm">+ Add To Cart</a>
+                        </div>
                     </div>
-                    <div class="product-item-info p-3">
-                        <h6 class="product-item-title">{{ related_product.name }}</h6>
-                        <p class="product-item-price">₹{{ related_product.price }}</p>
-                        <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary btn-sm">+ Add To Cart</a>
-                    </div>
-                </div>
                 </a>
             </div>
             {% endfor %}
@@ -195,22 +213,18 @@
         // Event listener for mouse movement on the zoom image
         zoomImage.addEventListener('mousemove', function (e) {
             const rect = zoomImage.getBoundingClientRect();
-            const xPos = e.clientX - rect.left;
-            const yPos = e.clientY - rect.top;
+            const xPos = ((e.pageX - rect.left) / zoomImage.width) * 100;
+            const yPos = ((e.pageY - rect.top) / zoomImage.height) * 100;
 
-            const bgPosX = (xPos / rect.width) * 100;
-            const bgPosY = (yPos / rect.height) * 100;
-
-            zoomedImage.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+            zoomedImage.style.backgroundPosition = `${xPos}% ${yPos}%`;
             zoomedImage.style.display = 'block';
         });
 
-        // Hide zoomed image when not hovering
-        zoomImage.addEventListener('mouseleave', function () {
+        zoomImage.addEventListener('mouseout', function () {
             zoomedImage.style.display = 'none';
         });
 
-        // Thumbnail click event
+        // Update zoom image when clicking on a thumbnail
         thumbnailLinks.forEach(function (link) {
             link.addEventListener('click', function () {
                 const newImageSrc = link.getAttribute('data-image');
@@ -218,19 +232,35 @@
             });
         });
 
-        // Variant click event
-        document.querySelectorAll('.variant-item').forEach(function (variantItem) {
-            variantItem.addEventListener('click', function () {
-                const newPrice = variantItem.getAttribute('data-price');
-                const newStock = variantItem.getAttribute('data-stock');
-                const newImages = variantItem.getAttribute('data-images');
-                
-                document.getElementById('product-price').textContent = newPrice;
-                document.getElementById('availability-message').innerHTML = newStock == 0 ? '<p class="text-danger font-weight-bold">Out of Stock</p>' : '<p class="text-success font-weight-bold">In Stock</p>';
+        // Event listener for variant selection
+        const variantItems = document.querySelectorAll('.variant-item');
+variantItems.forEach(function (item) {
+    item.addEventListener('click', function () {
+        // Update price
+        const newPrice = item.getAttribute('data-price');
+        document.getElementById('product-price').innerText = newPrice;
 
-                updateThumbnails(newImages);
-            });
-        });
+        // Update stock message and quantity input
+        const newStock = item.getAttribute('data-stock');
+        const quantityInput = document.getElementById('quantity-input');
+        if (parseInt(newStock) === 0) {
+            
+            
+            document.getElementById('availability-message').innerHTML = '<p class="text-danger font-weight-bold">Out of Stock</p>';
+            quantityInput.disabled = true;
+        } else {
+            console.log("newStock : ",newStock);
+            document.getElementById('availability-message').innerHTML = `<p class="text-success font-weight-bold">${item.querySelector('span').innerText}: In Stock (${newStock} left)</p>`;
+            quantityInput.disabled = false;
+            quantityInput.max = newStock;
+        }
+
+        // Update product images
+        const newImages = item.getAttribute('data-images');
+        updateThumbnails(newImages);
+    });
+});
+
     });
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@ from django.utils import timezone
 # Custom User Model
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
-    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
 
     USERNAME_FIELD = 'email'  # Set email as the login field
     REQUIRED_FIELDS = ['username']  # Fields required when creating a superuser

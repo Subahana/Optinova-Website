@@ -2,13 +2,28 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import UserProfileForm, AddressForm, ProfilePictureForm,CustomPasswordChangeForm
-from .models import Address, Order 
+from .forms import *
+from .models import * 
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 
 
 User = get_user_model()
+
+
+
+@login_required(login_url='accounts:user_login_view')
+@never_cache
+def upload_profile_picture(request):
+    if request.method == 'POST':
+        form = ProfilePictureForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('user_profile')  # Redirect to profile page after saving
+    else:
+        form = ProfilePictureForm(instance=request.user)
+    return render(request, 'user_profile/upload_profile_picture.html', {'form': form})
+
 
 @login_required(login_url='accounts:user_login_view')
 @never_cache
@@ -52,19 +67,6 @@ def edit_profile(request):
         'form': form,
         'profile': user,  # Pass the user instance directly to the template
     })
-
-
-@login_required(login_url='accounts:user_login_view')
-@never_cache
-def edit_profile_pic(request):
-    if request.method == 'POST':
-        form = ProfilePictureForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('user_profile')  # Redirect to the profile page
-    else:
-        form = ProfilePictureForm(instance=request.user)
-    return render(request, 'user_profile/edit_profile_pic.html', {'form': form})
 
 
 @login_required(login_url='accounts:user_login_view')

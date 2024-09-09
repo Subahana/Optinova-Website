@@ -80,7 +80,14 @@ class ProductForm(forms.ModelForm):
         if len(description) < 10:
             raise ValidationError("Description must be at least 10 characters long.")
         return description
+    
+    def clean_category(self):
+        category = self.cleaned_data.get('category')
 
+        if category and not category.is_active:
+            raise forms.ValidationError("You cannot add a product to an inactive category.")
+        
+        return category
 
 class ProductVariantForm(forms.ModelForm):
     COLORS = [

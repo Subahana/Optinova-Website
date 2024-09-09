@@ -5,16 +5,27 @@
 <div class="profile-container">
     <!-- Profile Header -->
     <div class="profile-header">
-        <div class="profile-pic">
-            <img src="{% if user.profile.profile_picture %}{{ user.profile.profile_picture.url }}{% else %}{% static 'images/default_profile_icon.png' %}{% endif %}" alt="User Profile Picture">
+        <!-- Profile Picture Display -->
+        <div class="profile-picture">
+            <!-- Display the Profile Picture -->
+            <img src="{% if user.profile_picture %}{{ user.profile_picture.url }}{% else %}{% static 'images/default_profile_icon.png' %}{% endif %}" 
+                alt="User Profile Picture" 
+                style="width: 150px; height: 150px; border-radius: 50%;">
         </div>
         <div class="profile-info">
             <h2 class="profile-name">{{ user.first_name }} {{ user.last_name }}</h2>
             <p class="profile-email">{{ user.email }}</p>
         </div>
-        <div class="profile-actions">
-            <a href="{% url 'edit_profile_pic' %}" class="btn btn-outline-primary">Change Picture</a>
-        </div>
+            <!-- Profile Actions -->
+            <div class="profile-actions">
+                {% if user.profile_picture %}
+                    <!-- If a profile picture exists, show "Edit Picture" -->
+                    <a href="{% url 'upload_profile_picture' %}" class="btn btn-outline-primary">Edit Picture</a>
+                {% else %}
+                    <!-- If no profile picture exists, show "Add Picture" -->
+                    <a href="{% url 'upload_profile_picture' %}" class="btn btn-outline-primary">Add Picture</a>
+                {% endif %}
+            </div>
     </div>
     
     <!-- Profile Information Section -->

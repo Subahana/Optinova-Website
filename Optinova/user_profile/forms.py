@@ -3,6 +3,10 @@ from django.contrib.auth import get_user_model
 from .models import Address
 from accounts.models import CustomUser
 from django.contrib.auth.forms import PasswordChangeForm
+from PIL import Image 
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 User = get_user_model()
 
@@ -47,9 +51,50 @@ class ProfilePictureForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = ['profile_picture']
-        widgets = {
-            'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-        }
+
+    def save(self, *args, **kwargs):
+        user = super().save(commit=False)
+        profile_picture = self.cleaned_data.get('profile_picture')
+
+        if profile_picture:
+            # Open the image using Pillow
+            img = Image.open(profile_picture)
+
+            # Resize the image to 300x300 pixels (or any size you want)
+            img = img.resize((300, 300), Image.Resampling.LANCZOS)
+
+            # Crop the image to a square if it's not already
+            width, height = img.size
+            if width != height:
+                min_dim = min(width, height)
+                left = (width - min_dim) // 2
+                top = (height - min_dim) // 2
+                right = (width + min_dim) // 2
+                bottom = (height + min_dim) // 2
+                img = img.crop((left, top, right, bottom))
+
+            # Save the image to a BytesIO object
+            img_io = BytesIO()
+            img.save(img_io, format='JPEG')
+
+            # Create a new InMemoryUploadedFile for the profile picture
+            profile_picture_file = InMemoryUploadedFile(
+                img_io,  # file
+                'profile_picture',  # field name
+                profile_picture.name,  # file name
+                'image/jpeg',  # content type
+                sys.getsizeof(img_io),  # file size
+                None  # charset
+            )
+
+            # Assign the new file to the user's profile_picture field
+            user.profile_picture = profile_picture_file
+
+        # Save the user instance
+        user.save()
+        return user
+
+
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):

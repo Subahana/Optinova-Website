@@ -126,7 +126,6 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         return new_password2
 
 
-
 class AddressForm(forms.ModelForm):
     class Meta:
         model = Address

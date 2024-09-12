@@ -4,11 +4,12 @@ from django.views.decorators.cache import never_cache
 from products.models import Product, Category
 from django.contrib import messages
 from django.contrib.auth import logout
+from django.middleware.csrf import get_token
 
 
 @login_required(login_url='accounts:user_login_view')
 @never_cache
-def user_product_detail(request, product_id):   
+def user_product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
     # Check if the product is inactive
@@ -21,18 +22,24 @@ def user_product_detail(request, product_id):
         messages.warning(request, 'The category of this product is not active. Redirecting to the shop.')
         return redirect('shop')  # Redirect to the shop page
 
+    # Fetch the variant. Adjust as necessary for your use case.
+    variant = product.main_variant
+
     categories = Category.objects.filter(is_active=True)
     related_products = Product.objects.filter(
         category=product.category,
         is_active=True
-    ).exclude(id=product.id).order_by('?')[:4]  
-    
+    ).exclude(id=product.id).order_by('?')[:4]
+
     context = {
         'product': product,
+        'variant': variant,  # Include variant in the context
         'related_products': related_products,
         'categories': categories,
+        'csrf_token': get_token(request)
     }
     return render(request, 'user_home/shop_details.html', context)
+
 
 
 # View to show the shop page with product and category lists

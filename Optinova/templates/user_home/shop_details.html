@@ -2,16 +2,22 @@
 {% load static %}
 
 {% block content %}
-<!-- Breadcrumbs Section -->
-<nav aria-label="breadcrumb" class="bg-light py-3">
+<section class="breadcrumb-option">
     <div class="container">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{% url 'user_home' %}">Home</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'shop' %}">Shop</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
-        </ol>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <div class="breadcrumb__links">
+                        <a href="{% url 'user_home' %}">Home</a>
+                        <a href="{% url 'shop' %}">Shop</a>
+                        <span>Product</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</nav>
+</section>
+<!-- Breadcrumb Section End -->
 
 <!-- Product Details Section -->
 <section class="product-details py-5">
@@ -71,28 +77,12 @@
                             {% if product.main_variant.stock_quantity == 0 %}
                                 <p class="text-danger font-weight-bold">{{ product.main_variant.name }}: Out of Stock</p>
                             {% else %}
-                                <p class="text-success font-weight-bold">{{ product.main_variant.name }}: In Stock ({{ product.main_variant.stock }} left)</p>
+                                <p class="text-success font-weight-bold">{{ product.main_variant.name }}: In Stock ({{ product.main_variant.stock_quantity }} left)</p>
                             {% endif %}
-                        </div>
-                        
-                        <div id="other-variants" style="display: none;">
-                            {% for variant in product.variants.all %}
-                                {% if variant.id != product.main_variant.id %}
-                                <div class="variant-stock" data-variant-id="{{ variant.id }}">
-                                    <h5>{{ variant.name }}</h5>
-                                    {% if variant.stock_quantity == 0 %}
-                                        <p class="text-danger font-weight-bold">{{ variant.name }}: Out of Stock</p>
-                                    {% else %}
-                                    <p class="text-success font-weight-bold">{{ variant.name }}: In Stock ({{variant.stock }} left)</p>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
-                            {% endfor %}
                         </div>
                     </div>
 
-
-                    <!-- Product Variants -->
+                    <!-- Variants Selection -->
                     {% if product.variants.all %}
                     <div class="product-variants mb-4">
                         <h5 class="font-weight-bold">Variants:</h5>
@@ -100,7 +90,7 @@
                             {% for variant in product.variants.all %}
                             <div class="variant-item p-2 mb-2" 
                                  data-price="{{ variant.price }}" 
-                                 data-stock="{{ variant.stock }}" 
+                                 data-stock="{{ variant.stock_quantity }}" 
                                  data-images="{% for img in variant.images.all %}{{ img.image.url }}{% if not forloop.last %}, {% endif %}{% endfor %}"
                                  data-variant-id="{{ variant.id }}"
                                  style="cursor: pointer; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background: #fff; transition: background 0.3s;">
@@ -111,18 +101,17 @@
                             {% endfor %}
                         </div>
                     </div>
+                    
+                    <form id="add-to-cart-form" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="variant_id" id="selected-variant-id" value="{{ product.main_variant.id }}">
+                        <input type="number" name="quantity" id="quantity-input" value="1" min="1">
+                        <button type="submit" class="btn btn-primary mt-3">Add to Cart</button>
+                    </form>
+                    
+                    {% else %}
+                    <p>Variant not available</p>
                     {% endif %}
-
-                    <!-- Quantity selection -->
-                    <div class="product__details__cart__option mb-4">
-                        <div class="quantity d-flex align-items-center mb-3">
-                            <span class="mr-3">Quantity:</span>
-                            <div class="pro-qty">
-                                <input id="quantity-input" type="number" value="1" min="1" max="{{ product.stock_quantity }}">
-                            </div>
-                        </div>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
-                    </div>
 
                     <!-- Description -->
                     <div class="product-description mt-4">
@@ -130,7 +119,7 @@
                         <p>{{ product.description }}</p>
                     </div>
                     
-                    <!-- Wishlist and Compare -->
+                    <!-- Wishlist -->
                     <div class="product__details__btns__option mb-4">
                         <a href="#" class="btn btn-outline-primary mr-2"><i class="fa fa-heart"></i> Wishlist</a>
                     </div>
@@ -175,92 +164,161 @@
     </div>
 </section>
 
-<script type="text/javascript">
+<style>
+     /* General Styles */
+     body {
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #f4f4f4;
+        }
+
+        /* Breadcrumb Section */
+        .breadcrumb-option {
+            background-color: #003366; /* Dark blue background */
+            padding: 20px 0;
+        }
+
+        .breadcrumb__text h4 {
+            font-size: 26px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .breadcrumb__links a, 
+        .breadcrumb__links span {
+            font-size: 15px;
+            color: #b0b0b0;
+        }
+
+        .breadcrumb__links a:hover {
+            color: #0099ff; /* Light blue on hover */
+        }
+
+</style>
+<script>
+    var csrfToken = '{{ csrf_token }}';
+</script>
+<script>
     document.addEventListener('DOMContentLoaded', function () {
-        const zoomImage = document.getElementById('zoom-image');
-        const zoomedImage = document.getElementById('zoomed-image');
-        const thumbnailLinks = document.querySelectorAll('.thumbnail-link');
+    const zoomImage = document.getElementById('zoom-image');
+    const zoomedImage = document.getElementById('zoomed-image');
+    const variantItems = document.querySelectorAll('.variant-item');
+    const addToCartForm = document.getElementById('add-to-cart-form');
+    const quantityInput = document.getElementById('quantity-input');
+    const variantIdInput = document.getElementById('selected-variant-id');
 
-        // Function to update zoom image
-        function updateZoomImage(src) {
-            zoomImage.src = src;
-            zoomedImage.style.backgroundImage = `url(${src})`;
-        }
+    // Function to update zoom image
+    function updateZoomImage(src) {
+        zoomImage.src = src;
+        zoomedImage.style.backgroundImage = `url(${src})`;
+    }
 
-        // Function to update thumbnails for the selected variant
-        function updateThumbnails(images) {
-            const thumbnailContainer = document.querySelector('.thumbnail-container');
-            thumbnailContainer.innerHTML = '';
-            images.split(', ').forEach(imageUrl => {
-                const thumbHtml = `
-                    <div class="thumbnail-item mx-1">
-                        <a href="javascript:void(0);" class="thumbnail-link" data-image="${imageUrl}">
-                            <img src="${imageUrl}" alt="Thumbnail" class="img-thumbnail rounded shadow-sm" style="width: 70px; height: 70px; object-fit: cover;">
-                        </a>
-                    </div>`;
-                thumbnailContainer.insertAdjacentHTML('beforeend', thumbHtml);
-            });
-
-            // Re-apply event listeners to the new thumbnails
-            document.querySelectorAll('.thumbnail-link').forEach(function (link) {
-                link.addEventListener('click', function () {
-                    const newImageSrc = link.getAttribute('data-image');
-                    updateZoomImage(newImageSrc);
-                });
-            });
-        }
-
-        // Event listener for mouse movement on the zoom image
-        zoomImage.addEventListener('mousemove', function (e) {
-            const rect = zoomImage.getBoundingClientRect();
-            const xPos = ((e.pageX - rect.left) / zoomImage.width) * 100;
-            const yPos = ((e.pageY - rect.top) / zoomImage.height) * 100;
-
-            zoomedImage.style.backgroundPosition = `${xPos}% ${yPos}%`;
-            zoomedImage.style.display = 'block';
+    // Function to update thumbnails for the selected variant
+    function updateThumbnails(images) {
+        const thumbnailContainer = document.querySelector('.thumbnail-container');
+        thumbnailContainer.innerHTML = '';
+        images.split(', ').forEach(imageUrl => {
+            const thumbHtml = `
+                <div class="thumbnail-item mx-1">
+                    <a href="javascript:void(0);" class="thumbnail-link" data-image="${imageUrl}">
+                        <img src="${imageUrl}" alt="Thumbnail" class="img-thumbnail rounded shadow-sm" style="width: 70px; height: 70px; object-fit: cover;">
+                    </a>
+                </div>`;
+            thumbnailContainer.insertAdjacentHTML('beforeend', thumbHtml);
         });
 
-        zoomImage.addEventListener('mouseout', function () {
-            zoomedImage.style.display = 'none';
-        });
-
-        // Update zoom image when clicking on a thumbnail
-        thumbnailLinks.forEach(function (link) {
+        document.querySelectorAll('.thumbnail-link').forEach(link => {
             link.addEventListener('click', function () {
                 const newImageSrc = link.getAttribute('data-image');
                 updateZoomImage(newImageSrc);
             });
         });
+    }
 
-        // Event listener for variant selection
-        const variantItems = document.querySelectorAll('.variant-item');
-variantItems.forEach(function (item) {
-    item.addEventListener('click', function () {
-        // Update price
-        const newPrice = item.getAttribute('data-price');
-        document.getElementById('product-price').innerText = newPrice;
+    // Event listener for variant selection
+    variantItems.forEach(item => {
+        item.addEventListener('click', function () {
+            const newPrice = item.getAttribute('data-price');
+            document.getElementById('product-price').innerText = newPrice;
 
-        // Update stock message and quantity input
-        const newStock = item.getAttribute('data-stock');
-        const quantityInput = document.getElementById('quantity-input');
-        if (parseInt(newStock) === 0) {
-            
-            
-            document.getElementById('availability-message').innerHTML = '<p class="text-danger font-weight-bold">Out of Stock</p>';
-            quantityInput.disabled = true;
-        } else {
-            console.log("newStock : ",newStock);
-            document.getElementById('availability-message').innerHTML = `<p class="text-success font-weight-bold">${item.querySelector('span').innerText}: In Stock (${newStock} left)</p>`;
-            quantityInput.disabled = false;
-            quantityInput.max = newStock;
-        }
+            const newStock = item.getAttribute('data-stock');
+            if (parseInt(newStock) === 0) {
+                document.getElementById('availability-message').innerHTML = '<p class="text-danger font-weight-bold">Out of Stock</p>';
+                quantityInput.disabled = true;
+            } else {
+                document.getElementById('availability-message').innerHTML = `<p class="text-success font-weight-bold">In Stock ${newStock} left</p>`;
+                quantityInput.disabled = false;
+                quantityInput.max = newStock;
+            }
 
-        // Update product images
-        const newImages = item.getAttribute('data-images');
-        updateThumbnails(newImages);
+            const newImages = item.getAttribute('data-images');
+            updateThumbnails(newImages);
+
+            const variantId = item.getAttribute('data-variant-id');
+            variantIdInput.value = variantId;
+            addToCartForm.action = `/cart_management/add_to_cart/${variantId}/`;
+        });
     });
+
+    // Add to cart form submission using Axios
+        addToCartForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const variantId = variantIdInput.value;
+        const quantity = quantityInput.value;
+        const url = `/cart_management/add_to_cart/${variantId}/`;
+
+        // Use FormData to mimic form submission
+        const formData = new FormData();
+        formData.append('variant_id', variantId);
+        formData.append('quantity', quantity);
+
+        console.log('Submitting form with variant ID:', variantId);
+        console.log('FormData:', Array.from(formData.entries()));
+
+        axios.post(url, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'X-CSRFToken': csrfToken 
+            },
+        })
+        .then(response => {
+            console.log(response.data);
+            if (response.data.status === 'success') {
+                alert(response.data.message);
+            } else {
+                alert(response.data.message);
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        })
+        .catch(error => {
+            console.error('There was an error:', error);
+        });
+    });
+
+
 });
 
-    });
 </script>
+
 {% endblock %}

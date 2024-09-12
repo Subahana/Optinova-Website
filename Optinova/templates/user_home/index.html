@@ -37,8 +37,7 @@
                                             </div>
                                         </div>
                                     {% endif %}
-                                    <!-- Add to Cart Button -->
-                                    <a href="#" class="add-cart mt-2 btn btn-primary">+ Add To Cart</a>
+                                    <a href="{% url 'user_product_detail' product.id %}" class="add-cart mt-2 btn btn-primary">Product_Detail</a>
                                     <!-- Main Variant Price -->
                                     <h5 class="mt-2">₹{{ product.main_variant.price }}</h5>
                                 </div>

@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/slicknav.min.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 
 </head>
@@ -44,10 +45,7 @@
         <div class="offcanvas__links">
             {% if user.is_authenticated %}
             <p style="display: inline; margin-right: 10px; color: #fff;">
-                Welcome,
-                <a href="{% url 'user_profile' %}" style="color: #fff; text-decoration: none;">
-                    <i class="fas fa-user-circle"></i> <!-- Profile icon -->
-                    {{ user.username }}
+                Welcome,{{ user.username }}
                 </a>
             </p>
             <a href="{% url 'logout_view' %}" style="color: #ff6b6b;">Log Out</a>
@@ -70,7 +68,7 @@
 
 <!-- Header Section Begin -->
 <header class="header">
-    <div class="header__top">
+    <div class="header__top" style="background-color: #003366;">
         <div class="container">
             <div class="row">
                 <div class="col-lg-6 col-md-7">
@@ -121,7 +119,9 @@
                 <div class="header__nav__option">
                     <a href="#" class="search-switch"><img src="{% static 'img/icon/search.png' %}" alt="Search"></a>
                     <a href="#"><img src="{% static 'img/icon/heart.png' %}" alt="Favorites"></a>
-                    <a href="#"><img src="{% static 'img/icon/cart.png' %}" alt="Cart"> <span>0</span></a>
+                    <a href="{% url 'cart_detail' %}"><img src="{% static 'img/icon/cart.png' %}" alt="Cart"> <span>0</span></a>
+                    <a href="{% url 'user_profile' %}" style="color: #000000; text-decoration: none;">
+                        <i class="fas fa-user-circle"></i> 
                 </div>
             </div>
         </div>
@@ -232,7 +232,7 @@
             }
         });
     });</script>
-
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>

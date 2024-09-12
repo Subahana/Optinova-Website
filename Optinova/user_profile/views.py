@@ -2,15 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import *
-from .models import * 
+from .forms import UserProfileForm,ProfilePictureForm,CustomPasswordChangeForm,AddressForm
+from .models import Address
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 
 
 User = get_user_model()
-
-
 
 @login_required(login_url='accounts:user_login_view')
 @never_cache
@@ -29,7 +27,6 @@ def upload_profile_picture(request):
 @never_cache
 def user_profile(request):
     user = request.user
-    orders = user.orders.all()
     addresses = user.addresses.all()
     
     if request.method == 'POST':
@@ -43,7 +40,6 @@ def user_profile(request):
 
     context = {
         'profile_form': profile_form,
-        'orders': orders,
         'addresses': addresses,
     }
     return render(request, 'user_profile/user_profile_page.html', context)
@@ -122,16 +118,3 @@ def delete_address(request, address_id):
         return redirect('user_profile')  # or wherever you want to redirect after deletion
     return redirect('user_profile')
 
-
-@login_required(login_url='accounts:user_login_view')
-@never_cache
-def cancel_order(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    if order.status == 'Pending':
-        order.status = 'Canceled'
-        order.save()
-        messages.success(request, 'Order has been canceled.')
-    else:
-        messages.error(request, 'Order cannot be canceled.')
-
-    return redirect('user_profile')

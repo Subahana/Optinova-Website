@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import *
+from .models import Product,ProductVariant,ProductImage,Category
 from django.contrib import messages
-from .forms import *
+from .forms import ProductForm,CategoryForm,ProductImageForm,ProductImageFormSet,ProductVariantForm
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse

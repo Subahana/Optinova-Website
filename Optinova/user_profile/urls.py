@@ -10,5 +10,4 @@ urlpatterns = [
     path('edit_address/', views.edit_address, name='edit_address'),
     path('delete_address/<int:address_id>/', views.delete_address, name='delete_address'),
     path('edit_address/<int:address_id>/', views.edit_address, name='edit_address'),
-    path('cancel_order/<int:order_id>/', views.cancel_order, name='cancel_order'),
 ]

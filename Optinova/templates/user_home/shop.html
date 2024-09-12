@@ -2,16 +2,26 @@
 {% load static %}
 
 {% block content %}
+    <!-- Breadcrumb Section Begin -->
+    <section class="breadcrumb-option">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="breadcrumb__text">
+                        <h4>Shop</h4>
+                        <div class="breadcrumb__links">
+                            <a href="{% url 'user_home' %}">Home</a>
+                            <span>Shop</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Breadcrumb Section End -->
     <!-- Shop Section Begin -->
     <section class="shop spad">
         <div class="container">
-                        <!-- Breadcrumb Section Begin -->
-            <nav aria-label="breadcrumb" class="mb-4">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'user_home' %}">Home</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Shope</li>
-                </ol>
-            </nav>
             <div class="row">
                 <div class="col-lg-3">
                     <div class="shop__sidebar">
@@ -230,7 +240,7 @@
                                                     </div>
                                                 {% endif %}
                                                 <!-- Add to Cart Button -->
-                                                <a href="#" class="add-cart mt-2 btn btn-primary">+ Add To Cart</a>
+                                                <a href="{% url 'user_product_detail' product.id %}" class="add-cart mt-2 btn btn-primary">Product_Detail</a>
                                                 <!-- Main Variant Price -->
                                                 <h5 class="mt-2">₹{{ product.main_variant.price }}</h5>
                                             </div>
@@ -261,6 +271,35 @@
     <!-- Shop Section End -->
 
     <style>
+         /* General Styles */
+         body {
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #f4f4f4;
+        }
+
+        /* Breadcrumb Section */
+        .breadcrumb-option {
+            background-color: #003366; /* Dark blue background */
+            padding: 20px 0;
+        }
+
+        .breadcrumb__text h4 {
+            font-size: 26px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .breadcrumb__links a, 
+        .breadcrumb__links span {
+            font-size: 15px;
+            color: #b0b0b0;
+        }
+
+        .breadcrumb__links a:hover {
+            color: #0099ff; /* Light blue on hover */
+        }
+
         .product__variants {
             margin-top: 15px;
         }

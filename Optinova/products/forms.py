@@ -1,5 +1,5 @@
 from django import forms
-from .models import *
+from .models import Product,ProductImage,ProductVariant,Category
 import re
 from PIL import Image as PILImage
 import io

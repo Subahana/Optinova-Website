@@ -60,20 +60,16 @@
                         
                                         <!-- Quantity with increase/decrease buttons -->
                                         <td class="quantity__item">
-                                            <form action="" method="post">
+                                            <form method="post" class="quantity-form" data-item-id="{{ item.id }}">
                                                 {% csrf_token %}
                                                 <div class="quantity">
-                                                    <div class="pro-qty-2">
-                                                        <form action="" method="post" class="quantity-form" data-item-id="{{ item.id }}">
-                                                            {% csrf_token %}
-                                                            <button type="submit" class="quantity-btn decrease">-</button>
-                                                            <input type="text" value="{{ item.quantity }}" name="quantity" readonly>
-                                                            <button type="submit" class="quantity-btn increase">+</button>
-                                                        </form>
-                                                    </div>
+                                                    <button type="button" class="quantity-btn decrease" data-action="decrease">-</button>
+                                                    <input type="text" name="quantity" value="{{ item.quantity }}" readonly>
+                                                    <button type="button" class="quantity-btn increase" data-action="increase">+</button>
                                                 </div>
                                             </form>
                                         </td>
+                                        
                         
                                         <!-- Total Price -->
                                         <td class="cart__price">₹{{ item.total_price }}</td>
@@ -107,11 +103,6 @@
                             <div class="col-lg-6 col-md-6 col-sm-6">
                                 <div class="continue__btn">
                                     <a href="{% url 'shop' %}">Continue Shopping</a>
-                                </div>
-                            </div>
-                            <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="continue__btn update__btn">
-                                        <button type="submit"><i class="fa fa-spinner"></i> Update Cart</button>
                                 </div>
                             </div>
                         </div>
@@ -350,53 +341,56 @@
         }
 
     </style>
-
+<script>
+    var csrfToken = '{{ csrf_token }}';  // This line sets the CSRF token
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-     document.querySelectorAll('.quantity-btn').forEach(button => {
-         button.addEventListener('click', function(e) {
-             e.preventDefault();
+        document.querySelectorAll('.quantity-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const form = this.closest('form');
+                const input = form.querySelector('input[name="quantity"]');
+                let quantity = parseInt(input.value, 10);
+                const itemId = form.dataset.itemId;  // Make sure item.id is passed correctly
+                const action = this.getAttribute('data-action');
 
-             const form = this.closest('form');
-             const input = form.querySelector('input[name="quantity"]');
-             const itemId = form.dataset.data-item-id;  // Assuming each form has a data attribute for the item ID
-             let quantity = parseInt(input.value, 10);
+                // Adjust the quantity based on the button clicked
+                if (action === 'increase') {
+                    quantity += 1;
+                } else if (action === 'decrease' && quantity > 1) {
+                    quantity -= 1;
+                }
+                
+                // Update the input field with the new quantity
+                input.value = quantity;
 
-             // Adjust the quantity based on the button clicked
-             if (this.classList.contains('increase')) {
-                 quantity += 1;
-             } else if (this.classList.contains('decrease') && quantity > 1) {
-                 quantity -= 1;
-             }
-             
-             input.value = quantity;  // Update the input field with the new quantity
-             
-             // Get CSRF token (make sure you have a valid CSRF token in your template)
-             const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
- 
-             // Use Axios to send the updated quantity to the server
-             axios.post(`/update_cart_item_quantity/${itemId}`, {  // Corrected to use itemId
-                 cart_item_id: itemId,
-                 quantity: quantity
-             }, {
-                 headers: {
-                     'X-CSRFToken': csrftoken
-                 }
-             })
-             .then(function (response) {
-                 console.log(response.data);
-                 // Optionally, update the UI with new data, such as updating total price, subtotal, etc.
-                 alert('Cart updated successfully!');
-             })
-             .catch(function (error) {
-                 console.error(error);
-                 alert('There was an error updating the cart. Please try again.');
-             });
-         });
-     });
- });
- </script>
- 
-    
-    
+                const formData = new FormData();
+                formData.append('item_id', itemId);
+                formData.append('quantity', quantity);
+
+                // Use Axios to send the updated quantity to the server
+                axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
+                    headers: {
+                        'X-CSRFToken': csrfToken  // Make sure to use csrfToken
+                    }
+                })
+                .then(function (response) {
+                    if (response.data.success) {
+                        // Optionally, update the UI with new data, such as total price
+                        console.log('Cart updated successfully:', response.data);
+                        // alert('Cart updated successfully!');
+                    } else {
+                        console.error('Failed to update cart:', response.data.error);
+                    }
+                })
+                .catch(function (error) {
+                    console.error('Error updating cart:', error);
+                    alert('Error updating cart. Please try again.');
+                });
+            });
+        });
+    });
+</script>
+
 {% endblock %}

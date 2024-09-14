@@ -6,7 +6,6 @@ from products.models import ProductVariant
 from django.contrib import messages
 from .models import CartItem
 from django.middleware.csrf import get_token
-import json
 
 @login_required(login_url='accounts:user_login_view')
 def add_to_cart(request, variant_id):
@@ -20,30 +19,40 @@ def add_to_cart(request, variant_id):
         except ValueError:
             return JsonResponse({'message': 'Invalid quantity', 'status': 'error'})
 
+        # Retrieve the variant and user information
         variant = get_object_or_404(ProductVariant, id=variant_id)
         user = request.user  
+
+        # Check if the item is out of stock
         if variant.stock <= 0:
             return JsonResponse({'message': 'Out of stock', 'status': 'error'})
 
-        cart, created = Cart.objects.get_or_create(user=user)
+        # Retrieve or create the user's cart and the corresponding cart item
+        cart, _ = Cart.objects.get_or_create(user=user)
         cart_item, created = CartItem.objects.get_or_create(cart=cart, variant=variant)
+
+        # If the cart item already exists, calculate the new total quantity
         new_quantity = cart_item.quantity + quantity if not created else quantity
 
+        # Validate stock availability
         if new_quantity > variant.stock:
             return JsonResponse({
-                'message': f'Only {variant.stock - cart_item.quantity} units are left to Add in Cart',
+                'message': f'Only {variant.stock - cart_item.quantity} units are left to add to the cart',
                 'status': 'error'
             })
 
+        # Validate the maximum allowed quantity per item (e.g., 10 units)
         if new_quantity > 10:
             return JsonResponse({
                 'message': 'You cannot add more than 10 units of this item',
                 'status': 'error'
             })
 
+        # Update the cart item quantity and save it
         cart_item.quantity = new_quantity
         cart_item.save()
 
+        # Return a success response to indicate the item was successfully added
         return JsonResponse({'message': 'Item added to cart successfully', 'status': 'success'})
     else:
         return JsonResponse({'message': 'Invalid request method', 'status': 'error'})
@@ -96,11 +105,12 @@ def remove_from_cart(request, cart_item_id):
 def update_cart_item_quantity(request, item_id):
     if request.method == 'POST':
         try:
+            # Retrieve the new quantity from the request
             new_quantity = int(request.POST.get('quantity'))
             cart_item = CartItem.objects.get(id=item_id)
 
             # Check if new quantity is greater than available stock
-            available_stock = cart_item.variant.stock  # Assuming 'stock' field exists in ProductVariant model
+            available_stock = cart_item.variant.stock 
             if new_quantity > available_stock:
                 return JsonResponse({
                     'success': False,
@@ -108,13 +118,17 @@ def update_cart_item_quantity(request, item_id):
                 })
 
             if new_quantity > 0:
+                # Update the quantity of the cart item
                 cart_item.quantity = new_quantity
                 cart_item.save()
 
+                # Calculate the total price for the updated quantity
                 item_total_price = cart_item.quantity * cart_item.variant.price
                 cart = cart_item.cart
-                cart_total_price = cart.get_total_price()  # Ensure this method exists in Cart model
-                
+
+                # Ensure the Cart model has a method to calculate the total price
+                cart_total_price = cart.get_total_price()
+
                 return JsonResponse({
                     'success': True,
                     'item_quantity': cart_item.quantity,

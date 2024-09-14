@@ -223,7 +223,8 @@
         const quantityInput = document.getElementById('quantity-input');
         const variantIdInput = document.getElementById('selected-variant-id');
         const stockMessage = document.getElementById('availability-message');
-        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
         // Show zoom image on hover
         zoomImage.addEventListener('mouseenter', function () {
             zoomedImage.style.display = 'block';
@@ -273,12 +274,25 @@
                 link.addEventListener('click', function () {
                     const newImageSrc = link.getAttribute('data-image');
                     updateZoomImage(newImageSrc);
+
+                    // Remove 'selected' class from other thumbnails
+                    document.querySelectorAll('.thumbnail-link').forEach(thumb => {
+                        thumb.classList.remove('selected');
+                    });
+                    // Add 'selected' class to the clicked thumbnail
+                    link.classList.add('selected');
                 });
             });
         }
 
         // Attach initial thumbnail event listeners
         attachThumbnailEventListeners();
+
+        // Function to update quantity buttons
+        function updateQuantityButtons(newQuantity, maxStock) {
+            document.getElementById('decrement-btn').disabled = newQuantity <= 1;
+            document.getElementById('increment-btn').disabled = newQuantity >= maxStock;
+        }
 
         // Event listener for variant selection
         variantItems.forEach(item => {
@@ -293,11 +307,13 @@
                 if (stockLeft === 0) {
                     stockMessage.innerHTML = '<p class="text-danger font-weight-bold">Out of Stock</p>';
                     quantityInput.disabled = true;
+                    document.getElementById('increment-btn').disabled = true;
                 } else {
                     stockMessage.innerHTML = `<p class="text-success font-weight-bold">In Stock: ${stockLeft} left</p>`;
                     quantityInput.disabled = false;
                     quantityInput.max = stockLeft; // Set max quantity to available stock
                     quantityInput.value = 1; // Reset the quantity to 1 on variant change
+                    updateQuantityButtons(1, stockLeft);
                 }
 
                 // Update thumbnails
@@ -310,32 +326,30 @@
                 addToCartForm.action = `/cart_management/add_to_cart/${variantId}/`;
             });
         });
-    // Decrement button
-    document.getElementById('decrement-btn').addEventListener('click', function () {
-        changeQuantity(-1);
-    });
 
-    // Increment button
-    document.getElementById('increment-btn').addEventListener('click', function () {
-        changeQuantity(1);
-    });
+        // Decrement button
+        document.getElementById('decrement-btn').addEventListener('click', function () {
+            changeQuantity(-1);
+        });
 
-    // Function to change the quantity
-    function changeQuantity(amount) {
-        let currentQuantity = parseInt(quantityInput.value);
-        let newQuantity = currentQuantity + amount;
+        // Increment button
+        document.getElementById('increment-btn').addEventListener('click', function () {
+            changeQuantity(1);
+        });
 
-        if (newQuantity < 1) {
-            newQuantity = 1;  // Ensure quantity is at least 1
+        // Function to change the quantity
+        function changeQuantity(amount) {
+            let currentQuantity = parseInt(quantityInput.value);
+            let newQuantity = currentQuantity + amount;
+
+            if (newQuantity < 1) newQuantity = 1;
+            const maxStock = parseInt(quantityInput.max);
+            if (newQuantity > maxStock) newQuantity = maxStock;
+
+            quantityInput.value = newQuantity;
+            updateQuantityButtons(newQuantity, maxStock);
         }
 
-        const maxStock = parseInt(quantityInput.max);
-        if (newQuantity > maxStock) {
-            newQuantity = maxStock;  // Ensure quantity doesn't exceed stock
-        }
-
-        quantityInput.value = newQuantity;
-    }
         // Add to cart form submission using Axios
         addToCartForm.addEventListener('submit', function (e) {
             e.preventDefault(); // Prevent default form submission
@@ -343,7 +357,7 @@
             const variantId = variantIdInput.value;
             const quantity = quantityInput.value;
 
-              // Basic validation for quantity
+            // Basic validation for quantity
             if (!quantity || quantity <= 0 || quantity > quantityInput.max) {
                 Swal.fire({
                     icon: 'error',
@@ -359,14 +373,13 @@
 
             // Use FormData to mimic form submission
             const formData = new FormData();
-            formData.append('variant_id', variantId);
             formData.append('quantity', quantity);
 
             // Send the request using Axios
             axios.post(url, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    'X-CSRFToken': csrfToken // Ensure you have a valid CSRF token
+                    'X-CSRFToken': csrfToken, // Ensure CSRF token is correctly passed
                 },
             })
             .then(response => {
@@ -377,7 +390,7 @@
                         text: response.data.message,
                         confirmButtonColor: '#28a745',
                         confirmButtonText: 'OK',
-                    });                
+                    });
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -400,6 +413,9 @@
         });
     });
 </script>
+
+
+
 
 
 {% endblock %}

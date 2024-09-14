@@ -22,114 +22,106 @@
     </section>
     <!-- Breadcrumb Section End -->
     
-        <!-- Shopping Cart Section Begin -->
-        <section class="shopping-cart spad">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-8">
-                        <!-- cart_management/cart_detail.html -->
-
-                        <div class="shopping__cart__table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Total</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in cart_items %}
-                                    <tr>
-                                        <!-- Product Information -->
-                                        <td class="product__cart__item">
-                                            <div class="product__cart__item__pic">
-                                                {% if item.variant.images.exists %}
-                                                    <img src="{{ item.variant.images.first.image.url }}" alt="Product Image">
-                                                {% else %}
-                                                    <img src="{% static 'img/shopping-cart/default-image.jpg' %}" alt="Default Image">
-                                                {% endif %}
-                                            </div>
-                                            <div class="product__cart__item__text">
-                                                <h6><a href="{% url 'user_product_detail' item.variant.product.id  %}">{{ item.variant.product.name }}</a></h6>
-                                                <h6>{{ item.variant.product.name }} - {{ item.variant.name }}</h6>
-                                                <h5>${{ item.variant.price }}</h5>
-                                            </div>
-                                        </td>
-                        
-                                        <!-- Quantity with increase/decrease buttons -->
-                                        <td class="quantity__item">
-                                            <form method="post" class="quantity-form" data-item-id="{{ item.id }}">
-                                                {% csrf_token %}
-                                                <div class="quantity">
-                                                    <button type="button" class="quantity-btn decrease" data-action="decrease">-</button>
-                                                    <input type="text" name="quantity" value="{{ item.quantity }}" readonly>
-                                                    <button type="button" class="quantity-btn increase" data-action="increase">+</button>
-                                                </div>
-                                            </form>
-                                        </td>
-                                        
-                        
-                                        <!-- Total Price -->
-                                        <td class="cart__price">₹{{ item.total_price }}</td>
-                        
-                                        <!-- Remove from cart button -->
-                                        <td class="cart__close">
-                                            {% if item.id %}
-                                                <a href="{% url 'remove_from_cart' item.id %}">
-                                                    <i class="fa fa-close"></i>
-                                                </a>
+    <!-- Shopping Cart Section Begin -->
+    <section class="shopping-cart spad">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="shopping__cart__table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <!-- Product Information -->
+                                    <td class="product__cart__item">
+                                        <div class="product__cart__item__pic">
+                                            {% if item.variant.images.exists %}
+                                                <img src="{{ item.variant.images.first.image.url }}" alt="Product Image">
                                             {% else %}
-                                                <span>Invalid item</span>
+                                                <img src="{% static 'img/shopping-cart/default-image.jpg' %}" alt="Default Image">
                                             {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="4">Your cart is empty.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-
-                        <div class="cart__total">
-                            <h5>Total: ₹{{ total_price }}</h5>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="continue__btn">
-                                    <a href="{% url 'shop' %}">Continue Shopping</a>
-                                </div>
+                                        </div>
+                                        <div class="product__cart__item__text">
+                                            <h6><a href="{% url 'user_product_detail' item.variant.product.id  %}">{{ item.variant.product.name }}</a></h6>
+                                            <h6>{{ item.variant.product.name }} - {{ item.variant.name }}</h6>
+                                            <h5>${{ item.variant.price }}</h5>
+                                        </div>
+                                    </td>
+                                
+                                    <!-- Quantity with increase/decrease buttons -->
+                                    <td class="quantity__item">
+                                        <form method="post" class="quantity-form" data-item-id="{{ item.id }}" data-item-stock="{{ item.variant.stock }}">
+                                            {% csrf_token %}
+                                            <div class="quantity">
+                                                <button type="button" class="quantity-btn decrease" data-action="decrease">-</button>
+                                                <input type="text" name="quantity" value="{{ item.quantity }}" readonly>
+                                                <button type="button" class="quantity-btn increase" data-action="increase">+</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    
+                                    <!-- Total Price -->
+                                    <td class="cart__price">₹{{ item.total_price }}</td>
+                                
+                                    <!-- Remove from cart button -->
+                                    <td class="cart__close">
+                                        {% if item.id %}
+                                            <a href="{% url 'remove_from_cart' item.id %}">
+                                                <i class="fa fa-close"></i>
+                                            </a>
+                                        {% else %}
+                                            <span>Invalid item</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4">Your cart is empty.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="cart__total">
+                        <h5>Total: ₹{{ total_price }}</h5>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-lg-6 col-md-6 col-sm-6">
+                            <div class="continue__btn">
+                                <a href="{% url 'shop' %}">Continue Shopping</a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="cart__discount">
-                            <h6>Discount Codes</h6>
-                            <form action="#">
-                                <input type="text" placeholder="Coupon Code">
-                                <button type="submit">Apply</button>
-                            </form>
-                        </div>
-                        <div class="cart__total">
-                            <h6>Cart Total</h6>
-                            <ul>
-                                <li>Items <span>{{ total_items }}</span></li> <!-- Number of items in the cart -->
-                                <li>Subtotal <span>${{ total_price }}</span></li>
-                                <li>Total <span>${{ total_price }}</span></li>
-                            </ul>
-                            <a href="" class="primary-btn">Proceed to Checkout</a> <!-- Checkout link -->
-                        </div>
-                        
+                </div>
+                <div class="col-lg-4">
+                    <div class="cart__discount">
+                        <h6>Discount Codes</h6>
+                        <form action="#">
+                            <input type="text" placeholder="Coupon Code">
+                            <button type="submit">Apply</button>
+                        </form>
+                    </div>
+                    <div class="cart__total">
+                        <h6>Cart Total</h6>
+                        <ul>
+                            <li>Items <span>{{ total_items }}</span></li>
+                            <li>Subtotal <span>${{ total_price }}</span></li>
+                            <li>Total <span>${{ total_price }}</span></li>
+                        </ul>
+                        <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
                     </div>
                 </div>
             </div>
-        </section>
-    
+        </div>
+    </section>
     
     <!-- Shopping Cart Section End -->
 
@@ -346,51 +338,60 @@
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.quantity-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const form = this.closest('form');
-                const input = form.querySelector('input[name="quantity"]');
-                let quantity = parseInt(input.value, 10);
-                const itemId = form.dataset.itemId;  // Make sure item.id is passed correctly
-                const action = this.getAttribute('data-action');
+    document.querySelectorAll('.quantity-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = this.closest('form');
+            const input = form.querySelector('input[name="quantity"]');
+            let quantity = parseInt(input.value, 10);
+            const itemId = form.dataset.itemId;
+            const action = this.getAttribute('data-action');
+            const stock = parseInt(form.dataset.itemStock, 10);
 
-                // Adjust the quantity based on the button clicked
-                if (action === 'increase') {
+            // Adjust the quantity based on the button clicked
+            if (action === 'increase') {
+                if (quantity < stock) {
                     quantity += 1;
-                } else if (action === 'decrease' && quantity > 1) {
-                    quantity -= 1;
+                } else {
+                    alert(`Sorry, only ${stock} items available in stock.`);
+                    return;
                 }
-                
-                // Update the input field with the new quantity
-                input.value = quantity;
+            } else if (action === 'decrease' && quantity > 1) {
+                quantity -= 1;
+            }
 
-                const formData = new FormData();
-                formData.append('item_id', itemId);
-                formData.append('quantity', quantity);
+            // Update the input field with the new quantity
+            input.value = quantity;
 
-                // Use Axios to send the updated quantity to the server
-                axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
-                    headers: {
-                        'X-CSRFToken': csrfToken  // Make sure to use csrfToken
-                    }
-                })
-                .then(function (response) {
-                    if (response.data.success) {
-                        // Optionally, update the UI with new data, such as total price
-                        console.log('Cart updated successfully:', response.data);
-                        // alert('Cart updated successfully!');
-                    } else {
-                        console.error('Failed to update cart:', response.data.error);
-                    }
-                })
-                .catch(function (error) {
-                    console.error('Error updating cart:', error);
-                    alert('Error updating cart. Please try again.');
-                });
+            const formData = new FormData();
+            formData.append('quantity', quantity);
+
+            // Use Axios to send the updated quantity to the server
+            axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(function (response) {
+                if (response.data.success) {
+                    // Update the UI with new data, such as total price
+                    const itemTotalElement = form.closest('tr').querySelector('.cart__price');
+                    itemTotalElement.textContent = `₹${response.data.item_total}`;
+
+                    const cartTotalElement = document.querySelector('.cart__total h5');
+                    cartTotalElement.textContent = `Total: ₹${response.data.cart_total}`;
+                } else {
+                    alert(`Error: ${response.data.error}`);
+                }
+            })
+            .catch(function (error) {
+                console.error('Error updating cart:', error);
+                alert('Error updating cart. Please try again.');
             });
         });
     });
+});
+
 </script>
 
 {% endblock %}

@@ -5,6 +5,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from user_profile.models import Address
 
 # Create your views here.
 
@@ -83,7 +84,12 @@ def unblock_user(request, id):
 @never_cache
 def user_details_page(request, id):
     user = get_object_or_404(User, id=id)  # Adjust User to your actual model
-    return render(request, 'admin_page/user_details_page.html', {'user': user})
+    addresses = Address.objects.filter(user=user)  # Fetch all addresses related to the user
+    context = {
+        'user': user,
+        'addresses' : addresses,
+    }
+    return render(request, 'admin_page/user_details_page.html', context)
 
 @login_required(login_url='accounts:admin_login')  
 @never_cache

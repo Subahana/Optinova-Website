@@ -4,13 +4,13 @@
 {% block content %}
 <main class="main-wrap">
     <section class="content-main">
-            {% if messages %}
+        {% if messages %}
             <div class="alert">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
             </div>
-            {% endif %}
+        {% endif %}
         <div class="content-header">
             <h2 class="content-title">User Details</h2>
             <a href="{% url 'user_management_page' %}" class="btn btn-primary float-end">Back to User Management</a>
@@ -31,27 +31,40 @@
                                 <span class="badge rounded-pill alert-danger">Inactive</span>
                             {% endif %}
                         </p>
-                        
+<hr>
+                        <!-- User Address Section -->
+                        <h4>Address Information</h4>
+                        {% if addresses %}
+                            {% for address in addresses %}
+                                <p><strong> Address:</strong> {{ address.street }}</p>
+                                <p><strong>City:</strong> {{ address.city }}</p>
+                                <p><strong>State:</strong> {{ address.state }}</p>
+                                <p><strong>PIN Code:</strong> {{ address.pin_code }}</p>
+                                <p><strong>Country:</strong> {{ address.country }}</p>
+                                <hr>
+                            {% endfor %}
+                        {% else %}
+                            <p><em>No address information available.</em></p>
+                        {% endif %}
                     </div>
                     <div class="col-md-6 text-end">
                         {% if user.is_active %}
-                        <form method="post" action="{% url 'block_user' id=user.id %}">
+                            <form method="post" action="{% url 'block_user' id=user.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning">Block User</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'unblock_user' id=user.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success">Unblock User</button>
+                            </form>
+                        {% endif %}
+                        <br>
+                        <form method="POST" action="{% url 'permanent_delete_user' user.id %}">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-warning">  Block  User  </button>
+                            <button type="submit" class="btn btn-danger">Delete User</button>
                         </form>
-                    {% else %}
-                        <form method="post" action="{% url 'unblock_user' id=user.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success">Unblock User</button>
-                        </form>
-                    {% endif %}
-                    <br>
-                    <form method="POST" action="{% url 'permanent_delete_user' user.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Delete User</button>
-                    </form>
                     </div>
-                    
                 </div>
             </div>
         </div>

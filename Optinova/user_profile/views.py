@@ -4,6 +4,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from .forms import UserProfileForm,ProfilePictureForm,CustomPasswordChangeForm,AddressForm
 from .models import Address
+from order_management.models import Order,OrderItem
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 
@@ -118,3 +119,22 @@ def delete_address(request, address_id):
         return redirect('user_profile')  # or wherever you want to redirect after deletion
     return redirect('user_profile')
 
+
+def order_details(request, order_id):
+    # Fetch the user's orders
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+
+    # Fetch all the order items for each order
+    order_details = []
+    for order in orders:
+        items = OrderItem.objects.filter(order=order)
+        order_details.append({
+            'order': order,
+            'items': items
+        })
+    
+    context = {
+        'orders': order_details,
+    }
+
+    return render(request, 'user_home/profile.html', context)

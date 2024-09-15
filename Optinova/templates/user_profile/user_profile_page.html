@@ -106,24 +106,37 @@
         </div>
     </div>
 
-    <!-- Orders Section -->
-    <div class="orders-section">
-        <h3 class="section-heading">My Orders</h3>
-        <ul class="list-group">
-            {% if orders %}
-                {% for order in orders %}
-                    <li class="list-group-item order-item">
-                        <span>Order ID: {{ order.id }} - {{ order.product }} - {{ order.status }}</span>
-                        {% if order.status == 'Pending' %}
-                            <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger cancel-btn">Cancel Order</a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            {% else %}
-                <p class="no-orders">You have no orders.</p>
-            {% endif %}
-        </ul>
-    </div>
+<!-- Orders Section -->
+<div class="orders-section">
+    <h3 class="section-heading">My Orders</h3>
+    <ul class="list-group">
+        {% if orders %}
+            {% for order in orders %}
+                <li class="list-group-item order-item">
+                    <!-- Wrapping order item content with an anchor tag -->
+                    <a href="{% url 'order_details' order.id %}" class="order-link" style="text-decoration:none; color:inherit;">
+                        <!-- Displaying Order Summary -->
+                        <div class="order-summary">
+                            <strong>Order ID:</strong> {{ order.id }} <br>
+                            <strong>Product:</strong> {{ order.variant.name }} <br>
+                            <strong>Quantity:</strong> {{ order.quantity }} <br>
+                            <strong>Status:</strong> {{ order.status }} <br>
+                            <strong>Date:</strong> {{ order.date|date:"M d, Y" }} <br>
+                        </div>
+                    </a>
+                    <!-- Cancel Order Button if applicable -->
+                    {% if order.status == 'Pending' %}
+                        <a href="{% url 'cancel_order' order.id %}" class="btn btn-sm btn-danger cancel-btn">Cancel Order</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        {% else %}
+            <p class="no-orders">You have no orders.</p>
+        {% endif %}
+    </ul>
+</div>
+
+
     <!-- Change Password Section -->
     <div class="change-password-section">
         <h3 class="section-heading">Change Password</h3>

@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import Address
 from accounts.models import CustomUser
 from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.models import User
 from PIL import Image 
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -93,37 +94,6 @@ class ProfilePictureForm(forms.ModelForm):
         # Save the user instance
         user.save()
         return user
-
-
-
-
-class CustomPasswordChangeForm(PasswordChangeForm):
-    old_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter your current password'
-        })
-    )
-    new_password1 = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter your new password'
-        }),
-        help_text="Your password must contain at least 8 characters and should not be easily guessable."
-    )
-    new_password2 = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Confirm your new password'
-        })
-    )
-
-    def clean_new_password2(self):
-        new_password1 = self.cleaned_data.get('new_password1')
-        new_password2 = self.cleaned_data.get('new_password2')
-        if new_password1 and new_password2 and new_password1 != new_password2:
-            raise forms.ValidationError("The two password fields must match.")
-        return new_password2
 
 
 class AddressForm(forms.ModelForm):

@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+<!-- Breadcrumb Section Begin -->
 <section class="breadcrumb-option">
     <div class="container">
         <div class="row">
@@ -10,8 +11,7 @@
                     <div class="breadcrumb__links">
                         <a href="{% url 'user_home' %}">Home</a>
                         <a href="{% url 'shop' %}">Shop</a>
-                        <a href="{% url 'cart_detail' %}">cart_detail</a>
-
+                        <a href="{% url 'cart_detail' %}">Cart</a>
                         <span>Checkout</span>
                     </div>
                 </div>
@@ -29,30 +29,32 @@
             <div class="col-lg-8">
                 <div class="checkout__form">
                     <h4>Checkout Details</h4>
-                    <form method="post" action="">
+                    <form method="post" action="{% url 'checkout' %}">
                         {% csrf_token %}
-
-                        <!-- Address Selection -->
                         <div class="checkout__form__input">
-                            <label for="address">Select or Add Address</label>
+                            <label for="address"><i class="fa fa-map-marker"></i> Select or Add Address</label>
                             <select name="address" id="address" required>
                                 {% for address in addresses %}
-                                    <option value="{{ address.id }}">{{ address.street_address }}, {{ address.city }}, {{ address.state }} - {{ address.zip_code }}</option>
+                                    <option value="{{ address.id }}" {% if address.is_default %} selected {% endif %}>
+                                        {{ address.street }}, {{ address.city }}, {{ address.state }} - {{ address.pin_code }}
+                                    </option>
                                 {% endfor %}
                                 <option value="add_new">Add New Address</option>
                             </select>
-                            <div id="new-address-form" style="display:none;">
-                                <h5>Add New Address</h5>
-                                <input type="text" name="new_street_address" placeholder="Street Address" required>
-                                <input type="text" name="new_city" placeholder="City" required>
-                                <input type="text" name="new_state" placeholder="State" required>
-                                <input type="text" name="new_zip_code" placeholder="ZIP Code" required>
-                            </div>
+                        </div>
+
+                        <!-- New Address Form (Hidden by Default) -->
+                        <div id="new-address-form" class="new-address">
+                            <h5>Add New Address</h5>
+                            <input type="text" name="new_street" placeholder="Street Address">
+                            <input type="text" name="new_city" placeholder="City">
+                            <input type="text" name="new_state" placeholder="State">
+                            <input type="text" name="new_pin_code" placeholder="PIN Code">
                         </div>
 
                         <!-- Payment Method -->
                         <div class="checkout__form__input">
-                            <label for="payment_method">Payment Method</label>
+                            <label for="payment_method"><i class="fa fa-credit-card"></i> Payment Method</label>
                             <select name="payment_method" id="payment_method" required>
                                 <option value="COD">Cash on Delivery</option>
                                 <option value="ONLINE">Online Payment</option>
@@ -76,16 +78,16 @@
                                     <tr>
                                         <td>{{ item.product.name }} - {{ item.variant.name }}</td>
                                         <td>{{ item.quantity }}</td>
-                                        <td>${{ item.variant.price }}</td>
-                                        <td>${{ item.total_price }}</td>
+                                        <td>₹{{ item.variant.price }}</td>
+                                        <td>₹{{ item.total_price }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                             <br>
-                            <h5>Total: ${{ total_price }}</h5>
+                            <h5>Total: ₹{{ total_price }}</h5>
                         </div>
-
+                        <hr>
                         <!-- Place Order Button -->
                         <button type="submit" class="primary-btn">Place Order</button>
                     </form>
@@ -95,9 +97,8 @@
             <!-- Order Management Sidebar -->
             <div class="col-lg-4">
                 <div class="order__management">
-                    <h4>Order Management</h4>
+                    <h4>Your Orders</h4>
                     <div class="order__history">
-                        <h5>Your Orders</h5>
                         <ul>
                             {% for order in orders %}
                             <li>
@@ -117,53 +118,138 @@
 <!-- Checkout Section End -->
 
 <script>
-    // Toggle New Address Form
-    document.getElementById('address').addEventListener('change', function() {
-        var newAddressForm = document.getElementById('new-address-form');
-        if (this.value === 'add_new') {
+document.addEventListener('DOMContentLoaded', function() {
+    var addressSelect = document.getElementById('address');
+    var newAddressForm = document.getElementById('new-address-form');
+    
+    function toggleNewAddressForm() {
+        if (addressSelect.value === 'add_new') {
             newAddressForm.style.display = 'block';
+            // Set 'required' attribute for new address fields
+            document.querySelector('input[name="new_street"]').setAttribute('required', 'required');
+            document.querySelector('input[name="new_pin_code"]').setAttribute('required', 'required');
         } else {
             newAddressForm.style.display = 'none';
+            // Remove 'required' attribute for new address fields
+            document.querySelector('input[name="new_street"]').removeAttribute('required');
+            document.querySelector('input[name="new_pin_code"]').removeAttribute('required');
         }
-    });
+    }
+
+    // Initial check
+    toggleNewAddressForm();
+
+    // Event listener
+    addressSelect.addEventListener('change', toggleNewAddressForm);
+});
+
+
+
 </script>
 
 <style>
-    /* Checkout Styles */
+    /* Global Styles */
+    body {
+        background-color: #f4f7fa;
+    }
+
+    /* Breadcrumb Section */
+    .breadcrumb-option {
+        padding: 20px 0;
+        background: #f8f8f8;
+    }
+
+    .breadcrumb__text {
+        font-size: 14px;
+        color: #777;
+    }
+
+    .breadcrumb__links a {
+        color: #0099ff;
+        text-decoration: none;
+    }
+
+    .breadcrumb__links span {
+        color: #333;
+    }
+
+    /* Checkout Section */
     .checkout {
-        padding: 40px 0;
+        padding: 60px 0;
+        background: #fff;
     }
 
     .checkout__form h4 {
-        font-size: 24px;
-        margin-bottom: 20px;
+        font-size: 28px;
+        margin-bottom: 30px;
+        font-weight: bold;
+        color: #333;
     }
 
     .checkout__form__input {
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
 
     .checkout__form__input label {
         display: block;
-        font-weight: bold;
+        font-weight: 600;
         margin-bottom: 10px;
+        font-size: 16px;
+        color: #666;
     }
 
-    .checkout__form__input input, 
-    .checkout__form__input select {
+    .checkout__form__input select, 
+    .checkout__form__input input {
         width: 100%;
-        padding: 10px;
-        border-radius: 5px;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+
+    .checkout__form__input select:focus, 
+    .checkout__form__input input:focus {
+        border-color: #0099ff;
+    }
+
+    /* New Address Styles */
+    .new-address {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 6px;
         border: 1px solid #ddd;
     }
 
+    .new-address h5 {
+        margin-bottom: 15px;
+        font-size: 20px;
+        color: #333;
+    }
+
+    .new-address input {
+        margin-bottom: 10px;
+        padding: 12px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        width: calc(100% - 24px);
+    }
+
+    /* Order Summary */
     .checkout__order__total {
-        margin-top: 30px;
+        margin-top: 40px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 6px;
+        border: 1px solid #ddd;
     }
 
     .checkout__order__total h5 {
-        font-size: 18px;
-        font-weight: bold;
+        font-size: 20px;
+        font-weight: 700;
+        color: #333;
     }
 
     .checkout__order__total table {
@@ -173,39 +259,45 @@
 
     .checkout__order__total table th, 
     .checkout__order__total table td {
-        padding: 10px;
+        padding: 15px;
         border-bottom: 1px solid #ddd;
-    }
-
-    .checkout__order__total table th {
-        text-align: left;
+        font-size: 16px;
+        color: #333;
     }
 
     .primary-btn {
-        background-color: #003366;
+        background: linear-gradient(90deg, #003366 0%, #0099ff 100%);
         color: #fff;
-        padding: 15px 25px;
+        padding: 15px 30px;
         border-radius: 30px;
-        font-size: 16px;
-        font-weight: 600;
-        transition: background-color 0.3s, color 0.3s;
+        font-size: 18px;
+        font-weight: bold;
+        text-transform: uppercase;
         border: none;
         cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        display: inline-block;
+        margin-top: 20px;
     }
 
     .primary-btn:hover {
-        background-color: #0099ff;
+        background: linear-gradient(90deg, #001f33 0%, #007acc 100%);
     }
 
+    /* Order Management */
     .order__management {
-        padding: 20px;
+        padding: 30px;
+        background-color: #fff;
         border: 1px solid #ddd;
         border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
     .order__management h4 {
         font-size: 24px;
         margin-bottom: 20px;
+        color: #333;
     }
 
     .order__history ul {
@@ -214,15 +306,21 @@
     }
 
     .order__history li {
-        margin-bottom: 10px;
+        margin-bottom: 15px;
+        font-size: 16px;
+        color: #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    .cancel-btn {
-        color: #e74c3c;
-        font-weight: bold;
+    .order__history .cancel-btn {
+        color: #ff4d4d;
+        text-decoration: none;
+        font-weight: 600;
     }
 
-    .cancel-btn:hover {
+    .order__history .cancel-btn:hover {
         text-decoration: underline;
     }
 </style>

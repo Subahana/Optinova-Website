@@ -1,1 +1,175 @@
-<h1>Order</h1>
+{% extends "user_home/main.html" %}
+
+{% block content %}
+<div class="order-details-container">
+    <h2>My Orders</h2>
+
+    {% if order_details %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Products</th>
+                    <th>Quantities</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Action</th> <!-- New column for Cancel Action -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for order_detail in order_details %}
+                    <tr>
+                        <!-- Display Order ID -->
+                        <td class="order-id">{{ order_detail.order.id }}</td>
+                        
+                        <!-- Display Products and Quantities in the same row, separated by commas -->
+                        <td>
+                            {% for item in order_detail.items %}
+                                {{ item.variant }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for item in order_detail.items %}
+                                {{ item.quantity }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        
+                        <!-- Display Status and Date with appropriate color -->
+                        <td class="order-status {{ order_detail.order.status|lower }}">{{ order_detail.order.status }}</td>
+                        <td class="order-date">{{ order_detail.order.created_at|date:"M d, Y" }}</td>
+                        
+                        <!-- Action: Cancel Button -->
+                        <td>
+                            {% if order_detail.order.cancelled_at %}
+                                <button class="btn btn-secondary" disabled>Cancelled</button>
+                            {% elif order_detail.order.status == "Pending" %}
+                                <a href="{% url 'cancel_order' order_detail.order.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">Cancel</a>
+                            {% else %}
+                                <button class="btn btn-secondary" disabled>Not Cancelable</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-warning" role="alert">
+            You have no orders.
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .order-details-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #FAFAFA; /* Very Light Gray */
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+        font-size: 28px;
+        color: #2C3E50; /* Dark Slate Gray */
+        margin-bottom: 20px;
+        text-align: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 600;
+    }
+
+    .table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+    }
+
+    .table th, .table td {
+        text-align: center;
+        vertical-align: middle;
+        padding: 12px;
+        border: 1px solid #E0E0E0; /* Light Gray */
+    }
+
+    .table thead th {
+        background-color: #B0BEC5; /* Light Grayish Blue */
+        color: #FFFFFF; /* White */
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .table tbody tr:nth-child(odd) {
+        background-color: #FFFFFF; /* White */
+    }
+
+    .table tbody tr:hover {
+        background-color: #F0F0F0; /* Very Light Gray */
+    }
+
+    .table .order-id {
+        font-weight: 600;
+        color: #0277BD; /* Light Blue */
+    }
+
+    .table .order-status {
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: #333; /* Dark Gray */
+        text-transform: capitalize;
+    }
+
+    .table .order-status.pending {
+        color: #FFA000; /* Amber */
+    }
+
+    .table .order-status.processing {
+        color: #FBC02D; /* Yellow */
+    }
+
+    .table .order-status.shipped {
+        color: #388E3C; /* Green */
+    }
+
+    .table .order-status.delivered {
+        color: #2C6B2F; /* Dark Green */
+    }
+
+    .table .order-status.cancelled {
+        color: #D32F2F; /* Red */
+    }
+
+    .table .order-date {
+        color: #757575; /* Medium Gray */
+    }
+
+    .alert {
+        font-size: 18px;
+        color: #D32F2F; /* Red */
+        background-color: #FFEBEE; /* Light Red */
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .btn-danger {
+        background-color: #D32F2F; /* Red */
+        color: #fff;
+    }
+
+    .btn-danger:hover {
+        background-color: #C62828; /* Darker Red for hover effect */
+    }
+
+    .btn-secondary {
+        background-color: #B0BEC5; /* Light Grayish Blue */
+        color: #fff;
+    }
+
+    .btn-secondary:disabled {
+        background-color: #B0BEC5; /* Gray */
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}

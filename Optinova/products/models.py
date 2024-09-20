@@ -51,6 +51,17 @@ class ProductVariant(models.Model):
             ProductVariant.objects.filter(product=self.product, is_main_variant=True).update(is_main_variant=False)
         super().save(*args, **kwargs)
 
+    def decrease_stock(self, quantity):
+        if self.stock >= quantity:
+            self.stock -= quantity
+            self.save()
+        else:
+            raise ValueError('Not enough stock available')
+
+    def increase_stock(self, quantity):
+        self.stock += quantity
+        self.save()
+        
 class ProductImage(models.Model):
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='product_images/', max_length=500)

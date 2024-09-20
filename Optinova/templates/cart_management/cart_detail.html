@@ -113,8 +113,8 @@
                         <h6>Cart Total</h6>
                         <ul>
                             <li>Items <span>{{ total_items }}</span></li>
-                            <li>Subtotal <span>${{ total_price }}</span></li>
-                            <li>Total <span>${{ total_price }}</span></li>
+                            <li>Subtotal <span>₹{{ total_price }}</span></li>
+                            <li>Total <span>₹{{ total_price }}</span></li>
                         </ul>
                         <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
                     </div>

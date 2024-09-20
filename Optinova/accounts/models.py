@@ -5,18 +5,16 @@ import secrets
 from datetime import timedelta
 from django.utils import timezone
 
-# Custom User Model
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
 
-    USERNAME_FIELD = 'email'  # Set email as the login field
-    REQUIRED_FIELDS = ['username']  # Fields required when creating a superuser
+    USERNAME_FIELD = 'email'  
+    REQUIRED_FIELDS = ['username']  
 
     def __str__(self):
         return self.email
 
-# OTP Token Model
 class OtpToken(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="otps")
     otp_code = models.CharField(max_length=6, default=secrets.token_hex(3))

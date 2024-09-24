@@ -6,22 +6,25 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from django.core.files.storage import default_storage
-
+import base64
+from django.core.files.base import ContentFile
 import logging
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+from django.shortcuts import render, get_object_or_404, redirect
+from django.forms import modelformset_factory
+
 
 logger = logging.getLogger(__name__)
 
         #   category_listt   
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def category_list(request):
     categories = Category.objects.all()
     return render(request, 'products/category_list.html', {'categories': categories})
 
         #    add_category
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def add_category(request):
     if request.method == "POST":
         form = CategoryForm(request.POST)
@@ -35,7 +38,6 @@ def add_category(request):
 
           #   edit_category      
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def edit_category(request, id):
     category = get_object_or_404(Category, id=id)
     if request.method == "POST":
@@ -50,7 +52,6 @@ def edit_category(request, id):
 
          #    activate_category
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def activate_category(request, id):
     category = get_object_or_404(Category, id=id)
     if request.method == "POST":
@@ -61,7 +62,6 @@ def activate_category(request, id):
 
         #  permanent_delete_category
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def permanent_delete_category(request, id):
     category = get_object_or_404(Category, id=id)
     if request.method == "POST":
@@ -71,7 +71,6 @@ def permanent_delete_category(request, id):
 
         #   Deactivating Category
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def soft_delete_category(request, id):
     category = get_object_or_404(Category, id=id)
     if request.method == "POST":
@@ -81,7 +80,6 @@ def soft_delete_category(request, id):
     return redirect('category_list')
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def product_list(request):
     categories = Category.objects.filter(is_active=True)
     
@@ -122,7 +120,6 @@ def add_product(request):
 
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 def add_variant(request, product_id):
     product = get_object_or_404(Product, id=product_id)  # Get the product by its ID
     
@@ -140,46 +137,37 @@ def add_variant(request, product_id):
     return render(request, 'products/add_variant.html', {
         'product': product,
         'variant_form': variant_form,
+        'csrf_token': get_token(request)
+
     })
 
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 def add_images(request, variant_id):
-    # Get the variant to which the images will be associated
     variant = get_object_or_404(ProductVariant, id=variant_id)
+    
+    # Handle GET request to render the image upload form
+    if request.method == 'GET':
+        return render(request, 'products/add_images.html', {'variant': variant})
 
+    
+    # Handle POST request to process the image upload
     if request.method == 'POST':
-        # Bind the formset with request data and files
-        image_formset = ProductImageFormSet(request.POST, request.FILES)
+        cropped_image_data = request.POST.get('croppedImageData')
 
-        if image_formset.is_valid():
-            # Iterate over each form in the formset
-            for form in image_formset:
-                if form.cleaned_data:  # Ensure the form has valid data
-                    image = form.save(commit=False)  # Don't commit yet
-                    image.variant = variant  # Set the foreign key here
-                    image.save()  # Now save the image with the associated variant
+        if cropped_image_data:
+            format, imgstr = cropped_image_data.split(';base64,')
+            ext = format.split('/')[-1]
+            image_data = ContentFile(base64.b64decode(imgstr), name=f'cropped_image.{ext}')
+            
+            product_image = ProductImage(variant=variant, image=image_data)
+            product_image.save()
+            return JsonResponse({'success': True})
 
-            # Redirect to product details or another relevant page after saving
-            return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
-        else:
-            # Print or log errors if the formset is invalid
-            print(image_formset.errors)
-
-    else:
-        # Instantiate an empty formset for GET requests
-        image_formset = ProductImageFormSet(queryset=ProductImage.objects.none())
-
-    return render(request, 'products/add_images.html', {
-        'variant': variant,
-        'image_formset': image_formset
-    })
-
+    return JsonResponse({'success': False}, status=400)
 
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -199,31 +187,69 @@ def edit_product(request, product_id):
 
     return render(request, 'products/product_edit.html', {'product_form': product_form, 'product': product})
 
+
 @login_required(login_url='accounts:admin_login')
-@never_cache
 def edit_variant(request, variant_id):
-    variant = get_object_or_404(ProductVariant, id=variant_id)  # Get the variant by its ID
-    product = variant.product  # Get the associated product
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    product = variant.product
 
     if request.method == 'POST':
-        variant_form = ProductVariantForm(request.POST, instance=variant)  # Populate the form with the existing variant
-        if variant_form.is_valid():            
+        variant_form = ProductVariantForm(request.POST, instance=variant, product=product)  # Pass the instance
+        if variant_form.is_valid():
             updated_variant = variant_form.save(commit=False)
-            updated_variant.product = product  # Reassociate with the product
-            updated_variant.save()             
+            updated_variant.product = product  
+            updated_variant.save()
             messages.success(request, 'Variant updated successfully.')
-            return redirect('product_detail', product_id=product.id, variant_id=variant.id)  # Redirect to the product detail page
+            return redirect('edit_images', variant_id=variant.id)
+        else:
+            messages.error(request, 'There was an error updating the variant. Please check the form.')
     else:
-        variant_form = ProductVariantForm(instance=variant)  # Pre-fill form with current variant data
+        variant_form = ProductVariantForm(instance=variant, product=product)  # Pass the instance here too
     
     return render(request, 'products/edit_variant.html', {
         'product': product,
         'variant_form': variant_form,
+        'variant_color': variant.color,  # Pass color separately
+    })
+
+
+
+@login_required(login_url='accounts:admin_login')
+def edit_images(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    
+    # Prepopulate the formset with existing images
+    image_formset = ProductImageFormSet(queryset=variant.images.all())
+
+    if request.method == 'POST':
+        # Bind formset with POST data and files
+        image_formset = ProductImageFormSet(request.POST, request.FILES, queryset=variant.images.all())
+        
+        if image_formset.is_valid():
+            # Save new images and handle deletions
+            instances = image_formset.save(commit=False)
+            for instance in instances:
+                if instance.image:  # Check if a new image was uploaded
+                    instance.variant = variant
+                    instance.save()
+                else:
+                    # If no new image is uploaded, keep existing
+                    instance.save()  # This retains the existing image in the DB
+
+            # Handle deletions
+            for obj in image_formset.deleted_objects:
+                obj.delete()
+
+            messages.success(request, 'Images updated successfully.')
+            return redirect('edit_images', variant_id=variant.id)
+
+    return render(request, 'products/edit_images.html', {
+        'variant': variant,
+        'image_formset': image_formset,
     })
 
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def soft_delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -233,7 +259,6 @@ def soft_delete_product(request, product_id):
     return redirect('product_list')
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def activate_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -243,7 +268,6 @@ def activate_product(request, product_id):
     return redirect('product_list')
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def permanent_delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)    
@@ -252,7 +276,6 @@ def permanent_delete_product(request, product_id):
     return redirect('product_list')
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def activate_variant(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
@@ -262,7 +285,6 @@ def activate_variant(request, variant_id):
     return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def deactivate_variant(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
@@ -275,7 +297,6 @@ def deactivate_variant(request, variant_id):
 
 
 @login_required(login_url='accounts:admin_login')
-@never_cache
 @require_POST
 def delete_variant(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)

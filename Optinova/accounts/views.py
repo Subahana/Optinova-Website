@@ -151,9 +151,7 @@ def resend_otp(request):
     
     if request.method == 'POST':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            logger.debug("Request recognized as AJAX.")
             username = request.POST.get("username")
-            logger.debug(f"Username received: {username}")
             
             user = User.objects.filter(username=username).first()
             if user:

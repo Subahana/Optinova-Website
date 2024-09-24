@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from .models import Address
 from accounts.models import CustomUser
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from PIL import Image 
 from io import BytesIO
@@ -147,3 +147,41 @@ class AddressForm(forms.ModelForm):
         if country.isspace():
             raise forms.ValidationError("Country name cannot consist of spaces.")
         return country
+
+
+class CustomPasswordChangeForm(forms.Form):
+    old_password = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Old Password'}))
+    new_password1 = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'New Password'}))
+    new_password2 = forms.CharField(widget=forms.PasswordInput(attrs={'placeholder': 'Confirm New Password'}))
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user')
+        super().__init__(*args, **kwargs)
+
+    def clean_old_password(self):
+        old_password = self.cleaned_data.get('old_password')
+        if not self.user.check_password(old_password):
+            raise forms.ValidationError('Old password is incorrect.')
+        return old_password
+
+    def clean_new_password2(self):
+        new_password1 = self.cleaned_data.get('new_password1')
+        new_password2 = self.cleaned_data.get('new_password2')
+
+        # Check if the two new passwords match
+        if new_password1 and new_password2 and new_password1 != new_password2:
+            raise forms.ValidationError('Passwords do not match.')
+
+        # Check if the new password is at least 6 characters long
+        if new_password1 and len(new_password1) < 6:
+            raise forms.ValidationError('The new password must be at least 6 characters long.')
+
+        return new_password2
+
+
+    def save(self, commit=True):
+        password = self.cleaned_data.get('new_password1')
+        self.user.set_password(password)
+        if commit:
+            self.user.save()
+        return self.user

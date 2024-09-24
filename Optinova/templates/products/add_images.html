@@ -5,60 +5,104 @@
 <main class="main-wrap">
     <section class="content-main">
         <div class="content-header">
-            <h2>Add Images for Variant: {{ variant.name }}</h2>
+            <h2 class="content-title">Add Images for Variant: {{ variant.color }}</h2>
         </div>
+
         <div class="card mb-4">
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+                <input type="file" id="imageInput" accept="image/*" class="form-control" aria-label="Upload Image">
+                <img id="imagePreview" alt="Image Preview" style="max-width: 300px; margin-top: 20px; display: none;">
+                <button type="button" id="cropImageButton" style="margin-top: 10px; display: none;">Crop Image</button>
+                <canvas id="croppedImageCanvas" style="display: none;"></canvas>
+
+                <form id="uploadForm" method="POST">
                     {% csrf_token %}
-                    
-                    <!-- Management form required for formsets -->
-                    {{ image_formset.management_form }}
-                
-                    <!-- Loop over formset forms to display individual file fields -->
-                    {% for form in image_formset %}
-                        <div class="form-group">
-                            {{ form.image.label_tag }} <!-- This will label the input field correctly -->
-                            {{ form.image }}           <!-- This will generate the file input field for each form -->
-                        </div>
-                    {% endfor %}
-                
-                    <button type="submit" class="btn btn-primary">Upload Images</button>
+                    <input type="hidden" id="croppedImageData" name="croppedImageData">
+                    <button type="submit" style="margin-top: 10px;" disabled>Upload Cropped Image</button>
                 </form>
-                
             </div>
         </div>
     </section>
 </main>
 
-<!-- JavaScript for handling image preview -->
+<!-- Include Cropper.js CSS and JS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 <script>
-document.getElementById('image-input').addEventListener('change', function(event) {
-    const preview = document.getElementById('image-preview');
-    preview.innerHTML = ''; // Clear existing previews
-    const files = event.target.files;
+    var csrfToken = '{{ csrf_token }}';  // CSRF token from Django
+    let cropper;
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const croppedImageCanvas = document.getElementById('croppedImageCanvas');
+    const croppedImageData = document.getElementById('croppedImageData');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadButton = uploadForm.querySelector('button[type="submit"]');
+    const cropButton = document.getElementById('cropImageButton');
 
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-
-            reader.onload = function(e) {
-                const imgElement = document.createElement('img');
-                imgElement.src = e.target.result;
-                imgElement.style.maxWidth = '150px';
-                imgElement.style.marginRight = '10px';
-                imgElement.style.marginBottom = '10px';
-                imgElement.style.border = '1px solid #ddd';
-                imgElement.style.padding = '5px';
-                imgElement.style.borderRadius = '5px';
-                preview.appendChild(imgElement);
+    // Handle image input change
+    imageInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload a valid image file.');
+                return;
             }
 
-            reader.readAsDataURL(file); // Read the image file as data URL
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block'; // Show image preview
+                cropButton.style.display = 'block'; // Show crop button
+                if (cropper) {
+                    cropper.destroy();  // Destroy old cropper instance
+                }
+                cropper = new Cropper(imagePreview, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                });
+            };
+            reader.readAsDataURL(file);
         }
-    }
-});
+    });
+
+    // Handle cropping and enabling the upload button
+    cropButton.addEventListener('click', function() {
+        if (cropper) {
+            const canvas = cropper.getCroppedCanvas();
+            canvas.toBlob(function(blob) {
+                const dataURL = canvas.toDataURL('image/png');
+                croppedImageData.value = dataURL; // Store data URL in hidden input
+                uploadButton.disabled = false; // Enable upload button
+                alert('Image cropped successfully! Ready to upload.');
+            });
+        }
+    });
+
+    // Handle form submission
+    uploadForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent normal form submission
+        if (croppedImageData.value) {
+            const formData = new FormData();
+            formData.append('croppedImageData', croppedImageData.value);
+            formData.append("csrfmiddlewaretoken", csrfToken);
+
+            // Send data using Axios
+            axios.post("{% url 'add_images' variant.id %}", formData, {
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'multipart/form-data'
+                }
+            }).then(function (response) {
+                console.log('Image uploaded successfully:', response.data);
+                window.location.href = "{% url 'product_detail' variant.product.id variant.id %}";
+            }).catch(function (error) {
+                console.error('Error uploading image:', error);
+                alert('Error uploading image. Please try again.');
+            });
+        }
+    });
 </script>
 {% endblock %}

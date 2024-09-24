@@ -1,78 +1,8 @@
 {% extends "admin_page/main.html" %}
 {% load static %}
-{% block title %}Add Variant{% endblock %}
+{% block title %}Edit Variant{% endblock %}
 
 {% block content %}
-<style>
-    /* Custom Select Wrapper */
-    .custom-select {
-        position: relative;
-        width: 100%;
-    }
-
-    /* Custom Dropdown */
-    .custom-dropdown {
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 10px;
-        cursor: pointer;
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    /* Arrow to indicate dropdown */
-    .custom-dropdown:after {
-        content: '\25BC'; /* Downward arrow */
-        margin-left: 10px;
-    }
-
-    /* Options Container (Hidden by default) */
-    .custom-options {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        max-height: 200px; /* To limit height if there are many options */
-        overflow-y: auto;
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        z-index: 999;
-    }
-
-    /* Option Item */
-    .custom-option {
-        padding: 10px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-    }
-
-    /* Hover effect */
-    .custom-option:hover {
-        background-color: #f1f1f1;
-    }
-
-    /* Color Circle for Each Option */
-    .color-circle {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        margin-right: 10px;
-        border: 1px solid #ccc;
-    }
-
-    /* Show the options when dropdown is active */
-    .custom-select.active .custom-options {
-        display: block;
-    }
-
-</style>
-
 <main class="main-wrap">
     <section class="content-main">
         <div class="content-header">
@@ -85,32 +15,16 @@
                 <form method="post">
                     {% csrf_token %}
                     
-                    <!-- Custom Dropdown for Color Selection -->
+                    <!-- Display Color -->
                     <div class="form-group">
-                        <label for="id_color">Color</label>
-
-                        <div class="custom-select">
-                            <div class="custom-dropdown" id="selected-color">
-                                Select a color
-                            </div>
-                            <div class="custom-options">
-                                {% for value, label in variant_form.fields.color.choices %}
-                                    <div class="custom-option" data-value="{{ value }}">
-                                        <span class="color-circle" style="background-color: {{ value|default:'#FFFFFF' }}"></span>
-                                        {{ label }}
-                                    </div>
-                                {% endfor %}
+                        <label>Color</label>
+                        <div class="color-display" style="display: flex; align-items: center;">
+                            <span class="color-circle" style="background-color: {{ variant_color|default:'#FFFFFF' }}; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px;"></span>
+                            <span>{{ variant_color }}</span>
+                            <div>
+                                <strong>Variant Color:</strong> {{ variant_color|default:"No color set" }}
                             </div>
                         </div>
-
-                        <!-- Hidden Input to Store the Selected Value -->
-                        <input type="hidden" id="color-input" name="color" value="{{ variant_form.data.color }}">
-
-                        {% if variant_form.color.errors %}
-                            <div class="text-danger">
-                                {{ variant_form.color.errors }}
-                            </div>
-                        {% endif %}
                     </div>
                 
                     <!-- Price Field -->
@@ -142,44 +56,4 @@
         </div>
     </section>
 </main>
-
-<!-- JavaScript to Handle Custom Select Behavior -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const customSelect = document.querySelector('.custom-select');
-        const dropdown = document.querySelector('.custom-dropdown');
-        const options = document.querySelectorAll('.custom-option');
-        const hiddenInput = document.getElementById('color-input');
-
-        // Toggle dropdown visibility
-        dropdown.addEventListener('click', function() {
-            customSelect.classList.toggle('active');
-        });
-
-        // Handle option click
-        options.forEach(option => {
-            option.addEventListener('click', function() {
-                const value = option.getAttribute('data-value');
-                const label = option.innerText.trim();
-
-                // Update the selected color display
-                dropdown.innerHTML = option.innerHTML;
-
-                // Set the hidden input value
-                hiddenInput.value = value;
-
-                // Close the dropdown
-                customSelect.classList.remove('active');
-            });
-        });
-
-        // Close dropdown if clicking outside
-        document.addEventListener('click', function(e) {
-            if (!customSelect.contains(e.target)) {
-                customSelect.classList.remove('active');
-            }
-        });
-    });
-</script>
-
 {% endblock content %}

@@ -1,0 +1,62 @@
+{% extends "admin_page/main.html" %}
+{% load static %}
+{% block title %}Edit Images for {{ variant.product.name }}{% endblock %}
+
+{% block content %}
+<main class="main-wrap">
+    <section class="content-main">
+        <div class="content-header">
+            <h2 class="content-title">Edit Images for {{ variant.product.name }} - Variant: {{ variant.color }}</h2>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <!-- Include the management form for the formset -->
+                    {{ image_formset.management_form }}
+
+                    <div class="formset">
+                        <!-- Loop over the formset forms to display each image and edit option -->
+                        {% for form in image_formset %}
+                        <div class="formset-item mb-3">
+                            <!-- Display the current image if it exists -->
+                            {% if form.instance.image %}
+                                <div class="mb-2">
+                                    <img src="{{ form.instance.image.url }}" alt="Image for {{ variant.color }}" class="img-thumbnail" style="max-width: 200px;">
+                                </div>
+                            {% else %}
+                                <p>No image uploaded</p>
+                            {% endif %}
+
+                            <!-- Image Field: to upload or replace the existing image -->
+                            <div class="form-group">
+                                {{ form.image.label_tag }}
+                                {{ form.image }}
+                                {% if form.image.errors %}
+                                    <div class="text-danger">
+                                        {{ form.image.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Delete Checkbox: to mark an image for deletion -->
+                            <div class="form-group">
+                                {{ form.DELETE.label_tag }}
+                                {{ form.DELETE }}
+                            </div>
+
+                            <hr>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Submit button -->
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}

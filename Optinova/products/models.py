@@ -1,5 +1,9 @@
 from django.db import models
 from PIL import Image
+from django.core.exceptions import ValidationError
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import sys
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -39,6 +43,11 @@ class ProductVariant(models.Model):
     is_active = models.BooleanField(default=True)
     is_main_variant = models.BooleanField(default=False)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'color'], name='unique_product_color')
+        ]
+
     def __str__(self):
         return f'{self.product.name} - {self.color}'
 
@@ -48,6 +57,7 @@ class ProductVariant(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_main_variant:
+            # Ensure only one main variant exists
             ProductVariant.objects.filter(product=self.product, is_main_variant=True).update(is_main_variant=False)
         super().save(*args, **kwargs)
 
@@ -61,21 +71,52 @@ class ProductVariant(models.Model):
     def increase_stock(self, quantity):
         self.stock += quantity
         self.save()
-        
+
+    def clean(self):
+        if self.stock < 0:
+            raise ValidationError('Stock cannot be negative.')
+
+
 class ProductImage(models.Model):
-    variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE, related_name='images')
+    variant = models.ForeignKey('ProductVariant', on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='product_images/', max_length=500)
 
     def __str__(self):
         return f'Image for {self.variant.product.name} ({self.variant.color})'
 
     def save(self, *args, **kwargs):
+        # Call the original save method
         super().save(*args, **kwargs)
+
+        # Resize the image only if necessary
         self.resize_image()
 
     def resize_image(self):
-        img = Image.open(self.image.path)
-        output_size = (800, 800)
-        if img.height > output_size[1] or img.width > output_size[0]:
-            img.thumbnail(output_size)
-            img.save(self.image.path)
+        try:
+            # Open the image
+            img = Image.open(self.image)
+
+            # Set output size
+            output_size = (800, 800)
+
+            # Only resize if the image is larger than the output size
+            if img.height > output_size[1] or img.width > output_size[0]:
+                # Create a BytesIO stream for the resized image
+                img.thumbnail(output_size)
+                img_format = img.format
+
+                output = BytesIO()
+                img.save(output, format=img_format)
+                output.seek(0)
+
+                # Create a new InMemoryUploadedFile
+                self.image = InMemoryUploadedFile(
+                    output, 'ImageField', self.image.name, 
+                    img_format.lower(), sys.getsizeof(output), None
+                )
+
+                # Save the resized image
+                super().save()
+
+        except Exception as e:
+            print(f"Error resizing the image: {e}")

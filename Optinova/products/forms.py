@@ -2,11 +2,9 @@ from django import forms
 from .models import Product,ProductImage,ProductVariant,Category
 import re
 from PIL import Image as PILImage
-import io
-import sys
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
+import io, sys
 
 class CategoryForm(forms.ModelForm):
     class Meta:
@@ -89,6 +87,7 @@ class ProductForm(forms.ModelForm):
         
         return category
 
+
 class ProductVariantForm(forms.ModelForm):
     COLORS = [
         ('', 'Select a color'),
@@ -97,10 +96,10 @@ class ProductVariantForm(forms.ModelForm):
         ('blue', 'Blue'),
         ('green', 'Green'),
         ('yellow', 'Yellow'),
-        ('Black', 'Black'),
-        ('White', 'White'),
-        ('Gold', 'Gold'),
-        ('Silver', 'Silver'),
+        ('black', 'Black'),
+        ('white', 'White'),
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
     ]
 
     color = forms.ChoiceField(
@@ -137,23 +136,31 @@ class ProductVariantForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.product = kwargs.pop('product', None)
+        instance = kwargs.get('instance')
         super(ProductVariantForm, self).__init__(*args, **kwargs)
+
+        if instance:
+            # Disable color field and set its initial value
+            self.fields['color'].widget.attrs['disabled'] = 'disabled'
+            self.fields['color'].initial = instance.color
+            # Remove required validation for the color field when editing
+            self.fields['color'].required = False
 
     def clean(self):
         cleaned_data = super().clean()
         color = cleaned_data.get('color')
         is_main_variant = cleaned_data.get('is_main_variant')
 
-        if color:
-            if ProductVariant.objects.filter(product=self.product, color=color).exclude(id=self.instance.id).exists():
-                self.add_error('color', "The color '{}' is already used for another variant of this product.".format(color))
+        # Check for duplicate color
+        if color and ProductVariant.objects.filter(product=self.product, color=color).exclude(id=self.instance.id).exists():
+            self.add_error('color', "The color '{}' is already used for another variant of this product.".format(color))
 
+        # Check if another main variant exists
         if is_main_variant:
             if ProductVariant.objects.filter(product=self.product, is_main_variant=True).exclude(id=self.instance.id).exists():
-                self.add_error(None, "A main variant already exists for this product. Only one main variant is allowed.")
+                self.add_error('is_main_variant', "A main variant already exists for this product. Only one main variant is allowed.")
 
         return cleaned_data
-
 
 
 class ProductImageForm(forms.ModelForm):
@@ -214,15 +221,12 @@ class ProductImageForm(forms.ModelForm):
         except Exception as e:
             raise ValidationError(f"Error processing the image: {e}")
 
-        if not image:
-            raise ValidationError("Image saving failed. Please try again.")
-
         return image
 
 # Formset for handling multiple product images
 ProductImageFormSet = forms.modelformset_factory(
     ProductImage, 
     form=ProductImageForm, 
-    extra=4,  # Adjust this for multiple images
+    extra=4,  # Adjust this based on how many additional images are expected
     can_delete=True  # Allow the option to delete images
 )

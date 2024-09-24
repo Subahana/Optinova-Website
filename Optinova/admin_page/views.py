@@ -68,7 +68,6 @@ def block_user(request, id):
     return redirect('user_details_page', id=id)  # Redirect back to the user's detail page
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def unblock_user(request, id):
     user = get_object_or_404(User, id=id)
     if request.method == "POST":
@@ -81,7 +80,6 @@ def unblock_user(request, id):
     return redirect('user_details_page', id=id)  # Redirect back to the user's detail page
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def user_details_page(request, id):
     user = get_object_or_404(User, id=id)  # Adjust User to your actual model
     addresses = Address.objects.filter(user=user)  # Fetch all addresses related to the user
@@ -92,12 +90,10 @@ def user_details_page(request, id):
     return render(request, 'admin_page/user_details_page.html', context)
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def admin_page(request):
     return render(request,'admin_page/index.html')
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def admin_logout_view(request):
     if request.user.is_authenticated:
         logout(request)

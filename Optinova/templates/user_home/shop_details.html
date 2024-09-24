@@ -160,15 +160,37 @@
                 <a href="{% url 'user_product_detail' related_product.id %}">
                     <div class="product-item border rounded bg-white shadow-sm">
                         <div class="product-item-image position-relative">
-                            <img src="{{ related_product.images.first.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded" style="width: 100%; height: auto;">
+                            <!-- Display thumbnail image of related product -->
+                            {% if related_product.main_variant %}
+                                {% with related_product.main_variant.images.first as main_image %}
+                                    {% if main_image %}
+                                        <img src="{{ main_image.image.url }}" alt="{{ related_product.name }}" class="img-fluid rounded" style="width: 100%; height: auto;">
+                                    {% else %}
+                                        <img src="/path/to/default-image.jpg" alt="Default Image" class="img-fluid rounded" style="width: 100%; height: auto;">
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <img src="/path/to/default-image.jpg" alt="Default Image" class="img-fluid rounded" style="width: 100%; height: auto;">
+                            {% endif %}   
+                            <!-- New Product Badge -->
                             {% if related_product.is_new %}
                             <span class="badge badge-success position-absolute top-0 start-0 m-2">New</span>
                             {% endif %}
                         </div>
                         <div class="product-item-info p-3">
                             <h6 class="product-item-title">{{ related_product.name }}</h6>
-                            <p class="product-item-price">₹{{ related_product.price }}</p>
-                            <a href="{% url 'product_detail' related_product.id %}" class="btn btn-outline-primary btn-sm">+ Add To Cart</a>
+
+                            <!-- Display product price -->
+                            <p class="product-item-price">
+                                ₹{{ related_product.price|floatformat:2 }}
+                            </p>
+
+                            <!-- Add to Cart button -->
+                            {% if related_product.variants.exists %}
+                            <a href="{% url 'product_detail' related_product.id related_product.variants.first.id %}" class="btn btn-outline-primary btn-sm">+ Add To Cart</a>
+                            {% else %}
+                            <a href="#" class="btn btn-outline-secondary btn-sm disabled">No Variants Available</a>
+                            {% endif %}
                         </div>
                     </div>
                 </a>
@@ -177,6 +199,9 @@
         </div>
     </div>
 </section>
+
+
+
 
 <style>
      /* General Styles */

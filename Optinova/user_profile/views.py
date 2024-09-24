@@ -2,9 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import UserProfileForm,ProfilePictureForm,AddressForm
+from .forms import UserProfileForm,ProfilePictureForm,AddressForm,CustomPasswordChangeForm
 from django.http import JsonResponse
-from django.contrib.auth.forms import PasswordChangeForm
 from .models import Address
 from order_management.models import Order,OrderItem
 from django.contrib.auth import get_user_model
@@ -69,26 +68,22 @@ def edit_profile(request):
         'profile': user,  # Pass the user instance directly to the template
     })
 
-@login_required(login_url='accounts:user_login_view')
+@login_required
 def change_password(request):
     if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)  # Keep user logged in
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'message': 'Password changed successfully!'}, status=200)
-            return redirect('user_profile')
-        else:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                errors = {field: form.errors[field][0] for field in form.errors}
-                return JsonResponse({'errors': errors}, status=400)
-    else:
-        # Initialize the form for GET requests
-        form = PasswordChangeForm(request.user)
+            form.save()
+            return JsonResponse({'success': True}, status=200)  # Respond with success
 
+        # If form is invalid, send errors back in JSON format
+        errors = {field: error[0] for field, error in form.errors.items()}
+        return JsonResponse({'errors': errors}, status=400)
+    
+    # In case it's not a POST request, render the template
+    form = CustomPasswordChangeForm(user=request.user)
     return render(request, 'user_profile/change_password.html', {'form': form})
+
 
 
 @login_required(login_url='accounts:user_login_view')

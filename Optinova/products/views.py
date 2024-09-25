@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Product,ProductVariant,ProductImage,Category
 from django.contrib import messages
-from .forms import ProductForm,CategoryForm,ProductImageForm,ProductImageFormSet,ProductVariantForm
+from .forms import ProductForm,CategoryForm,ProductImageForm,ProductVariantForm
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
@@ -10,9 +10,10 @@ import base64
 from django.core.files.base import ContentFile
 import logging
 from django.http import JsonResponse
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 from django.middleware.csrf import get_token
 from django.shortcuts import render, get_object_or_404, redirect
-from django.forms import modelformset_factory
 
 
 logger = logging.getLogger(__name__)
@@ -142,29 +143,29 @@ def add_variant(request, product_id):
     })
 
 
+
 @login_required(login_url='accounts:admin_login')
 def add_images(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
-    
-    # Handle GET request to render the image upload form
-    if request.method == 'GET':
-        return render(request, 'products/add_images.html', {'variant': variant})
 
-    
-    # Handle POST request to process the image upload
     if request.method == 'POST':
-        cropped_image_data = request.POST.get('croppedImageData')
+        # Prepare to save images
+        for i in range(1, 5):
+            image_data = request.POST.get(f'croppedImageData{i}')
+            if image_data:
+                # Split the data into its components
+                format, imgstr = image_data.split(';base64,')  
+                ext = format.split('/')[-1]  # Extract the file extension
+                # Create a ContentFile from the base64 data
+                image_file = ContentFile(base64.b64decode(imgstr), name=f'product_variant_{variant_id}_image_{i}.{ext}')
 
-        if cropped_image_data:
-            format, imgstr = cropped_image_data.split(';base64,')
-            ext = format.split('/')[-1]
-            image_data = ContentFile(base64.b64decode(imgstr), name=f'cropped_image.{ext}')
-            
-            product_image = ProductImage(variant=variant, image=image_data)
-            product_image.save()
-            return JsonResponse({'success': True})
+                # Save the image to the database
+                product_image = ProductImage(variant=variant, image=image_file)
+                product_image.save()
 
-    return JsonResponse({'success': False}, status=400)
+        return JsonResponse({'message': 'Images uploaded successfully'}, status=200)
+
+    return render(request, 'products/add_images.html', {'variant': variant})
 
 
 @login_required(login_url='accounts:admin_login')  
@@ -194,59 +195,98 @@ def edit_variant(request, variant_id):
     product = variant.product
 
     if request.method == 'POST':
-        variant_form = ProductVariantForm(request.POST, instance=variant, product=product)  # Pass the instance
+        variant_form = ProductVariantForm(request.POST, instance=variant, product=product)
+        
+        # Get the color from the hidden input (if you're passing it like we discussed)
+        color = request.POST.get('color', variant.color)  # Default to existing color if not provided
+
         if variant_form.is_valid():
             updated_variant = variant_form.save(commit=False)
             updated_variant.product = product  
+            updated_variant.color = color  # Set the color from the hidden input
+
+            # Handle main variant logic
+            if updated_variant.is_main_variant:
+                ProductVariant.objects.filter(product=product, is_main_variant=True).exclude(id=updated_variant.id).update(is_main_variant=False)
+
             updated_variant.save()
             messages.success(request, 'Variant updated successfully.')
             return redirect('edit_images', variant_id=variant.id)
         else:
             messages.error(request, 'There was an error updating the variant. Please check the form.')
     else:
-        variant_form = ProductVariantForm(instance=variant, product=product)  # Pass the instance here too
-    
+        variant_form = ProductVariantForm(instance=variant, product=product)
+
     return render(request, 'products/edit_variant.html', {
         'product': product,
         'variant_form': variant_form,
-        'variant_color': variant.color,  # Pass color separately
+        'variant_color': variant.color,
     })
 
+
+@login_required(login_url='accounts:admin_login')
+def delete_image(request, variant_id):
+    if request.method == 'POST':
+        image_ids = request.POST.getlist('selected_images')  # Get the selected image IDs from the form
+        ProductImage.objects.filter(id__in=image_ids).delete()  # Delete the selected images
+
+        return redirect('edit_images', variant_id=variant_id)  # Redirect back to the edit images page
+
+    return HttpResponseRedirect(reverse('product_detail', args=[variant_id]))  # Fallback if not a POST request
 
 
 @login_required(login_url='accounts:admin_login')
 def edit_images(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
-    
-    # Prepopulate the formset with existing images
-    image_formset = ProductImageFormSet(queryset=variant.images.all())
+    existing_images = list(variant.images.all())  # Get the list of existing images
+    max_images = 4  # Maximum number of images allowed
+    total_existing_count = len(existing_images)  # Current count of existing images
+    remaining_slots = max_images - total_existing_count  # Remaining slots for new images
 
     if request.method == 'POST':
-        # Bind formset with POST data and files
-        image_formset = ProductImageFormSet(request.POST, request.FILES, queryset=variant.images.all())
-        
-        if image_formset.is_valid():
-            # Save new images and handle deletions
-            instances = image_formset.save(commit=False)
-            for instance in instances:
-                if instance.image:  # Check if a new image was uploaded
-                    instance.variant = variant
-                    instance.save()
-                else:
-                    # If no new image is uploaded, keep existing
-                    instance.save()  # This retains the existing image in the DB
+        # Handle image deletion first
+        if 'delete_images' in request.POST:
+            image_ids = request.POST.getlist('selected_images')
+            ProductImage.objects.filter(id__in=image_ids).delete()  # Delete selected images
+            return HttpResponseRedirect(reverse('edit_images', args=[variant_id]))
 
-            # Handle deletions
-            for obj in image_formset.deleted_objects:
-                obj.delete()
+        # Now handle image uploads and updates
+        new_images_added = 0  # To track how many new images are added
 
-            messages.success(request, 'Images updated successfully.')
-            return redirect('edit_images', variant_id=variant.id)
+        # Process uploaded images
+        for i in range(1, max_images + 1):
+            image_data = request.POST.get(f'croppedImageData{i}')
+            if image_data:
+                # Decode the base64 image data
+                format, imgstr = image_data.split(';base64,')
+                ext = format.split('/')[-1]
+                image_file = ContentFile(base64.b64decode(imgstr), name=f'product_variant_{variant_id}_image_{total_existing_count + new_images_added + 1}.{ext}')
 
-    return render(request, 'products/edit_images.html', {
+                # Add new images if there are remaining slots
+                if new_images_added < remaining_slots:
+                    new_image = ProductImage(variant=variant, image=image_file)
+                    new_image.save()
+                    new_images_added += 1
+
+        # After updates, refresh the list of existing images to reflect changes
+        existing_images = list(variant.images.all())  # Refresh existing images
+
+        # Ensure that we do not exceed the maximum number of images
+        if len(existing_images) > max_images:
+            # If there are more than max_images, delete the extra ones
+            excess_images = len(existing_images) - max_images
+            ProductImage.objects.filter(variant=variant).order_by('id')[:excess_images].delete()
+
+        return HttpResponseRedirect(reverse('product_detail', args=[variant.product.id, variant_id]))
+
+    context = {
         'variant': variant,
-        'image_formset': image_formset,
-    })
+        'existing_images': existing_images,
+        'remaining_slots': remaining_slots,
+        'image_indices': range(1, remaining_slots + 1),  # To display appropriate number of input fields
+        'max_images': max_images,
+    }
+    return render(request, 'products/edit_images.html', context)
 
 
 @login_required(login_url='accounts:admin_login')
@@ -357,6 +397,5 @@ def delete_selected_images(request, variant_id):
     return redirect(reverse('product_detail', args=[variant.product.id, variant.id]))
 
 @login_required(login_url='accounts:admin_login')  
-@never_cache
 def admin_dashboard(request):
     return redirect('admin_page')

@@ -1,10 +1,13 @@
 from django import forms
-from .models import Product,ProductImage,ProductVariant,Category
+from .models import Product, ProductImage, ProductVariant, Category
 import re
 from PIL import Image as PILImage
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
-import io, sys
+import io
+import sys
+from io import BytesIO
+
 
 class CategoryForm(forms.ModelForm):
     class Meta:
@@ -14,29 +17,25 @@ class CategoryForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter category name'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        self.instance = kwargs.get('instance', None)
-        super(CategoryForm, self).__init__(*args, **kwargs)
-
     def clean_name(self):
         name = self.cleaned_data.get('name')
         if not name:
             raise forms.ValidationError("Category name is required.")
-        
+
         if re.fullmatch(r'\d+', name):
             raise forms.ValidationError("Category name cannot consist of numbers only.")
-        
+
         if not re.match(r'^[\w\s-]+$', name):
             raise forms.ValidationError("Category name should not contain special characters.")
-        
+
         if len(name) < 4:
             raise forms.ValidationError("Category name must be at least 4 characters long.")
-        
-        if not self.instance or self.instance.name != name:
-            if Category.objects.filter(name__iexact=name).exists():
-                raise forms.ValidationError("Category with this name already exists.")
-        
+
+        if Category.objects.filter(name__iexact=name).exists():
+            raise forms.ValidationError("Category with this name already exists.")
+
         return name
+
 
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -48,21 +47,15 @@ class ProductForm(forms.ModelForm):
             'base_price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        self.instance = kwargs.get('instance', None)  # Get the instance (for edit case)
-        super(ProductForm, self).__init__(*args, **kwargs)
-
     def clean_name(self):
         name = self.cleaned_data.get('name')
-        
-        # Validate name length
+
         if len(name) < 3:
             raise ValidationError("Product name must be at least 3 characters long.")
-        
-        # Uniqueness check, excluding the current product when editing
+
         if Product.objects.filter(name__iexact=name).exclude(id=self.instance.id).exists():
             raise ValidationError("A product with this name already exists.")
-        
+
         return name
 
     def clean_base_price(self):
@@ -78,13 +71,11 @@ class ProductForm(forms.ModelForm):
         if len(description) < 10:
             raise ValidationError("Description must be at least 10 characters long.")
         return description
-    
+
     def clean_category(self):
         category = self.cleaned_data.get('category')
-
         if category and not category.is_active:
             raise forms.ValidationError("You cannot add a product to an inactive category.")
-        
         return category
 
 
@@ -104,7 +95,7 @@ class ProductVariantForm(forms.ModelForm):
 
     color = forms.ChoiceField(
         choices=COLORS,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}),
         error_messages={'required': 'Please select a color'}
     )
 
@@ -136,26 +127,14 @@ class ProductVariantForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.product = kwargs.pop('product', None)
-        instance = kwargs.get('instance')
         super(ProductVariantForm, self).__init__(*args, **kwargs)
-
-        if instance:
-            # Disable color field and set its initial value
-            self.fields['color'].widget.attrs['disabled'] = 'disabled'
-            self.fields['color'].initial = instance.color
-            # Remove required validation for the color field when editing
-            self.fields['color'].required = False
+        if self.instance:
+            self.fields['color'].initial = self.instance.color
 
     def clean(self):
         cleaned_data = super().clean()
-        color = cleaned_data.get('color')
         is_main_variant = cleaned_data.get('is_main_variant')
 
-        # Check for duplicate color
-        if color and ProductVariant.objects.filter(product=self.product, color=color).exclude(id=self.instance.id).exists():
-            self.add_error('color', "The color '{}' is already used for another variant of this product.".format(color))
-
-        # Check if another main variant exists
         if is_main_variant:
             if ProductVariant.objects.filter(product=self.product, is_main_variant=True).exclude(id=self.instance.id).exists():
                 self.add_error('is_main_variant', "A main variant already exists for this product. Only one main variant is allowed.")
@@ -164,35 +143,28 @@ class ProductVariantForm(forms.ModelForm):
 
 
 class ProductImageForm(forms.ModelForm):
+    image1 = forms.ImageField(required=True, label='Image 1', widget=forms.ClearableFileInput(attrs={'accept': 'image/*'}))
+    image2 = forms.ImageField(required=False, label='Image 2', widget=forms.ClearableFileInput(attrs={'accept': 'image/*'}))
+    image3 = forms.ImageField(required=False, label='Image 3', widget=forms.ClearableFileInput(attrs={'accept': 'image/*'}))
+    image4 = forms.ImageField(required=False, label='Image 4', widget=forms.ClearableFileInput(attrs={'accept': 'image/*'}))
+
     class Meta:
         model = ProductImage
-        fields = ['image']
-        widgets = {
-            'image': forms.FileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control',
-                'required': 'true',
-            }),
-        }
+        fields = ['image1', 'image2', 'image3', 'image4']
 
-    def clean_image(self):
-        image = self.cleaned_data.get('image')
-
+    def clean_image(self, image):
         if not image:
-            raise ValidationError("Please upload an image.")
+            return None  # Allow optional images
 
-        # Check image size
         max_size = 2 * 1024 * 1024  # 2MB
         if image.size > max_size:
             raise ValidationError(f"The image file size cannot exceed {max_size / (1024 * 1024)}MB.")
 
-        # Check image format
         valid_mime_types = ['image/jpeg', 'image/png', 'image/webp']
         if image.content_type not in valid_mime_types:
             raise ValidationError("Please upload a JPEG, PNG, or WebP image.")
 
         try:
-            # Open the image using Pillow
             img = PILImage.open(image)
 
             # Crop the image to the center and resize it to 800x800
@@ -204,10 +176,9 @@ class ProductImageForm(forms.ModelForm):
             bottom = (height + new_size) / 2
 
             img = img.crop((left, top, right, bottom))
-            img = img.resize((800, 800), PILImage.Resampling.LANCZOS)
+            img = img.resize((800, 800), PILImage.LANCZOS)
 
-            # Save the image back to a BytesIO object
-            output = io.BytesIO()
+            output = BytesIO()
             img_format = image.name.split('.')[-1].upper()
             if img_format == 'JPG':
                 img_format = 'JPEG'
@@ -215,7 +186,6 @@ class ProductImageForm(forms.ModelForm):
             img.save(output, format=img_format)
             output.seek(0)
 
-            # Create a new InMemoryUploadedFile to replace the original
             image = InMemoryUploadedFile(output, 'image', image.name, image.content_type, sys.getsizeof(output), None)
 
         except Exception as e:
@@ -223,10 +193,10 @@ class ProductImageForm(forms.ModelForm):
 
         return image
 
-# Formset for handling multiple product images
-ProductImageFormSet = forms.modelformset_factory(
-    ProductImage, 
-    form=ProductImageForm, 
-    extra=4,  # Adjust this based on how many additional images are expected
-    can_delete=True  # Allow the option to delete images
-)
+    def clean(self):
+        cleaned_data = super().clean()
+        for i in range(1, 5):
+            image_field = cleaned_data.get(f'image{i}')
+            cleaned_data[f'image{i}'] = self.clean_image(image_field)
+
+        return cleaned_data

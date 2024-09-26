@@ -289,6 +289,27 @@ def edit_images(request, variant_id):
     return render(request, 'products/edit_images.html', context)
 
 
+
+def set_main_variant(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    product = variant.product
+
+    # Check if the main variant is being set
+    if request.POST.get('is_main_variant') == 'true':
+        # Ensure no other main variant exists for this product
+        if product.variants.filter(is_main_variant=True).exists():
+            messages.error(request, "A main variant already exists for this product.")
+        else:
+            variant.is_main_variant = True
+            variant.save()
+            messages.success(request, "Main variant updated successfully.")
+    else:
+        variant.is_main_variant = False
+        variant.save()
+        messages.success(request, "Variant updated successfully.")
+
+    return redirect('product_detail', product_id=product.id, variant_id=variant.id)
+
 @login_required(login_url='accounts:admin_login')
 @require_POST
 def soft_delete_product(request, product_id):

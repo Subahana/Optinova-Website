@@ -29,4 +29,7 @@ urlpatterns = [
     path('images/delete/<int:product_id>/', delete_selected_images, name='delete_selected_images'),
 
     path('admin/dashboard/', admin_dashboard, name='admin_dashboard'),
+
+    path('variant/<int:variant_id>/set-main/', set_main_variant, name='set_main_variant'),
+
 ]

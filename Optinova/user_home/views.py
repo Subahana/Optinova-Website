@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
+from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
@@ -57,12 +58,27 @@ def shop(request):
     products = Product.objects.filter(
         is_active=True,
         category__in=categories
-    )
-    
+    ).prefetch_related('variants')  # Prefetch related variants for efficiency
+
+    product_forms = {}
+    product_colors = {}
+
+    for product in products:
+        # Get all the colors for the product's variants
+        variants = product.variants.all()
+        product_colors[product.id] = list(set([variant.color for variant in variants]))
+
+        # Generate a form for the first variant (or main variant)
+        form = ProductVariantForm(product=product)
+        product_forms[product.id] = form
+
     context = {
         'categories': categories,
         'products': products,
+        'product_forms': product_forms,
+        'product_colors': product_colors,
     }
+
     return render(request, 'user_home/shop.html', context)
 
 

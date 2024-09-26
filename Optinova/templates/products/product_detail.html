@@ -35,8 +35,8 @@
                     <i class="material-icons md-arrow-back"></i> Back to Product Management
                 </a>
             </div>
-        </div> 
-        
+        </div>
+
         <!-- Variant Cards -->
         <div class="row">
             {% for variant in product.variants.all %}
@@ -58,7 +58,7 @@
                                          display: inline-block;">
                             </span>
                         </div>
-                    </div>                    
+                    </div>
                     <p class="mt-3">
                         <strong>Price:</strong> {{ variant.price }} <br>
                         <strong>Status:</strong>
@@ -86,6 +86,16 @@
                         <a href="{% url 'add_images' variant.id %}" class="btn btn-outline-success btn-sm">Add image</a>
                         {% endif %}
                     </div>
+
+                    <!-- Main Variant Selection -->
+                    <form method="POST" action="{% url 'set_main_variant' variant.id %}">
+                        {% csrf_token %}
+                        <div class="form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" name="is_main_variant" value="true" {% if variant.is_main_variant %} checked {% endif %}
+                                   onclick="this.form.submit()">
+                            <label class="form-check-label" for="is_main_variant">Set as Main Variant</label>
+                        </div>
+                    </form>
 
                     <!-- Actions for the Variant -->
                     <div class="d-flex justify-content-between mt-3">
@@ -168,5 +178,4 @@
         background-color: #f1faff;
     }
 </style>
-
 {% endblock content %}

@@ -98,7 +98,6 @@ def registration_view(request):
             user = form.save(commit=False)
             user.is_active = True  
             user.save()
-
             # Signal will handle OTP creation and email sending
 
             messages.success(request, 'Account created successfully! Please check your email to verify your account.')
@@ -207,7 +206,6 @@ def admin_login(request):
 
     context = {'form': form}
     return render(request, 'admin_page/admin_login.html', context)
-
 
 
 @never_cache

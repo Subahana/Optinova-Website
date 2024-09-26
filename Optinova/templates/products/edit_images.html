@@ -6,55 +6,72 @@
     <section class="content-main">
         <div class="content-header">
             <h2 class="content-title">Manage Images for Variant: {{ variant.variant_name }}</h2>
+            <a href="{% url 'edit_variant' variant.id %}" class="btn btn-outline-secondary float-end">
+                <i class="material-icons md-arrow-back me-2"></i>Back to Variant Management
+            </a>
         </div>
 
-        <div class="card mb-4">
+        <!-- Existing Images Section -->
+        <div class="card mb-4 shadow-sm">
             <div class="card-body">
-                <h5>Existing Images</h5>
+                <h5 class="mb-4">Existing Images</h5>
                 {% if existing_images %}
                     <form id="deleteSelectedForm" method="POST" action="{% url 'delete_image' variant.id %}">
                         {% csrf_token %}
-                        <div class="row">
+                        <div class="row g-4">
                             {% for image in existing_images %}
-                                <div class="col-md-3 mb-3">
-                                    <img src="{{ image.image.url }}" alt="Image {{ forloop.counter }}" class="img-fluid mb-2">
-                                    <div>
-                                        <input type="checkbox" name="selected_images" value="{{ image.id }}">
-                                        <button type="button" class="btn btn-primary" onclick="editImage({{ image.id }})">Edit</button>
+                                <div class="col-sm-6 col-md-4 col-lg-3">
+                                    <div class="image-card shadow-sm p-2">
+                                        <img src="{{ image.image.url }}" alt="Image {{ forloop.counter }}" class="img-fluid rounded mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <input type="checkbox" name="selected_images" value="{{ image.id }}">
+                                        </div>
                                     </div>
                                 </div>
                             {% endfor %}
                         </div>
-                        <button type="submit" class="btn btn-danger" name="delete_images">Delete Selected Images</button>
+                        <button type="submit" class="btn btn-danger mt-4" name="delete_images">
+                            <i class="material-icons md-delete"></i> Delete Selected Images
+                        </button>
                     </form>
                 {% else %}
-                    <p>No images uploaded yet.</p>
+                    <p class="text-muted">No images uploaded yet.</p>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Form for adding new images -->
+        <!-- Upload New Images Section -->
         {% if remaining_slots > 0 %}
-        <div class="card mb-4" id="uploadFields">
+        <div class="card mb-4 shadow-sm">
             <div class="card-body">
-                <h5>Upload New Images</h5>
+                <h5 class="mb-4">Upload New Images ({{ remaining_slots }} slots left)</h5>
                 <form id="uploadForm" method="POST">
                     {% csrf_token %}
-                    {% for i in image_indices %}
-                        <div class="mb-3">
-                            <label for="imageInput{{ i }}">Upload Image {{ i }}</label>
-                            <input type="file" id="imageInput{{ i }}" accept="image/*" class="form-control">
-                            <img id="imagePreview{{ i }}" alt="Image {{ i }} Preview" style="max-width: 300px; margin-top: 20px; display: none;">
-                            <button type="button" id="cropImageButton{{ i }}" style="margin-top: 10px; display: none;">Crop Image {{ i }}</button>
-                            <input type="hidden" id="croppedImageData{{ i }}" name="croppedImageData{{ i }}">
+                    <div class="row g-4">
+                        {% for i in image_indices %}
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="imageInput{{ i }}" class="form-label">Image {{ i }}</label>
+                                <input type="file" id="imageInput{{ i }}" accept="image/*" class="form-control">
+                                <img id="imagePreview{{ i }}" alt="Image {{ i }} Preview" class="img-fluid mt-2 rounded" style="max-width: 100%; display: none;">
+                                <button type="button" id="cropImageButton{{ i }}" class="btn btn-outline-secondary mt-3" style="display: none;">
+                                    <i class="material-icons md-crop me-1"></i> Crop Image {{ i }}
+                                </button>
+                                <input type="hidden" id="croppedImageData{{ i }}" name="croppedImageData{{ i }}">
+                            </div>
                         </div>
-                    {% endfor %}
-                    <button type="submit" id="submitButton" class="btn btn-primary" disabled>Upload Cropped Images</button>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" id="submitButton" class="btn btn-primary mt-4" disabled>
+                        <i class="material-icons md-file-upload me-2"></i>Upload Cropped Images
+                    </button>
                 </form>
             </div>
         </div>
         {% else %}
-            <p>You have uploaded the maximum number of images.</p>
+        <div class="alert alert-warning">
+            You have uploaded the maximum number of images for this variant.
+        </div>
         {% endif %}
     </section>
 </main>
@@ -118,4 +135,57 @@
         setupImageHandling(i);
     }
 </script>
+
+<!-- Custom Styling -->
+<style>
+    .main-wrap {
+        background-color: #f8f9fa;
+    }
+
+    .content-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .image-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #fff;
+        overflow: hidden;
+    }
+
+    .image-card img {
+        width: 100%;
+        height: auto;
+    }
+
+    .image-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-outline-secondary {
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-outline-secondary i {
+        margin-right: 5px;
+    }
+
+    .btn-primary, .btn-danger, .btn-outline-secondary {
+        font-weight: bold;
+        padding: 10px 20px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-primary i, .btn-danger i, .btn-outline-secondary i {
+        margin-right: 8px;
+    }
+
+    .form-label {
+        font-weight: bold;
+    }
+</style>
 {% endblock %}

@@ -2,304 +2,492 @@
 {% load static %}
 
 {% block content %}
-    <!-- Breadcrumb Section Begin -->
-    <section class="breadcrumb-option">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="breadcrumb__text">
-                        <h4>Shop</h4>
-                        <div class="breadcrumb__links">
-                            <a href="{% url 'user_home' %}">Home</a>
-                            <span>Shop</span>
-                        </div>
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>Exclusive Collection</h4>
+                    <div class="breadcrumb__links">
+                        <a href="{% url 'user_home' %}">Home</a>
+                        <span>Shop</span>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
-    <!-- Breadcrumb Section End -->
-    <!-- Shop Section Begin -->
-    <section class="shop spad">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-3">
-                    <div class="shop__sidebar">
-                        <div class="shop__sidebar__search">
-                            <form action="#">
-                                <input type="text" placeholder="Search...">
-                                <button type="submit"><span class="icon_search"></span></button>
-                            </form>
-                        </div>
-                        <div class="shop__sidebar__accordion">
-                            <div class="accordion" id="accordionExample">
-                                <div class="card">
-                                    <div class="card-heading">
-                                        <a data-toggle="collapse" data-target="#collapseOne">Categories</a>
-                                    </div>
-                                    <div id="collapseOne" class="collapse show" data-parent="#accordionExample">
-                                        <div class="card-body">
-                                            <div class="shop__sidebar__categories">
-                                                <ul class="nice-scroll">
-                                                    {% for category in categories %}
-                                                        <li><a href="#">{{ category.name }} ({{ category.product_count }})</a></li>
-                                                    {% empty %}
-                                                        <li>No categories available.</li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="card">
-                                    <div class="card-heading">
-                                        <a data-toggle="collapse" data-target="#collapseTwo">Branding</a>
-                                    </div>
-                                    <div id="collapseTwo" class="collapse show" data-parent="#accordionExample">
-                                        <div class="card-body">
-                                            <div class="shop__sidebar__brand">
-                                                <ul>
-                                                    <li><a href="#">Louis Vuitton</a></li>
-                                                    <li><a href="#">Chanel</a></li>
-                                                    <li><a href="#">Hermes</a></li>
-                                                    <li><a href="#">Gucci</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card">
-                                    <div class="card-heading">
-                                        <a data-toggle="collapse" data-target="#collapseThree">Filter Price</a>
-                                    </div>
-                                    <div id="collapseThree" class="collapse show" data-parent="#accordionExample">
-                                        <div class="card-body">
-                                            <div class="shop__sidebar__price">
-                                                <ul>
-                                                    <li><a href="#">$0.00 - $50.00</a></li>
-                                                    <li><a href="#">$50.00 - $100.00</a></li>
-                                                    <li><a href="#">$100.00 - $150.00</a></li>
-                                                    <li><a href="#">$150.00 - $200.00</a></li>
-                                                    <li><a href="#">$200.00 - $250.00</a></li>
-                                                    <li><a href="#">250.00+</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            
-                                {% load custom_filters %}
+    </div>
+</section>
+<!-- Breadcrumb Section End -->
 
-                                <div class="row">
-                                    {% if products %}
-                                        {% for product in products %}
-                                            <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
-                                                <a href="{% url 'user_product_detail' product.id %}">
-                                                    <div class="product__item">
-                                                        <!-- Main Variant Image -->
-                                                        {% if product.variants.all %}
-                                                            <div class="product__item__pic">
-                                                                <img src="{{ product.variants.first.image.url }}" alt="{{ product.name }}" class="img-fluid">
-                                                                <ul class="product__hover">
-                                                                    <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
-                                                                </ul>
-                                                            </div>
-                                                        {% else %}
-                                                            <p class="text-muted text-center">No images available for this product.</p>
-                                                        {% endif %}
-                                                        
-                                                        <div class="product__item__text">
-                                                            <h6>{{ product.name }}</h6>
-                                                            <!-- Display Unique Colors -->
-                                                            {% if product.id|get_item:product_colors %}
-                                                                <div class="product__colors">
-                                                                    <strong>Available Colors:</strong>
-                                                                    <div class="row">
-                                                                        {% for color in product.id|get_item:product_colors %}
-                                                                            <div class="color-swatch" style="background-color: {{ color|default:'#FFFFFF' }}; width: 25px; height: 25px; border-radius: 50%; margin-right: 5px; display: inline-block;"></div>
-                                                                        {% endfor %}
-                                                                    </div>
-                                                                </div>
-                                                            {% endif %}
-                                                            
-                                                            <!-- Render Color Form -->
-                                                            <form method="POST" action="{% url 'add_to_cart' product.id %}">
-                                                                {% csrf_token %}
-                                                                {{ product_forms[product.id].color.label_tag }}
-                                                                {{ product_forms[product.id].color }}
-                                                                <button type="submit" class="add-cart mt-2 btn btn-primary">Add to Cart</button>
-                                                            </form>
-                                
-                                                            <a href="{% url 'user_product_detail' product.id %}" class="add-cart mt-2 btn btn-secondary">Product Detail</a>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        {% endfor %}
+<!-- Shop Section Begin -->
+<section class="shop spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="shop__sidebar">
+                    <div class="shop__sidebar__search mb-4">
+                        <input type="text" placeholder="Search..." id="search-input">
+                        <button><i class="fa fa-search"></i></button>
+                    </div>
+
+                    <!-- Categories Accordion -->
+                    <div class="shop__sidebar__accordion">
+                        <div class="accordion" id="accordionExample">
+                            <div class="card">
+                                <div class="card-heading">
+                                    <a data-toggle="collapse" data-target="#collapseOne">Categories</a>
+                                </div>
+                                <div id="collapseOne" class="collapse show" data-parent="#accordionExample">
+                                    <div class="card-body">
+                                        <div class="shop__sidebar__categories">
+                                            <ul id="category-list">
+                                                <li><a href="#" class="category-filter active" data-category="all">All Categories</a></li>
+                                                {% for category in categories %}
+                                                    <li>
+                                                        <a href="#" class="category-filter" data-category="{{ category.id }}">
+                                                            {{ category.name }} 
+                                                        </a>
+                                                    </li>
+                                                {% empty %}
+                                                    <li>No categories available.</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="shop__product__option mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-lg-6 col-md-6 col-sm-6">
+                            <div class="shop__product__option__left">
+                                <p>Showing <span id="product-count">{{ products.count }}</span> results</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-md-6 col-sm-6">
+                            <div class="shop__product__option__right">
+                                <p>Sort by:</p>
+                                <select id="sort-select">
+                                    <option value="default">Featured</option>
+                                    <option value="price_low">Price: Low to High</option>
+                                    <option value="price_high">Price: High to Low</option>
+                                    <option value="a_to_z">A - Z</option>
+                                    <option value="z_to_a">Z - A</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" id="product-list">
+                    {% for product in products %}
+                        <div class="col-lg-4 col-md-6 col-sm-6 mb-4 product-item" data-price="{{ product.main_variant.price }}" data-name="{{ product.name }}" data-category="{{ product.category.id }}">
+                            <div class="product__item">
+                                <div class="product__item__pic">
+                                    {% if product.main_variant and product.main_variant.images.first %}
+                                        <img src="{{ product.main_variant.images.first.image.url }}" alt="{{ product.name }}">
                                     {% else %}
-                                        <p>No products available.</p>
+                                        <img src="{% static 'img/no-image.jpg' %}" alt="No image available">
                                     {% endif %}
+                                    <ul class="product__hover">
+                                        <li><a href="#"><i class="fa fa-heart"></i></a></li>
+                                    </ul>
                                 </div>
-                                
-                                
-                                
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-9">
-                    <div class="shop__product__option">
-                        <div class="row">
-                            <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="shop__product__option__left">
-                                    <p>Showing 1–12 of 126 results</p>
-                                </div>
-                            </div>
-                            <div class="col-lg-6 col-md-6 col-sm-6">
-                                <div class="shop__product__option__right">
-                                    <p>Sort by Price:</p>
-                                    <select>
-                                        <option value="">Low To High</option>
-                                        <option value="">$0 - $55</option>
-                                        <option value="">$55 - $100</option>
-                                    </select>
+                                <div class="product__item__text">
+                                    <h6>{{ product.name }}</h6>
+                                    <a href="{% url 'user_product_detail' product.id %}" class="add-cart">View Details</a>
+                                    <div class="rating">
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star"></i>
+                                        <i class="fa fa-star-half-o"></i>
+                                    </div>
+                                    <h5>₹{{ product.main_variant.price }}</h5>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        {% if products %}
-                            {% for product in products %}
-                                <div class="col-lg-4 col-md-6 col-sm-6 mb-4">
-                                    <a href="{% url 'user_product_detail' product.id %}">
-                                        <div class="product__item">
-                                            <!-- Main Variant Image -->
-                                            {% if product.main_variant and product.main_variant.images.all %}
-                                                <div class="product__item__pic">
-                                                    <img src="{{ product.main_variant.images.all.0.image.url }}" alt="{{ product.name }}" class="img-fluid">
-                                                    <ul class="product__hover">
-                                                        <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
-                                                    </ul>
-                                                </div>
-                                            {% else %}
-                                                <p class="text-muted text-center">No images available for the main variant.</p>
-                                            {% endif %}
-
-                                            <div class="product__item__text">
-                                                <!-- Product Name -->
-                                                <h6>{{ product.name }}</h6>
-                                                <!-- Display Product Variants -->
-                                                {% if product.variants.all %}
-                                                    <div class="product__variants">
-                                                        <div class="row">
-                                                            {% for variant in product.variants.all %}
-                                                                <div class="variant-item d-flex align-items-center justify-content-center p-2 border rounded">
-                                                                    <div class="variant-color" style="background-color: {{ variant.color|default:'#FFFFFF' }};"></div>
-                                                                </div>
-                                                            {% endfor %}
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
-                                                <!-- Add to Cart Button -->
-                                                <a href="{% url 'user_product_detail' product.id %}" class="add-cart mt-2 btn btn-primary">Product_Detail</a>
-                                                <!-- Main Variant Price -->
-                                                <h5 class="mt-2">₹{{ product.main_variant.price }}</h5>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p>No products available.</p>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="product__pagination">
-                                <a class="active" href="#">1</a>
-                                <a href="#">2</a>
-                                <a href="#">3</a>
-                                <span>...</span>
-                                <a href="#">21</a>
-                            </div>
-                        </div>
-                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    </section>
-    <!-- Shop Section End -->
-
-    <style>
-         /* General Styles */
-         body {
-            font-family: 'Poppins', sans-serif;
-            color: #333;
-            background-color: #f4f4f4;
+    </div>
+</section>
+<!-- Shop Section End -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const products = Array.from(document.querySelectorAll('.product-item'));
+        const searchInput = document.getElementById('search-input');
+        const sortSelect = document.getElementById('sort-select');
+        const categoryList = document.getElementById('category-list');
+        const productCount = document.getElementById('product-count');
+        let currentCategory = 'all'; // Keep track of the current category selection
+    
+        // Search functionality
+        searchInput.addEventListener('input', function() {
+            filterAndSortProducts();
+        });
+    
+        // Sort functionality
+        sortSelect.addEventListener('change', function() {
+            filterAndSortProducts();
+        });
+    
+        // Category filtering
+        categoryList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('category-filter')) {
+                e.preventDefault();
+                currentCategory = e.target.getAttribute('data-category');
+                document.querySelectorAll('.category-filter').forEach(el => el.classList.remove('active'));
+                e.target.classList.add('active');
+                filterAndSortProducts(currentCategory);
+            }
+        });
+    
+        // Function to filter and sort products
+        function filterAndSortProducts() {
+            const query = searchInput.value.toLowerCase();
+            const sortBy = sortSelect.value;
+            let filteredProducts = products;
+    
+            // Category filtering
+            if (currentCategory !== 'all') {
+                filteredProducts = filteredProducts.filter(product => product.getAttribute('data-category') === currentCategory);
+            }
+    
+            // Search filtering
+            filteredProducts = filteredProducts.filter(product => {
+                const name = product.getAttribute('data-name').toLowerCase();
+                return name.includes(query);
+            });
+    
+            // Sorting
+            if (sortBy === 'price_low') {
+                filteredProducts.sort((a, b) => parseFloat(a.getAttribute('data-price')) - parseFloat(b.getAttribute('data-price')));
+            } else if (sortBy === 'price_high') {
+                filteredProducts.sort((a, b) => parseFloat(b.getAttribute('data-price')) - parseFloat(a.getAttribute('data-price')));
+            } else if (sortBy === 'a_to_z') {
+                filteredProducts.sort((a, b) => a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')));
+            } else if (sortBy === 'z_to_a') {
+                filteredProducts.sort((a, b) => b.getAttribute('data-name').localeCompare(a.getAttribute('data-name')));
+            }
+    
+            // Update the DOM
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = '';
+            filteredProducts.forEach(product => productList.appendChild(product));
+    
+            // Update product count
+            productCount.textContent = filteredProducts.length;
+    
+            // Animate new products
+            animateProducts();
         }
-
-        /* Breadcrumb Section */
-        .breadcrumb-option {
-            background-color: #003366; /* Dark blue background */
-            padding: 20px 0;
+    
+        // Function to animate products
+        function animateProducts() {
+            const products = document.querySelectorAll('.product-item');
+            products.forEach((product, index) => {
+                product.style.opacity = '0';
+                product.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    product.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    product.style.opacity = '1';
+                    product.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
         }
+    
+        // Initial animation
+        animateProducts();
+    });
+    </script>
+    
+<style>
+/* General Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    background-color: #f8f9fa;
+}
 
-        .breadcrumb__text h4 {
-            font-size: 26px;
-            font-weight: 600;
-            color: #fff;
-        }
+/* Breadcrumb Section */
+.breadcrumb-option {
+    background-color: #002366; /* Royal blue */
+    padding: 30px 0;
+}
 
-        .breadcrumb__links a, 
-        .breadcrumb__links span {
-            font-size: 15px;
-            color: #b0b0b0;
-        }
+.breadcrumb__text h4 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+}
 
-        .breadcrumb__links a:hover {
-            color: #0099ff; /* Light blue on hover */
-        }
+.breadcrumb__links a, 
+.breadcrumb__links span {
+    font-size: 16px;
+    color: #b0b0b0;
+    transition: color 0.3s ease;
+}
 
-        .product__variants {
-            margin-top: 15px;
-        }
+.breadcrumb__links a:hover {
+    color: #4169E1; /* Royal blue */
+}
 
-        .variant-item {
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            max-width: 80px; /* Ensure the container doesn’t exceed this width */
-        }
+/* Shop Sidebar */
+.shop__sidebar {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
 
-        .variant-item:hover {
-            background-color: #f8f9fa;
-        }
+.shop__sidebar__search {
+    position: relative;
+}
 
-        .variant-color {
-            width: 25px; /* Small size for color circle */
-            height: 25px; /* Small size for color circle */
-            border-radius: 50%;
-            border: 2px solid #ddd;
-        }
+.shop__sidebar__search input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
 
-        .product__item__text h6 {
-            font-weight: bold;
-        }
+.shop__sidebar__search button {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    border: none;
+    font-size: 18px;
+    color: #666;
+}
 
-        .add-cart {
-            display: inline-block;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-align: center;
-            color: #fff;
-            text-decoration: none;
-            background-color: #007bff;
-            transition: background-color 0.3s ease;
-        }
+.shop__sidebar__categories ul {
+    list-style: none;
+    padding-left: 0;
+}
 
-        .add-cart:hover {
-            background-color: #0056b3;
-        }
-    </style>
-{% endblock content %}
+.shop__sidebar__categories ul li {
+    margin-bottom: 10px;
+}
+
+.shop__sidebar__categories ul li a {
+    color: #666;
+    font-size: 16px;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.shop__sidebar__categories ul li a:hover {
+    color: #4169E1; /* Royal blue */
+}
+
+.category-filter.active {
+    font-weight: 700;
+    color: #4169E1;
+}
+
+/* Shop Product Section */
+.shop__product__option {
+    margin-bottom: 30px;
+}
+
+.shop__product__option__left p,
+.shop__product__option__right p {
+    display: inline-block;
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+#sort-select {
+    padding: 5px 10px;
+    font-size: 16px;
+}
+
+.product__item {
+    background-color: #fff;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.product__item:hover {
+    transform: translateY(-10px);
+}
+
+.product__item__pic {
+    position: relative;
+    margin-bottom: 20px;
+    height: 260px;
+}
+
+.product__item__pic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.product__item__pic ul {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+}
+
+.product__item__pic ul li {
+    margin-right: 10px;
+}
+
+.product__item__pic ul li a {
+    display: block;
+    height: 40px;
+    width: 40px;
+    background-color: #fff;
+    color: #4169E1;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 40px;
+    transition: background-color 0.3s ease;
+}
+
+.product__item__pic ul li a:hover {
+    background-color: #4169E1;
+    color: #fff;
+}
+
+.product__item__text h6 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.product__item__text h5 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #4169E1;
+}
+
+.product__item__text .rating i {
+    color: #ffc107;
+    font-size: 14px;
+}
+
+.add-cart {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #4169E1;
+    color: #fff;
+    font-size: 14px;
+    border-radius: 20px;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.add-cart:hover {
+    background-color: #002366;
+}
+
+/* Responsive Styles */
+@media (max-width: 991px) {
+    .shop__sidebar {
+        margin-bottom: 30px;
+    }
+
+    .breadcrumb__text h4 {
+        font-size: 24px;
+    }
+
+    .breadcrumb__links a, 
+    .breadcrumb__links span {
+        font-size: 14px;
+    }
+
+    .shop__product__option__left p {
+        font-size: 14px;
+    }
+
+    .shop__product__option__right p {
+        font-size: 14px;
+    }
+
+    #sort-select {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .product__item__text h6 {
+        font-size: 14px;
+    }
+
+    .product__item__text h5 {
+        font-size: 16px;
+    }
+
+    .product__hover li a {
+        height: 30px;
+        width: 30px;
+        font-size: 14px;
+    }
+
+    .add-cart {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+}
+
+@media (max-width: 375px) {
+    .breadcrumb__text h4 {
+        font-size: 20px;
+    }
+
+    .breadcrumb__links a, 
+    .breadcrumb__links span {
+        font-size: 12px;
+    }
+
+    .shop__product__option__left p {
+        font-size: 12px;
+    }
+
+    .shop__product__option__right p {
+        font-size: 12px;
+    }
+
+    .product__item__pic {
+        height: 180px;
+    }
+
+    .product__item__text h6 {
+        font-size: 12px;
+    }
+
+    .product__item__text h5 {
+        font-size: 14px;
+    }
+
+    .product__hover li a {
+        height: 25px;
+        width: 25px;
+        font-size: 12px;
+    }
+
+    .add-cart {
+        font-size: 10px;
+        padding: 6px 12px;
+    }
+}
+</style>
+{% endblock %}

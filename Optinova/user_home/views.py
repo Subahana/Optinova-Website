@@ -6,7 +6,9 @@ from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
-from django.db.models import Prefetch
+from django.db.models import Prefetch,Exists, OuterRef,Subquery,F
+from django.http import JsonResponse
+
 
 
 @login_required(login_url='accounts:user_login_view')
@@ -49,36 +51,42 @@ def user_product_detail(request, product_id):
     return render(request, 'user_home/shop_details.html', context)
 
 
-# View to show the shop page with product and category lists
-@login_required(login_url='accounts:user_login_view')
-@never_cache
+
 def shop(request):
-    # Filter categories and products based on active status
     categories = Category.objects.filter(is_active=True)
-    products = Product.objects.filter(
-        is_active=True,
-        category__in=categories
-    ).prefetch_related('variants')  # Prefetch related variants for efficiency
+    products = Product.objects.filter(is_active=True)  # Only show active products
 
-    product_forms = {}
-    product_colors = {}
+    # Search functionality
+    query = request.GET.get('q')
+    if query:
+        products = products.filter(name__icontains=query)
 
-    for product in products:
-        # Get all the colors for the product's variants
-        variants = product.variants.all()
-        product_colors[product.id] = list(set([variant.color for variant in variants]))
+    category_id = request.GET.get('category')
+    if category_id:
+        products = products.filter(category_id=category_id)
 
-        # Generate a form for the first variant (or main variant)
-        form = ProductVariantForm(product=product)
-        product_forms[product.id] = form
+    # Sorting functionality
+    sort_option = request.GET.get('sort')
+    if sort_option == 'popularity':
+        products = products.order_by('-popularity')
+    elif sort_option == 'price_low':
+        products = products.order_by('base_price')
+    elif sort_option == 'price_high':
+        products = products.order_by('-base_price')
+    elif sort_option == 'average_rating':
+        products = products.order_by('-average_rating')
+    elif sort_option == 'new_arrivals':
+        products = products.order_by('-created_at')  # Ensure created_at is in your model
+    elif sort_option == 'a_to_z':
+        products = products.order_by('name')
+    elif sort_option == 'z_to_a':
+        products = products.order_by('-name')
 
     context = {
-        'categories': categories,
         'products': products,
-        'product_forms': product_forms,
-        'product_colors': product_colors,
-    }
+            'categories': categories,
 
+    }
     return render(request, 'user_home/shop.html', context)
 
 

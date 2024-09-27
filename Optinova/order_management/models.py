@@ -18,7 +18,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     is_cancelled = models.BooleanField(default=False)
-    cancelled_at = models.DateTimeField(null=True, blank=True)
+    canceled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='canceled_orders')
 
     def cancel_order(self):
         """Cancel the order and revert stock."""

@@ -2,29 +2,32 @@
 {% load static %}
 
 {% block content %}
-<!-- Breadcrumb Section Begin -->
-<section class="breadcrumb-option">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="breadcrumb__text">
-                    <div class="breadcrumb__links">
-                        <a href="{% url 'user_home' %}">Home</a>
-                        <a href="{% url 'shop' %}">Shop</a>
-                        <a href="{% url 'cart_detail' %}">Cart</a>
-                        <span>Checkout</span>
+
+    <!-- Breadcrumb Section Begin -->
+    <section class="breadcrumb-option">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="breadcrumb__text">
+                        <h4>Checkout</h4>
+                        <div class="breadcrumb__links">
+                            <a href="{% url 'user_home' %}">Home</a>
+                            <a href="{% url 'shop' %}">Shop</a>
+                            <a href="{% url 'cart_detail' %}">Shopping Cart</a>
+                            <span>Checkout</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</section>
-<!-- Breadcrumb Section End -->
+    </section>
+    <!-- Breadcrumb Section End -->
 
 <!-- Checkout Section Begin -->
 <section class="checkout spad">
     <div class="container">
         <div class="row">
+            {% if cart_items %}
             <!-- Checkout Form -->
             <div class="col-lg-8">
                 <div class="checkout__form">
@@ -76,7 +79,7 @@
                                 <tbody>
                                     {% for item in cart_items %}
                                     <tr>
-                                        <td>{{ item.product.name }} - {{ item.variant.name }}</td>
+                                        <td>{{ item.variant.product.name }} - {{ item.variant.name }}</td>
                                         <td>{{ item.quantity }}</td>
                                         <td>₹{{ item.variant.price }}</td>
                                         <td>₹{{ item.total_price }}</td>
@@ -112,6 +115,17 @@
                     </div>
                 </div>
             </div>
+
+            {% else %}
+            <!-- Empty Cart Message -->
+            <div class="col-lg-12 text-center">
+                <h3>Your shopping cart is empty!</h3>
+                <p>It looks like you haven’t added anything to your cart yet. Start shopping now!</p>
+                <div class="continue__btn mt-4">
+                    <a href="{% url 'shop' %}" class="primary-btn">Start Shopping</a>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -142,35 +156,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener
     addressSelect.addEventListener('change', toggleNewAddressForm);
 });
-
-
-
 </script>
 
 <style>
-    /* Global Styles */
-    body {
-        background-color: #f4f7fa;
+ body {
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+        background-color: #f4f4f4;
     }
 
     /* Breadcrumb Section */
     .breadcrumb-option {
+        background-color: #003366; /* Dark blue background */
         padding: 20px 0;
-        background: #f8f8f8;
     }
 
-    .breadcrumb__text {
-        font-size: 14px;
-        color: #777;
+    .breadcrumb__text h4 {
+        font-size: 26px;
+        font-weight: 600;
+        color: #fff;
     }
 
-    .breadcrumb__links a {
-        color: #0099ff;
-        text-decoration: none;
-    }
-
+    .breadcrumb__links a, 
     .breadcrumb__links span {
-        color: #333;
+        font-size: 15px;
+        color: #b0b0b0;
+    }
+
+    .breadcrumb__links a:hover {
+        color: #0099ff; /* Light blue on hover */
     }
 
     /* Checkout Section */
@@ -283,6 +297,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .primary-btn:hover {
         background: linear-gradient(90deg, #001f33 0%, #007acc 100%);
+    }
+
+    /* Empty Cart Styles */
+    .empty-cart {
+        text-align: center;
+        padding: 50px 0;
+        background-color: #fff;
+    }
+
+    .empty-cart h4 {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .empty-cart .primary-btn {
+        display: inline-block;
+        margin-top: 20px;
     }
 
     /* Order Management */

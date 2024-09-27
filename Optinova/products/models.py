@@ -22,10 +22,7 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
-    def get_main_variant(self):
-        # Fetch the main variant (assuming you have a related model `Variant`)
-        return self.variants.filter(is_main_variant=True).first()
-    
+
     @property
     def main_variant(self):
         return self.variants.filter(is_main_variant=True).first()
@@ -76,7 +73,6 @@ class ProductVariant(models.Model):
         if self.stock < 0:
             raise ValidationError('Stock cannot be negative.')
 
-
 class ProductImage(models.Model):
     variant = models.ForeignKey('ProductVariant', on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='product_images/', max_length=500)
@@ -87,7 +83,6 @@ class ProductImage(models.Model):
     def save(self, *args, **kwargs):
         # Call the original save method
         super().save(*args, **kwargs)
-
         # Resize the image only if necessary
         self.resize_image()
 

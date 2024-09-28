@@ -111,7 +111,7 @@
     <h3 class="section-heading">My Orders</h3>
     {% if orders %}
         <!-- Button to navigate to the order details page -->
-        <form action="{% url 'order_details' %}" method="get" style="display: inline;">
+        <form action="{% url 'my_orders' %}" method="get" style="display: inline;">
             <button type="submit" class="btn btn-outline-primary order-details-btn">
                 View Order Details
             </button>

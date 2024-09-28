@@ -4,10 +4,12 @@ from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
 from products.forms import ProductVariantForm
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
 from django.db.models import Prefetch,Exists, OuterRef,Subquery,F
 from django.http import JsonResponse
+
 
 
 
@@ -52,6 +54,7 @@ def user_product_detail(request, product_id):
 
 
 
+
 def shop(request):
     categories = Category.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)  # Only show active products
@@ -82,10 +85,15 @@ def shop(request):
     elif sort_option == 'z_to_a':
         products = products.order_by('-name')
 
-    context = {
-        'products': products,
-            'categories': categories,
+    # Pagination
+    paginator = Paginator(products,4)  # Show 9 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
+    context = {
+        'products': page_obj,  # Pass the paginated products to the template
+        'categories': categories,
+        'page_obj': page_obj,  # Pass the page_obj to the template
     }
     return render(request, 'user_home/shop.html', context)
 

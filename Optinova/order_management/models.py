@@ -19,18 +19,28 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     is_cancelled = models.BooleanField(default=False)
     canceled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='canceled_orders')
+    cancelled_at = models.DateTimeField(null=True, blank=True)  
+    cancellation_reason = models.CharField(max_length=100, null=True, blank=True)
+    is_returned = models.BooleanField(default=False)
 
-    def cancel_order(self):
+    def cancel_order(self, reason=None):
         """Cancel the order and revert stock."""
         if not self.is_cancelled:
             self.is_cancelled = True
             self.cancelled_at = timezone.now()
-            for item in self.items.all():  # Use 'items' as specified in the related_name
+            self.cancellation_reason = reason or 'Cancelled by User'  # Set reason
+            for item in self.items.all():
                 item.variant.increase_stock(item.quantity)  # Revert stock
             self.status = 'Cancelled'
             self.save()
 
-
+    def return_order(self):
+        if not self.is_returned and self.status == 'Delivered':
+            self.is_returned = True
+            self.save()
+    def total_amount(self):
+        return sum(item.total_price() for item in self.items.all())
+    
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
@@ -43,3 +53,8 @@ class OrderItem(models.Model):
         if not self.pk:  # Item is being created
             self.variant.decrease_stock(self.quantity)
         super().save(*args, **kwargs)
+
+    def total_price(self):
+        return self.variant.price * self.quantity
+    
+    

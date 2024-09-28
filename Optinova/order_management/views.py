@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 
-@login_required
+@login_required(login_url='accounts:user_login_view')
 def checkout(request):
     cart = Cart.objects.get(user=request.user)
     addresses = Address.objects.filter(user=request.user)
@@ -68,6 +68,7 @@ def checkout(request):
         'total_price': cart.get_total_price(),
     })
 
+@login_required(login_url='accounts:user_login_view')
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     total_price = sum(item.quantity * item.variant.price for item in order.items.all())
@@ -76,7 +77,7 @@ def order_success(request, order_id):
 
 
 def list_orders(request):
-    orders = Order.objects.all()  # Start with all orders
+    orders = Order.objects.filter(items__variant__is_active=True).distinct()
 
     # Search
     search_query = request.GET.get('search', '')
@@ -87,6 +88,8 @@ def list_orders(request):
     status_filter = request.GET.get('status_filter', '')
     if status_filter:
         orders = orders.filter(status=status_filter)
+
+  
 
     # Sorting
     sort_option = request.GET.get('sort', '')
@@ -119,11 +122,58 @@ def update_order_status(request, order_id):
     return redirect('list_orders')
 
 
+
 @login_required
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    if order.status != 'Cancelled by User':
-        order.status = 'Cancelled by User'
-        order.canceled_by = request.user  # Set the user who canceled the order
-        order.save()
-    return render(request,"user_profile/order_details.html")  # Redirect to the order list or appropriate page
+    
+    # Check if the user is an admin
+    if request.user.is_superuser:  # Adjust this to your actual admin check logic
+        order.status = 'Cancelled'
+        order.cancellation_reason = 'Cancelled by the team due to technical reasons.'  # Custom message
+        order.cancelled_at = timezone.now()
+        order.canceled_by = request.user  # Log admin as the canceller
+    else:
+        # User is trying to cancel their own order
+        if order.status not in ['Cancelled', 'Delivered']:
+            order.status = 'Cancelled'
+            order.cancellation_reason = 'Cancelled by User'  # Log user cancellation reason
+            order.cancelled_at = timezone.now()  # Log cancellation time
+            order.canceled_by = request.user  # Log user as the canceller
+            
+    order.save()
+    return redirect('my_orders')  # Redirect back to the orders page\
+
+@login_required(login_url='accounts:user_login_view')
+def return_order(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    if order.status == 'Delivered':
+        order.return_order()
+        messages.success(request, "Return request has been submitted.")
+    return redirect('order_details', order_id=order_id)
+
+@login_required(login_url='accounts:user_login_view')
+def order_details(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Calculate total price for the order (all items)
+    total_price = sum(item.total_price() for item in order.items.all())
+    total_price_order = order.total_amount()  # Use the total_amount method
+
+    if request.method == 'POST':
+        if 'cancel_order' in request.POST and order.status in ['Pending', 'Processing']:
+            reason = request.POST.get('cancellation_reason', 'Cancelled by User')
+            order.cancel_order(reason=reason)
+            messages.success(request, "Order has been cancelled.")
+            return redirect('my_orders')
+        
+        if 'return_order' in request.POST and order.status == 'Delivered':
+            order.return_order()
+            messages.success(request, "Return request has been submitted.")
+            return redirect('my_orders')
+
+    return render(request, 'checkout/order_details.html', {
+        'order': order,
+        'total_price_order': total_price_order,
+        'total_price':total_price,
+    })

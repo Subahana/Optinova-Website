@@ -118,6 +118,45 @@
             </div>
         </div>
     </div>
+    <!-- Add Pagination Controls -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="pagination__option">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&sort={{ request.GET.sort|default_if_none:'' }}&q={{ request.GET.q|default_if_none:'' }}&category={{ request.GET.category|default_if_none:'' }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}&sort={{ request.GET.sort|default_if_none:'' }}&q={{ request.GET.q|default_if_none:'' }}&category={{ request.GET.category|default_if_none:'' }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&sort={{ request.GET.sort|default_if_none:'' }}&q={{ request.GET.q|default_if_none:'' }}&category={{ request.GET.category|default_if_none:'' }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
 </section>
 <!-- Shop Section End -->
 <script>

@@ -3,144 +3,150 @@
 
 {% block content %}
 <main class="main-wrap">
-    <div class="container">
-        <h2 class="text-center mb-5" style="color: #333; font-family: 'Poppins', sans-serif; font-weight: bold;">Order Management</h2>
+    <!-- Page Title -->
+    <div class="row mb-4">
+        <div class="col text-center">
+            <h2 class="text-uppercase" style="font-family: 'Poppins', sans-serif; font-weight: bold; color: #333;">
+                Order Management
+            </h2>
+        </div>
+    </div>
 
-        <!-- Search and Filter Form -->
-        <form method="get" class="mb-4 p-3 rounded shadow-sm bg-white">
-            <div class="form-row align-items-center">
-                <div class="col-md-4 mb-2">
-                    <input type="text" id="search" class="form-control shadow-sm" placeholder="Search Orders" aria-label="Search Orders" onkeyup="filterOrders()">
-                </div>
-                <div class="col-md-3 mb-2">
-                    <select id="status_filter" class="form-control shadow-sm" aria-label="Filter by Status" onchange="filterOrders()">
-                        <option value="">All Statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Processing">Processing</option>
-                        <option value="Shipped">Shipped</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled by User">Cancelled by User</option>
-                    </select>
-                </div>
-                <div class="col-md-3 mb-2">
-                    <select id="sort" class="form-control shadow-sm" aria-label="Sort Orders" onchange="sortOrders()">
-                        <option value="">Sort By</option>
-                        <option value="date_asc">Date Ascending</option>
-                        <option value="date_desc">Date Descending</option>
-                        <option value="status_asc">Status Ascending</option>
-                        <option value="status_desc">Status Descending</option>
-                    </select>
+    <!-- Search and Filter Section (Card) -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="get" action="{% url 'list_orders' %}">
+                        <div class="row">
+                            <!-- Search Field -->
+                            <div class="col-md-4 mb-3">
+                                <input type="text" name="search" id="search" class="form-control shadow-sm" placeholder="Search Orders" aria-label="Search Orders" value="{{ request.GET.search }}" onkeyup="filterOrders()">
+                            </div>
+                            <!-- Status Filter -->
+                            <div class="col-md-4 mb-3">
+                                <select name="status_filter" id="status_filter" class="form-control shadow-sm" aria-label="Filter by Status" onchange="this.form.submit()">
+                                    <option value="">All Statuses</option>
+                                    <option value="Pending" {% if request.GET.status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                                    <option value="Processing" {% if request.GET.status_filter == 'Processing' %}selected{% endif %}>Processing</option>
+                                    <option value="Shipped" {% if request.GET.status_filter == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                    <option value="Delivered" {% if request.GET.status_filter == 'Delivered' %}selected{% endif %}>Delivered</option>
+                                    <option value="Cancelled by User" {% if request.GET.status_filter == 'Cancelled by User' %}selected{% endif %}>Cancelled by User</option>
+                                </select>
+                            </div>
+                            <!-- Sort Options -->
+                            <div class="col-md-4 mb-3">
+                                <select name="sort" id="sort" class="form-control shadow-sm" aria-label="Sort Orders" onchange="this.form.submit()">
+                                    <option value="">Sort By</option>
+                                    <option value="date_asc" {% if request.GET.sort == 'date_asc' %}selected{% endif %}>Older Order</option>
+                                    <option value="date_desc" {% if request.GET.sort == 'date_desc' %}selected{% endif %}>Recent Order</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </form>
+        </div>
+    </div>
 
-<!-- Orders Table -->
-<div class="table-responsive rounded shadow-sm bg-white p-3">
-    <table class="table table-hover" id="ordersTable">
-        <thead class="thead-light">
-            <tr>
-                <th scope="col">Order ID</th>
-                <th scope="col">User</th>
-                <th scope="col">Status</th>
-                <th scope="col">Payment Method</th>
-                <th scope="col">Canceled By</th> <!-- New column -->
-                <th scope="col">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr class="order-row {% if forloop.counter|divisibleby:2 %}table-light{% else %}table-secondary{% endif %}">
-                <td>#{{ order.id }}</td>
-                <td>{{ order.user.username }}</td>
-                <td>
-                    <span class="badge badge-status {% if order.status == 'Cancelled by User' %}badge-danger{% elif order.status == 'Delivered' %}badge-success{% elif order.status == 'Shipped' %}badge-warning{% else %}badge-info{% endif %}">
-                        {{ order.status }}
-                    </span>
-                </td>
-                <td>{{ order.payment_method }}</td>
-                <td>
-                    {% if order.canceled_by %}
-                        {{ order.canceled_by.username }} <!-- Display the user who canceled -->
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </td>
-                <td>
-                    {% if order.status != 'Cancelled by User' %}
-                        <form action="{% url 'update_order_status' order.id %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <select name="status" class="form-control form-control-sm shadow-sm" onchange="this.form.submit()">
-                                <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
-                                <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
-                                <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
-                                <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
-                                <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                            </select>
-                        </form>
-                    {% else %}
-                        <span class="text-muted">Cannot edit: Cancelled by User</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="text-center">No orders found.</td> <!-- Adjusted colspan -->
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- Orders Table Section (Card) -->
+<div class="row">
+    <div class="col">
+        <div class="card shadow-sm">
+            <div class="table-responsive p-3">
+                <table class="table table-hover" id="ordersTable">
+                    <thead class="thead-light">
+                        <tr>
+                            <th scope="col">Order ID</th>
+                            <th scope="col">User</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Payment Method</th>
+                            <th scope="col">Canceled By</th> <!-- New Column -->
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="order-row {% if forloop.counter|divisibleby:2 %}table-light{% else %}table-secondary{% endif %}" 
+                            data-date="{{ order.created_at }}" data-status="{{ order.status }}">
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.user.username }}</td>
+                            <td>
+                                <span class="badge badge-status {% if order.status == 'Cancelled' %}badge-danger{% elif order.status == 'Delivered' %}badge-success{% elif order.status == 'Shipped' %}badge-warning{% else %}badge-info{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td>{{ order.payment_method }}</td>
+                            <td>
+                                {% if order.canceled_by %}
+                                    {{ order.canceled_by.username }} <!-- Display the user who canceled -->
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.status != 'Cancelled' %}
+                                    <form action="{% url 'update_order_status' order.id %}" method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <select name="status" class="form-control form-control-sm shadow-sm" onchange="this.form.submit()">
+                                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                            <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                                            <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                            <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                                        </select>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted">Cannot edit: Cancelled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No orders found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
-    </div>
 </main>
 
+<!-- JavaScript -->
 <script>
+    // This function can be removed if you decide to handle filtering/sorting on the backend only.
     function filterOrders() {
         const searchValue = document.getElementById("search").value.toLowerCase();
-        const statusFilter = document.getElementById("status_filter").value;
+        const statusFilter = document.getElementById("status_filter").value.toLowerCase();
         const rows = document.querySelectorAll("#ordersTable tbody tr");
 
         rows.forEach(row => {
+            const orderId = row.querySelector("td:nth-child(1)").textContent.toLowerCase();
             const user = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-            const status = row.getAttribute("data-status");
+            const status = row.querySelector("td:nth-child(3)").textContent.toLowerCase();
+            const paymentMethod = row.querySelector("td:nth-child(4)").textContent.toLowerCase();
+            const canceledBy = row.querySelector("td:nth-child(5)").textContent.toLowerCase();
 
-            const isVisible = (user.includes(searchValue) || searchValue === "") &&
-                             (statusFilter === "" || status === statusFilter);
+            const isVisible = (
+                (orderId.includes(searchValue) || 
+                 user.includes(searchValue) || 
+                 status.includes(searchValue) || 
+                 paymentMethod.includes(searchValue) || 
+                 canceledBy.includes(searchValue) || 
+                 searchValue === "") &&
+                (statusFilter === "" || status === statusFilter)
+            );
 
             row.style.display = isVisible ? "" : "none";
         });
     }
-
-    function sortOrders() {
-        const sortOption = document.getElementById("sort").value;
-        const tableBody = document.querySelector("#ordersTable tbody");
-        const rows = Array.from(tableBody.querySelectorAll("tr"));
-
-        rows.sort((a, b) => {
-            const dateA = new Date(a.getAttribute("data-date"));
-            const dateB = new Date(b.getAttribute("data-date"));
-            const statusA = a.getAttribute("data-status");
-            const statusB = b.getAttribute("data-status");
-
-            if (sortOption === "date_asc") {
-                return dateA - dateB;
-            } else if (sortOption === "date_desc") {
-                return dateB - dateA;
-            } else if (sortOption === "status_asc") {
-                return statusA.localeCompare(statusB);
-            } else if (sortOption === "status_desc") {
-                return statusB.localeCompare(statusA);
-            }
-            return 0;
-        });
-
-        // Append sorted rows back to the table body
-        rows.forEach(row => tableBody.appendChild(row));
-    }
 </script>
 
+<!-- Styles -->
 <style>
-    /* Enhanced CSS */
     .table {
         border-radius: 0.5rem;
         background-color: #ffffff;
@@ -178,44 +184,14 @@
         color: white;
     }
 
-    .btn {
-        transition: background-color 0.3s ease;
-        border-radius: 0.3rem;
-    }
-
-    .btn:hover {
-        background-color: #0056b3; /* Darker shade for hover effect */
-    }
-
     .main-wrap {
-        background-color: #f8f9fa; /* Light background color */
         padding: 40px 30px;
-        border-radius: 0.75rem;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        background-color: #f8f9fa;
     }
 
-    .container {
-        max-width: 1200px;
-        margin: auto;
-    }
-
-    h2 {
-        margin-bottom: 25px;
-        font-size: 2.2rem;
-        letter-spacing: 1px;
-    }
-
-    .table-responsive {
-        margin-top: 20px;
+    .card {
         border-radius: 0.5rem;
-        background-color: #ffffff;
-    }
-
-    form.mb-4 {
-        background-color: #ffffff;
-        padding: 15px 25px;
-        border-radius: 0.5rem;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
     }
 
     .form-control {
@@ -223,23 +199,9 @@
         padding: 0.75rem;
     }
 
-    /* Media Queries */
     @media (max-width: 768px) {
         .form-row {
             flex-direction: column;
-        }
-
-        .form-row .col-md-4,
-        .form-row .col-md-3 {
-            width: 100%;
-        }
-
-        .btn {
-            margin-top: 10px;
-        }
-
-        .table th, .table td {
-            padding: 0.8rem;
         }
     }
 </style>

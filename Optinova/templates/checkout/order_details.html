@@ -1,0 +1,198 @@
+{% extends "user_home/main.html" %}
+
+{% block content %}
+    <!-- Breadcrumb Section Begin -->
+    <section class="breadcrumb-option">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="breadcrumb__text">
+                        <h4>Order Details</h4>
+                        <div class="breadcrumb__links">
+                            <a href="{% url 'user_home' %}">Home</a>
+                            <a href="{% url 'user_profile' %}">Profile</a>
+                            <a href="{% url 'my_orders' %}">My Orders</a>
+                            <span>Order {{ order.id }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Breadcrumb Section End -->
+
+    <div class="order-details-container">
+        <h2 class="text-center">Order #{{ order.id }}</h2>
+
+        {% if order.items.count == 1 %}
+            <!-- Single product, display in one table -->
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>Color</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items.all %}
+                        <tr>
+                            <!-- Display the first image of the product variant -->
+                            <td>
+                                <img src="{{ item.variant.images.first.image.url }}" alt="Product Image" class="img-fluid" style="width: 100px; border-radius: 10px;">
+                            </td>
+                            <td>{{ item.variant.product.name }}</td>
+                            <td>{{ item.variant.color }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>₹{{ item.price }}</td>
+                            <td>₹{{ item.price|floatformat:2 }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <!-- Multiple products, display in separate tables -->
+            {% for item in order.items.all %}
+                <h3 class="product-title">Product: {{ item.variant.product.name }}</h3>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Product</th>
+                            <th>Color</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <!-- Display the first image of the product variant -->
+                            <td>
+                                <img src="{{ item.variant.images.first.image.url }}" alt="Product Image" class="img-fluid" style="width: 100px; border-radius: 10px;">
+                            </td>
+                            <td>{{ item.variant.product.name }}</td>
+                            <td>{{ item.variant.color }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>₹{{ item.variant.price }}</td>
+                            <td>₹{{ item.total_price|floatformat:2 }}</td> <!-- Display total price of each item -->
+
+                        </tr>
+                    </tbody>
+                </table>
+            {% endfor %}
+        {% endif %}
+
+        <div class="order-summary">
+            <h4 class="text-center">Order Summary</h4>
+            <p><strong>Status:</strong> {{ order.status }}</p>
+            <p><strong>Total Price:</strong> ₹{{ total_price_order|floatformat:2 }}</p>
+            <p><strong>Order Date:</strong> {{ order.created_at|date:"M d, Y" }}</p>
+        </div>
+
+        <!-- Actions for Cancel and Return -->
+        <div class="order-actions text-center">
+            {% if order.status == "Pending" or order.status == "Processing" %}
+                <!-- Cancel Button -->
+                <form method="post" action="{% url 'cancel_order' order.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to cancel this order?');">
+                        Cancel Order
+                    </button>
+                </form>
+            {% endif %}
+
+            {% if order.status == "Delivered" %}
+                <!-- Return Button -->
+                <form method="post" action="{% url 'return_order' order.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg" onclick="return confirm('Are you sure you want to return this order?');">
+                        Return Order
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+        background-color: #f4f4f4;
+    }
+
+    /* Breadcrumb Section */
+    .breadcrumb-option {
+        background-color: #003366; /* Dark blue background */
+        padding: 20px 0;
+    }
+
+    .breadcrumb__text h4 {
+        font-size: 26px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .breadcrumb__links a, 
+    .breadcrumb__links span {
+        font-size: 15px;
+        color: #b0b0b0;
+    }
+
+    .breadcrumb__links a:hover {
+        color: #0099ff; /* Light blue on hover */
+    }
+
+        /* Order Details */
+        .order-details-container {
+            max-width: 900px;
+            margin: 30px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3, h4 {
+            color: #2C3E50;
+            font-weight: 600;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+            text-align: center;
+        }
+        .product-title {
+            margin-top: 30px;
+            font-size: 20px;
+            color: #34495E;
+        }
+        .img-fluid {
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 10px;
+        }
+        .order-summary {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 18px;
+            background-color: #F8F9FA;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        /* Order Actions */
+        .order-actions {
+            margin-top: 20px;
+        }
+        .btn-danger {
+            background-color: #d9534f;
+            border-color: #d9534f;
+        }
+        .btn-warning {
+            background-color: #f0ad4e;
+            border-color: #f0ad4e;
+        }
+    </style>
+{% endblock %}

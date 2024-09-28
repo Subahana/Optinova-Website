@@ -5,10 +5,13 @@ from django.contrib import messages
 from .forms import UserProfileForm,ProfilePictureForm,AddressForm,CustomPasswordChangeForm
 from django.http import JsonResponse
 from .models import Address
+from products.models import ProductVariant
 from order_management.models import Order,OrderItem
 from django.contrib.auth import get_user_model
 from django.contrib.auth import update_session_auth_hash
 from django.middleware.csrf import get_token
+from django.core.paginator import Paginator
+from django.db.models import Q, Sum, F
 
 User = get_user_model()
 
@@ -120,22 +123,27 @@ def delete_address(request, address_id):
         return redirect('user_profile')  # or wherever you want to redirect after deletion
     return redirect('user_profile')
 
+
 @login_required(login_url='accounts:user_login_view')
-def order_details(request):
-    # Fetch the user's orders
-    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+def my_orders(request):
+    available_variants = ProductVariant.objects.filter(is_active=True)
+    query = request.GET.get('query', '')
 
-    # Fetch all the order items for each order and group them by order
-    order_details = []
+    # Filter orders that contain available product variants
+    orders = Order.objects.filter(
+        user=request.user,  
+        items__variant__is_active=True
+    ).distinct()
+
+    # Calculate total price for each order
     for order in orders:
-        items = OrderItem.objects.filter(order=order)
-        order_details.append({
-            'order': order,
-            'items': items
-        })
-    
-    context = {
-        'order_details': order_details,
-    }
+        order.total_price = order.items.aggregate(
+            total=Sum(F('variant__price') * F('quantity'))  # Adjusted to use 'variant'
+        )['total'] or 0
 
-    return render(request, 'user_profile/order_details.html', context)
+    # Pagination (5 orders per page)
+    paginator = Paginator(orders, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'user_profile/my_orders.html', {'page_obj': page_obj, 'query': query})

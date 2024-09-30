@@ -97,7 +97,6 @@ def shop(request):
     }
     return render(request, 'user_home/shop.html', context)
 
-
 @login_required(login_url='accounts:user_login_view')
 @never_cache
 def user_home(request):
@@ -108,8 +107,7 @@ def user_home(request):
     products = Product.objects.filter(
         is_active=True,
         category__is_active=True
-    )
-
+    ).prefetch_related('variants') 
 
     context = {
         'products': products,

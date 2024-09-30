@@ -137,7 +137,11 @@
                     
                     <!-- Wishlist -->
                     <div class="product__details__btns__option mb-4">
-                        <a href="#" class="btn btn-outline-primary mr-2"><i class="fa fa-heart"></i> Wishlist</a>
+                        {% if product.main_variant %}
+                        <a href="{% url 'add_to_wishlist' product.main_variant.id %}" class="btn btn-outline-primary mr-2"><i class="fa fa-heart"></i> Wishlist</a>
+                    {% else %}
+                        <p>No main variant available.</p>
+                    {% endif %}
                     </div>
 
                     <!-- Additional Information -->
@@ -385,7 +389,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Invalid Quantity',
-                    text: 'Please enter a valid quantity.',
+                    text: 'Please enter a valid Item',
                     confirmButtonColor: '#d33',
                     confirmButtonText: 'Try Again',
                 });

@@ -28,9 +28,10 @@ class Order(models.Model):
         if not self.is_cancelled:
             self.is_cancelled = True
             self.cancelled_at = timezone.now()
-            self.cancellation_reason = reason or 'Cancelled by User'  # Set reason
+            self.cancellation_reason = reason or 'Cancelled by User'
+            # Revert stock for all items
             for item in self.items.all():
-                item.variant.increase_stock(item.quantity)  # Revert stock
+                item.variant.increase_stock(item.quantity)
             self.status = 'Cancelled'
             self.save()
 
@@ -38,23 +39,28 @@ class Order(models.Model):
         if not self.is_returned and self.status == 'Delivered':
             self.is_returned = True
             self.save()
+
     def total_amount(self):
-        return sum(item.total_price() for item in self.items.all())
-    
+        """Calculate total amount based on the stored prices of the order items."""
+        return sum(item.total_price() for item in self.items.all())  # Use stored price
+
+    def total_quantity(self):
+        """Calculate total quantity of items in the order."""
+        return sum(item.quantity for item in self.items.all())
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     variant = models.ForeignKey(ProductVariant, related_name='order_items', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # Add price field
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # Store the price at the time of ordering
 
     def save(self, *args, **kwargs):
-        """Reduce stock when the item is added to an order."""
-        if not self.pk:  # Item is being created
-            self.variant.decrease_stock(self.quantity)
+        """Store the price at the time of ordering and reduce stock when the item is added."""
+        if not self.pk:  # Only set the price when the item is first created (new order item)
+            self.price = self.variant.price  # Store the current price of the variant
+            self.variant.decrease_stock(self.quantity)  # Decrease stock
         super().save(*args, **kwargs)
 
     def total_price(self):
-        return self.variant.price * self.quantity
-    
-    
+        """Calculate total price based on stored price."""
+        return self.price * self.quantity  # Use stored price, not current price

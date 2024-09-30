@@ -1,11 +1,13 @@
 from django.shortcuts import get_object_or_404, redirect,render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from .models import Cart, CartItem
-from products.models import ProductVariant
+from .models import Cart, CartItem , Wishlist
+from products.models import Product,ProductVariant
 from django.contrib import messages
 from .models import CartItem
 from django.middleware.csrf import get_token
+import json
+# --------------Cart Management---------------#
 
 @login_required(login_url='accounts:user_login_view')
 def add_to_cart(request, variant_id):
@@ -142,3 +144,43 @@ def update_cart_item_quantity(request, item_id):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request method.'})
+
+
+# --------------Wishlist Management---------------#
+
+
+@login_required(login_url='accounts:user_login_view')
+def view_wishlist(request):
+    wishlist = request.user.wishlist  # Adjust this if your wishlist logic is different
+    wishlist_items = wishlist.variants.all()  # Adjust according to your model structure
+
+    context = {
+        'wishlist_items': wishlist_items,
+        'wishlist': wishlist,
+        'csrf_token': get_token(request) 
+
+    }
+    return render(request, 'cart_management/wishlist.html', context)
+
+# Add to Wishlist
+def add_to_wishlist(request, variant_id):
+    variant = get_object_or_404(ProductVariant, id=variant_id)
+    wishlist, created = Wishlist.objects.get_or_create(user=request.user)
+    wishlist.variants.add(variant)
+    return redirect('view_wishlist')
+
+
+def remove_from_wishlist(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        selected_items = data.get('selected_items', [])
+
+        if selected_items:
+            wishlist = Wishlist.objects.get(user=request.user)
+            for item_id in selected_items:
+                variant = get_object_or_404(ProductVariant, id=item_id)
+                wishlist.variants.remove(variant)  # Remove selected variants from wishlist
+
+        return JsonResponse({'status': 'success'})
+    else:
+        return JsonResponse({'status': 'error'}, status=400)

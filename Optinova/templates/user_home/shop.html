@@ -96,19 +96,20 @@
                                         <img src="{% static 'img/no-image.jpg' %}" alt="No image available">
                                     {% endif %}
                                     <ul class="product__hover">
-                                        <li><a href="#"><i class="fa fa-heart"></i></a></li>
+                                        <li>
+                                            {% if product.main_variant %}
+                                                <a href="{% url 'add_to_wishlist' product.main_variant.id %}">
+                                                    <img src="{% static 'img/icon/heart.png' %}" alt="Add to wishlist">
+                                                </a>
+                                            {% else %}
+                                                <p>No main variant available.</p>
+                                            {% endif %}
+                                        </li>                                    
                                     </ul>
                                 </div>
                                 <div class="product__item__text">
                                     <h6>{{ product.name }}</h6>
                                     <a href="{% url 'user_product_detail' product.id %}" class="add-cart">View Details</a>
-                                    <div class="rating">
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star"></i>
-                                        <i class="fa fa-star-half-o"></i>
-                                    </div>
                                     <h5>₹{{ product.main_variant.price }}</h5>
                                 </div>
                             </div>

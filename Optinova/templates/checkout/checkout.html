@@ -23,113 +23,94 @@
     </section>
     <!-- Breadcrumb Section End -->
 
-<!-- Checkout Section Begin -->
-<section class="checkout spad">
-    <div class="container">
-        <div class="row">
-            {% if cart_items %}
-            <!-- Checkout Form -->
-            <div class="col-lg-8">
-                <div class="checkout__form">
-                    <h4>Checkout Details</h4>
-                    <form method="post" action="{% url 'checkout' %}">
-                        {% csrf_token %}
-                        <div class="checkout__form__input">
-                            <label for="address"><i class="fa fa-map-marker"></i> Select or Add Address</label>
-                            <select name="address" id="address" required>
-                                {% for address in addresses %}
-                                    <option value="{{ address.id }}" {% if address.is_default %} selected {% endif %}>
-                                        {{ address.street }}, {{ address.city }}, {{ address.state }} - {{ address.pin_code }}
-                                    </option>
-                                {% endfor %}
-                                <option value="add_new">Add New Address</option>
-                            </select>
-                        </div>
-
-                        <!-- New Address Form (Hidden by Default) -->
-                        <div id="new-address-form" class="new-address">
-                            <h5>Add New Address</h5>
-                            <input type="text" name="new_street" placeholder="Street Address">
-                            <input type="text" name="new_city" placeholder="City">
-                            <input type="text" name="new_state" placeholder="State">
-                            <input type="text" name="new_pin_code" placeholder="PIN Code">
-                        </div>
-
-                        <!-- Payment Method -->
-                        <div class="checkout__form__input">
-                            <label for="payment_method"><i class="fa fa-credit-card"></i> Payment Method</label>
-                            <select name="payment_method" id="payment_method" required>
-                                <option value="COD">Cash on Delivery</option>
-                                <option value="ONLINE">Online Payment</option>
-                            </select>
-                        </div>
-
-                        <!-- Order Summary -->
-                        <div class="checkout__order__total">
-                            <h5>Order Summary</h5>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Price</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in cart_items %}
-                                    <tr>
-                                        <td>{{ item.variant.product.name }} - {{ item.variant.name }}</td>
-                                        <td>{{ item.quantity }}</td>
-                                        <td>₹{{ item.variant.price }}</td>
-                                        <td>₹{{ item.total_price }}</td>
-                                    </tr>
+    <!-- Checkout Section Begin -->
+    <section class="checkout spad">
+        <div class="container">
+            <div class="row">
+                {% if cart_items %}
+                <!-- Checkout Form -->
+                <div class="col-lg-8">
+                    <div class="checkout__form">
+                        <h4>Checkout Details</h4>
+                        <form method="post" action="{% url 'checkout' %}">
+                            {% csrf_token %}
+                            <div class="checkout__form__input">
+                                <label for="address"><i class="fa fa-map-marker"></i> Select or Add Address</label>
+                                <select name="address" id="address" required>
+                                    {% for address in addresses %}
+                                        <option value="{{ address.id }}" {% if address.is_default %} selected {% endif %}>
+                                            {{ address.street }}, {{ address.city }}, {{ address.state }} - {{ address.pin_code }}
+                                        </option>
                                     {% endfor %}
-                                </tbody>
-                            </table>
-                            <br>
-                            <h5>Total: ₹{{ total_price }}</h5>
-                        </div>
-                        <hr>
-                        <!-- Place Order Button -->
-                        <button type="submit" class="primary-btn">Place Order</button>
-                    </form>
-                </div>
-            </div>
+                                    <option value="add_new">Add New Address</option>
+                                </select>
+                            </div>
 
-            <!-- Order Management Sidebar -->
-            <div class="col-lg-4">
-                <div class="order__management">
-                    <h4>Your Orders</h4>
-                    <div class="order__history">
-                        <ul>
-                            {% for order in orders %}
-                            <li>
-                                Order #{{ order.id }} - {{ order.status }} 
-                                <a href="{% url 'cancel_order' order.id %}" class="cancel-btn">Cancel</a>
-                            </li>
-                            {% empty %}
-                            <li>No orders found.</li>
-                            {% endfor %}
-                        </ul>
+                            <!-- New Address Form (Hidden by Default) -->
+                            <div id="new-address-form" class="new-address">
+                                <h5>Add New Address</h5>
+                                <input type="text" name="new_street" placeholder="Street Address">
+                                <input type="text" name="new_city" placeholder="City">
+                                <input type="text" name="new_state" placeholder="State">
+                                <input type="text" name="new_pin_code" placeholder="PIN Code">
+                            </div>
+
+                            <!-- Payment Method -->
+                            <div class="checkout__form__input">
+                                <label for="payment_method"><i class="fa fa-credit-card"></i> Payment Method</label>
+                                <select name="payment_method" id="payment_method" required>
+                                    <option value="COD">Cash on Delivery</option>
+                                    <option value="ONLINE">Online Payment</option>
+                                </select>
+                            </div>
+
+                            <!-- Order Summary -->
+                            <div class="checkout__order__total">
+                                <h5>Order Summary</h5>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Quantity</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in cart_items %}
+                                        <tr>
+                                            <td>{{ item.variant.product.name }} - {{ item.variant.name }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>₹{{ item.variant.price }}</td>
+                                            <td>₹{{ item.total_price }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                <br>
+                                <h5>Total: ₹{{ total_price }}</h5>
+                            </div>
+                            <hr>
+                            <!-- Place Order Button -->
+                            <button type="submit" class="primary-btn">Place Order</button>
+                        </form>
                     </div>
                 </div>
-            </div>
 
-            {% else %}
-            <!-- Empty Cart Message -->
-            <div class="col-lg-12 text-center">
-                <h3>Your shopping cart is empty!</h3>
-                <p>It looks like you haven’t added anything to your cart yet. Start shopping now!</p>
-                <div class="continue__btn mt-4">
-                    <a href="{% url 'shop' %}" class="primary-btn">Start Shopping</a>
+                {% else %}
+                <!-- Empty Cart Message -->
+                <div class="col-lg-12 text-center">
+                    <h3>Your shopping cart is empty!</h3>
+                    <p>It looks like you haven’t added anything to your cart yet. Start shopping now!</p>
+                    <div class="continue__btn mt-4">
+                        <a href="{% url 'shop' %}" class="primary-btn">Start Shopping</a>
+                    </div>
                 </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
-    </div>
-</section>
-<!-- Checkout Section End -->
+    </section>
+    <!-- Checkout Section End -->
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -139,221 +120,160 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleNewAddressForm() {
         if (addressSelect.value === 'add_new') {
             newAddressForm.style.display = 'block';
-            // Set 'required' attribute for new address fields
             document.querySelector('input[name="new_street"]').setAttribute('required', 'required');
             document.querySelector('input[name="new_pin_code"]').setAttribute('required', 'required');
         } else {
             newAddressForm.style.display = 'none';
-            // Remove 'required' attribute for new address fields
             document.querySelector('input[name="new_street"]').removeAttribute('required');
             document.querySelector('input[name="new_pin_code"]').removeAttribute('required');
         }
     }
 
-    // Initial check
     toggleNewAddressForm();
-
-    // Event listener
     addressSelect.addEventListener('change', toggleNewAddressForm);
 });
 </script>
 
 <style>
- body {
-        font-family: 'Poppins', sans-serif;
-        color: #333;
-        background-color: #f4f4f4;
-    }
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    background-color: #f4f4f4;
+}
 
-    /* Breadcrumb Section */
-    .breadcrumb-option {
-        background-color: #003366; /* Dark blue background */
-        padding: 20px 0;
-    }
+/* Breadcrumb Section */
+.breadcrumb-option {
+    background-color: #003366; /* Dark blue background */
+    padding: 20px 0;
+}
 
-    .breadcrumb__text h4 {
-        font-size: 26px;
-        font-weight: 600;
-        color: #fff;
-    }
+.breadcrumb__text h4 {
+    font-size: 26px;
+    font-weight: 600;
+    color: #fff;
+}
 
-    .breadcrumb__links a, 
-    .breadcrumb__links span {
-        font-size: 15px;
-        color: #b0b0b0;
-    }
+.breadcrumb__links a, 
+.breadcrumb__links span {
+    font-size: 15px;
+    color: #b0b0b0;
+}
 
-    .breadcrumb__links a:hover {
-        color: #0099ff; /* Light blue on hover */
-    }
+.breadcrumb__links a:hover {
+    color: #0099ff; /* Light blue on hover */
+}
 
-    /* Checkout Section */
-    .checkout {
-        padding: 60px 0;
-        background: #fff;
-    }
+/* Checkout Section */
+.checkout {
+    padding: 60px 0;
+    background: #fff;
+}
 
-    .checkout__form h4 {
-        font-size: 28px;
-        margin-bottom: 30px;
-        font-weight: bold;
-        color: #333;
-    }
+.checkout__form h4 {
+    font-size: 28px;
+    margin-bottom: 30px;
+    font-weight: bold;
+    color: #333;
+}
 
-    .checkout__form__input {
-        margin-bottom: 25px;
-    }
+.checkout__form__input {
+    margin-bottom: 25px;
+}
 
-    .checkout__form__input label {
-        display: block;
-        font-weight: 600;
-        margin-bottom: 10px;
-        font-size: 16px;
-        color: #666;
-    }
+.checkout__form__input label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #666;
+}
 
-    .checkout__form__input select, 
-    .checkout__form__input input {
-        width: 100%;
-        padding: 15px;
-        border-radius: 6px;
-        border: 1px solid #ddd;
-        font-size: 16px;
-        transition: border-color 0.3s ease;
-    }
+.checkout__form__input select, 
+.checkout__form__input input {
+    width: 100%;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
 
-    .checkout__form__input select:focus, 
-    .checkout__form__input input:focus {
-        border-color: #0099ff;
-    }
+.checkout__form__input select:focus, 
+.checkout__form__input input:focus {
+    border-color: #0099ff;
+}
 
-    /* New Address Styles */
-    .new-address {
-        margin-top: 20px;
-        padding: 20px;
-        background: #f9f9f9;
-        border-radius: 6px;
-        border: 1px solid #ddd;
-    }
+/* New Address Styles */
+.new-address {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
 
-    .new-address h5 {
-        margin-bottom: 15px;
-        font-size: 20px;
-        color: #333;
-    }
+.new-address h5 {
+    margin-bottom: 15px;
+    font-size: 20px;
+    color: #333;
+}
 
-    .new-address input {
-        margin-bottom: 10px;
-        padding: 12px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-        font-size: 16px;
-        width: calc(100% - 24px);
-    }
+.new-address input {
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    width: calc(100% - 24px);
+}
 
-    /* Order Summary */
-    .checkout__order__total {
-        margin-top: 40px;
-        padding: 20px;
-        background: #f9f9f9;
-        border-radius: 6px;
-        border: 1px solid #ddd;
-    }
+/* Order Summary */
+.checkout__order__total {
+    margin-top: 40px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
 
-    .checkout__order__total h5 {
-        font-size: 20px;
-        font-weight: 700;
-        color: #333;
-    }
+.checkout__order__total h5 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
 
-    .checkout__order__total table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+.checkout__order__total table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-    .checkout__order__total table th, 
-    .checkout__order__total table td {
-        padding: 15px;
-        border-bottom: 1px solid #ddd;
-        font-size: 16px;
-        color: #333;
-    }
+.checkout__order__total table th, 
+.checkout__order__total table td {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    font-size: 16px;
+    color: #333;
+}
 
-    .primary-btn {
-        background: linear-gradient(90deg, #003366 0%, #0099ff 100%);
-        color: #fff;
-        padding: 15px 30px;
-        border-radius: 30px;
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: uppercase;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-align: center;
-        display: inline-block;
-        margin-top: 20px;
-    }
+.primary-btn {
+    background: #ff9900;
+    color: #fff;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: inline-block;
+    margin-top: 20px;
+}
 
-    .primary-btn:hover {
-        background: linear-gradient(90deg, #001f33 0%, #007acc 100%);
-    }
-
-    /* Empty Cart Styles */
-    .empty-cart {
-        text-align: center;
-        padding: 50px 0;
-        background-color: #fff;
-    }
-
-    .empty-cart h4 {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-
-    .empty-cart .primary-btn {
-        display: inline-block;
-        margin-top: 20px;
-    }
-
-    /* Order Management */
-    .order__management {
-        padding: 30px;
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    .order__management h4 {
-        font-size: 24px;
-        margin-bottom: 20px;
-        color: #333;
-    }
-
-    .order__history ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .order__history li {
-        margin-bottom: 15px;
-        font-size: 16px;
-        color: #333;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .order__history .cancel-btn {
-        color: #ff4d4d;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .order__history .cancel-btn:hover {
-        text-decoration: underline;
-    }
+.primary-btn:hover {
+    background: #cc7a00;
+}
 </style>
 
 {% endblock %}

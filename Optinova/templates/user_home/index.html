@@ -15,7 +15,15 @@
                                     <div class="product__item__pic position-relative text-center">
                                         <img src="{{ product.main_variant.images.all.0.image.url }}" alt="{{ product.name }}" class="img-fluid rounded product-img">
                                         <ul class="product__hover position-absolute d-flex justify-content-center align-items-center">
-                                            <li><a href="#"><img src="{% static 'img/icon/heart.png' %}" alt=""></a></li>
+                                            <li>
+                                                {% if product.main_variant %}
+                                                    <a href="{% url 'add_to_wishlist' product.main_variant.id %}">
+                                                        <img src="{% static 'img/icon/heart.png' %}" alt="Add to wishlist">
+                                                    </a>
+                                                {% else %}
+                                                    <p>No main variant available.</p>
+                                                {% endif %}
+                                            </li>
                                         </ul>
                                     </div>
                                 {% else %}

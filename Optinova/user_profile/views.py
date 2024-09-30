@@ -123,7 +123,6 @@ def delete_address(request, address_id):
         return redirect('user_profile')  # or wherever you want to redirect after deletion
     return redirect('user_profile')
 
-
 @login_required(login_url='accounts:user_login_view')
 def my_orders(request):
     available_variants = ProductVariant.objects.filter(is_active=True)
@@ -135,10 +134,15 @@ def my_orders(request):
         items__variant__is_active=True
     ).distinct()
 
-    # Calculate total price for each order
+    # Calculate total price and total quantity for each order
     for order in orders:
         order.total_price = order.items.aggregate(
-            total=Sum(F('variant__price') * F('quantity'))  # Adjusted to use 'variant'
+            total=Sum(F('price') * F('quantity'))  # Use 'price' stored in OrderItem
+        )['total'] or 0
+        
+        # Calculate total items in the order
+        order.total_items = order.items.aggregate(
+            total=Sum('quantity')  # Total quantity of items in this order
         )['total'] or 0
 
     # Pagination (5 orders per page)

@@ -50,6 +50,8 @@
                                 <th>Image</th>
                                 <th>Product Name</th>
                                 <th>Variants</th>
+                                <th>Category</th>
+                                <th>Brand</th>
                                 <th>Status</th>
                                 <th class="text-end">Action</th>
                             </tr>
@@ -79,7 +81,8 @@
                                             No Variants Available
                                         {% endif %}
                                     </td>
-                                    
+                                    <td><b>{{ product.category }}</b></td>
+                                    <td><b>{{ product.brand }}</b></td>
                                     <td>
                                         {% if product.is_active %}
                                             <span class="badge rounded-pill alert-success">Active</span>

@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import sys
+from brand_management.models import Brand
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -18,6 +19,7 @@ class Product(models.Model):
     description = models.TextField(default='')
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)  # Update here
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

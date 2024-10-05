@@ -53,13 +53,24 @@
                             </div>
                         {% endif %}
                     </div>
-
+<hr>
                     <div class="form-group">
                         {{ product_form.category.label_tag }}
                         {{ product_form.category }}
                         {% if product_form.category.errors %}
                             <div class="text-danger">
                                 {{ product_form.category.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <hr>       
+                
+                    <div class="form-group">
+                        {{ product_form.brand.label_tag }}
+                        {{ product_form.brand }}
+                        {% if product_form.brand.errors %}
+                            <div class="text-danger">
+                                {{ product_form.brand.errors }}
                             </div>
                         {% endif %}
                     </div>

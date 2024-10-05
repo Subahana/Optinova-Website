@@ -7,6 +7,7 @@ from django.contrib import messages
 from .models import CartItem
 from django.middleware.csrf import get_token
 import json
+
 # --------------Cart Management---------------#
 
 @login_required(login_url='accounts:user_login_view')
@@ -162,14 +163,14 @@ def view_wishlist(request):
     }
     return render(request, 'cart_management/wishlist.html', context)
 
-# Add to Wishlist
+@login_required(login_url='accounts:user_login_view')
 def add_to_wishlist(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)
     wishlist, created = Wishlist.objects.get_or_create(user=request.user)
     wishlist.variants.add(variant)
     return redirect('view_wishlist')
 
-
+@login_required(login_url='accounts:user_login_view')
 def remove_from_wishlist(request):
     if request.method == 'POST':
         data = json.loads(request.body)

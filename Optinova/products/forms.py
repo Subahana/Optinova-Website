@@ -40,7 +40,7 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'description', 'base_price', 'category']
+        fields = ['name', 'description', 'base_price', 'category','brand']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter Product name'}),
             'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
@@ -76,7 +76,13 @@ class ProductForm(forms.ModelForm):
         category = self.cleaned_data.get('category')
         if category and not category.is_active:
             raise forms.ValidationError("You cannot add a product to an inactive category.")
-        return category
+        return category    
+    
+    def clean_brand(self):
+        brand = self.cleaned_data.get('brand')
+        if brand and not brand.is_active:
+            raise forms.ValidationError("You cannot add a product to an inactive brand.")
+        return brand
 
 
 class ProductVariantForm(forms.ModelForm):

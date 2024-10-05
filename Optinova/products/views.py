@@ -143,7 +143,6 @@ def add_variant(request, product_id):
     })
 
 
-
 @login_required(login_url='accounts:admin_login')
 def add_images(request, variant_id):
     variant = get_object_or_404(ProductVariant, id=variant_id)

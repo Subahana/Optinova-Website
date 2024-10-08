@@ -24,10 +24,72 @@
 
     <style>
         .menu-item.active .menu-link {
-    background-color: #299750; /* Change this to your desired color */
-    color: #fff; /* Change text color if needed */
-}
+            background-color: #299750; /* Active menu background color */
+            color: #fff; /* Active menu text color */
+        }
 
+        .menu-item .menu-link {
+            color: #a0a9b5; /* Default menu text color */
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-item .menu-link i {
+            margin-right: 10px;
+        }
+
+        .menu-item .menu-link:hover {
+            background-color: #3b4e63; /* Hover background */
+            color: #fff; /* Hover text */
+        }
+
+        .submenu a {
+            display: block;
+            padding: 8px 20px;
+            font-size: 14px;
+            color: #a0a9b5;
+        }
+
+        .submenu a:hover {
+            background-color: #299750; /* Hover color in submenu */
+            color: #fff;
+        }
+
+        .brand-wrap img {
+            width: 150px;
+        }
+
+        .main-header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 10px;
+        }
+
+        .searchform input {
+            border-radius: 20px;
+            border: 1px solid #d1d5db;
+            padding: 8px 15px;
+        }
+
+        .nav-link.btn-icon {
+            color: #6b7280;
+            margin: 0 10px;
+        }
+
+        .nav-link.btn-icon:hover {
+            color: #299750;
+        }
+
+        .dropdown-menu a {
+            padding: 10px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f3f4f6;
+        }
     </style>
     </head>
 
@@ -83,7 +145,7 @@
                             <a href="{% url 'list_orders' %}">Order detail</a>
                         </div>
                     </li>         <li class="menu-item has-submenu">
-                        <a class="menu-link" href=""> <i class="icon material-icons md-shopping_cart"></i>
+                        <a class="menu-link" href=""> <i class="icon material-icons md-loyalty"></i>
                             <span class="text">Brand</span>
                         </a>
                         <div class="submenu">
@@ -91,52 +153,6 @@
                             <a href="{% url 'brand_list' %}">Order detail</a>
                         </div>
                     </li>
-                    <!-- <li class="menu-item has-submenu">
-                        <a class="menu-link" href="page-form-product-1.html"> <i class="icon material-icons md-add_box"></i>
-                            <span class="text">Add product</span>
-                        </a>
-                        <div class="submenu">
-                            <a href="page-form-product-1.html">Add product 1</a>
-                            <a href="page-form-product-2.html">Add product 2</a>
-                            <a href="page-form-product-3.html">Add product 3</a>
-                            <a href="page-form-product-4.html">Add product 4</a>
-                        </div>
-                    </li>
-
-                    <li class="menu-item">
-                        <a class="menu-link" href="page-reviews.html"> <i class="icon material-icons md-comment"></i>
-                            <span class="text">Reviews</span>
-                        </a>
-                    </li>
-                    <li class="menu-item">
-                        <a class="menu-link" href="page-brands.html"> <i class="icon material-icons md-stars"></i>
-                            <span class="text">Brands</span> </a>
-                    </li>
-                    <li class="menu-item">
-                        <a class="menu-link" disabled href="#"> <i class="icon material-icons md-pie_chart"></i>
-                            <span class="text">Statistics</span>
-                        </a>
-                    </li> -->
-                </ul>
-                <hr>
-                <!-- <ul class="menu-aside">
-                    <li class="menu-item has-submenu">
-                        <a class="menu-link" href="#"> <i class="icon material-icons md-settings"></i>
-                            <span class="text">Settings</span>
-                        </a>
-                        <div class="submenu">
-                            <a href="page-settings-1.html">Setting sample 1</a>
-                            <a href="page-settings-2.html">Setting sample 2</a>
-                        </div>
-                    </li>
-                    <li class="menu-item">
-                        <a class="menu-link" href="page-blank.html"> <i class="icon material-icons md-local_offer"></i>
-                            <span class="text"> Starter page </span>
-                        </a>
-                    </li>
-                </ul> -->
-                <br>
-                <br>
             </nav>
         </aside>
         <main class="main-wrap">

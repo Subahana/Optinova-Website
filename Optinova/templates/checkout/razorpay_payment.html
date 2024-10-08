@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Razorpay Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> <!-- Include Axios -->
+</head>
+<body>
+    <h1>Complete Your Payment</h1>
+    
+    <form id="razorpay-form" method="POST" action="{% url 'verify_payment' %}">
+        {% csrf_token %}
+        <input type="hidden" name="order_id" value="{{ razorpay_order_id }}">
+        <input type="hidden" name="amount" value="{{ total_price }}">  <!-- Amount in paisa -->
+        <input type="hidden" name="payment_id" id="payment_id">
+        <input type="hidden" name="signature" id="signature">
+    </form>
+
+    <script>
+        // Set up the Razorpay options
+        var options = {
+    "key": "{{ razorpay_key }}", // Your Razorpay Key ID
+    "amount": {{ total_price }}, // Amount in paisa (make sure it's a number)
+    "currency": "INR",
+    "name": "{{ user_name }}", // Customer name
+    "description": "Order Payment",
+    "image": "https://your_logo_url.com/logo.png", // Optional logo
+    "order_id": "{{ razorpay_order_id }}", // Get the order ID from the server
+    "handler": function (response) {
+        // Handle successful payment
+        document.getElementById('payment_id').value = response.razorpay_payment_id;
+        document.getElementById('signature').value = response.razorpay_signature;
+
+        // Submit the form to verify payment on the server
+        document.getElementById('razorpay-form').submit();
+    },
+    "prefill": {
+        "name": "{{ user_name }}",
+        "email": "{{ user_email }}",
+    },
+    "theme": {
+        "color": "#0099ff"
+    }
+};
+
+// Create a new Razorpay instance
+var rzp1 = new Razorpay(options);
+rzp1.open();
+
+// Handle payment failure
+rzp1.on('payment.failed', function(response) {
+    alert("Payment failed: " + response.error.description); // Alert the user about the failure
+});
+
+    </script>
+</body>
+</html>

@@ -9,7 +9,10 @@ class OrderForm(forms.Form):
         help_text='Choose an existing address or add a new one.'
     )
     payment_method = forms.ChoiceField(
-        choices=[('COD', 'Cash on Delivery'), ('ONLINE', 'Online Payment')],
+        choices=[
+            ('COD', 'Cash on Delivery'), 
+            ('razorpay', 'Online Payment (Razorpay)')
+        ],
         required=True,
         label='Payment Method'
     )
@@ -47,18 +50,20 @@ class OrderForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         address = cleaned_data.get('address')
-        print("Selected Address:", address)
-        print("New Street:", cleaned_data.get('new_street'))
-        print("New Pin Code:", cleaned_data.get('new_pin_code'))
-
 
         # If 'Add New Address' is selected, validate new address fields
         if address == 'add_new':
             new_street = cleaned_data.get('new_street')
+            new_city = cleaned_data.get('new_city')
+            new_state = cleaned_data.get('new_state')
             new_pin_code = cleaned_data.get('new_pin_code')
 
             if not new_street:
                 self.add_error('new_street', 'Street Address is required.')
+            if not new_city:
+                self.add_error('new_city', 'City is required.')
+            if not new_state:
+                self.add_error('new_state', 'State is required.')
             if not new_pin_code:
                 self.add_error('new_pin_code', 'PIN Code is required.')
 

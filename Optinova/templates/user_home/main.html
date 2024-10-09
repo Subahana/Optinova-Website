@@ -33,8 +33,6 @@
     <link rel="stylesheet" href="{% static 'css/slicknav.min.css' %}" type="text/css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}" type="text/css">
 
-    <!-- Preload Font -->
-    <link rel="preload" href="{% static 'fonts/fontawesome-webfont.woff2' %}" as="font" type="font/woff2" crossorigin="anonymous">
 
     <!-- JavaScript Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -108,7 +106,7 @@
             <div class="row align-items-center">
                 <div class="col-lg-3 col-md-3">
                     <div class="header__logo">
-                        <img src="{% static 'img/optinova_logo.png' %}" alt="optinova_logo">
+                        <img src="{{ MEDIA_URL }}img/optinova_logo.png" alt="Optinova Logo">
                     </div>
                 </div>
                 <div class="col-lg-6 col-md-6">

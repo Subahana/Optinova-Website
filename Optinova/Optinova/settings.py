@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'cart_management',
     'order_management',
     'brand_management',
+    'coupon_management',
     'django.contrib.sites',  
     'allauth',
     'allauth.account',
@@ -113,7 +114,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
-RAZOR_PAY_KEY_ID =config('RAZOR_PAY_KEY_ID')
+RAZOR_PAY_KEY_ID = config('RAZOR_PAY_KEY_ID')
 RAZOR_PAY_KEY_SECRET = config('RAZOR_PAY_KEY_SECRET')
 
 SOCIALACCOUNT_PROVIDERS = {

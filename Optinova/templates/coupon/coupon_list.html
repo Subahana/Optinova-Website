@@ -1,0 +1,42 @@
+{% extends "admin_page/main.html" %}
+{% load static %}
+
+{% block content %}
+<main class="main-wrap">
+    <section class="content-main">
+    <h1>Coupons</h1>
+    <a href="{% url 'create_coupon' %}">Create New Coupon</a>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Discount (%)</th>
+                <th>Valid From</th>
+                <th>Valid To</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coupon in coupons %}
+            <tr>
+                <td>{{ coupon.code }}</td>
+                <td>{{ coupon.discount }}</td>
+                <td>{{ coupon.valid_from }}</td>
+                <td>{{ coupon.valid_to }}</td>
+                <td>{{ coupon.active|yesno:"Yes,No" }}</td>
+                <td>
+                    <a href="{% url 'edit_coupon' coupon.id %}">Edit</a> | 
+                    <a href="{% url 'toggle_coupon_status' coupon.id %}">
+                        {{ coupon.active|yesno:"Deactivate,Activate" }}
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+</main>
+{% endblock %}
+

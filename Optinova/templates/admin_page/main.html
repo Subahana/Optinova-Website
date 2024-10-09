@@ -144,13 +144,23 @@
                       
                             <a href="{% url 'list_orders' %}">Order detail</a>
                         </div>
-                    </li>         <li class="menu-item has-submenu">
+                    </li>  
+                    <li class="menu-item has-submenu">
+                        <a class="menu-link" href=""> <i class="icon material-icons md-shopping_cart"></i>
+                            <span class="text">Coupon</span>
+                        </a>
+                        <div class="submenu">
+                      
+                            <a href="{% url 'coupon_list' %}">Coupon detail</a>
+                        </div>
+                    </li>          
+                    <li class="menu-item has-submenu">
                         <a class="menu-link" href=""> <i class="icon material-icons md-loyalty"></i>
                             <span class="text">Brand</span>
                         </a>
                         <div class="submenu">
                       
-                            <a href="{% url 'brand_list' %}">Order detail</a>
+                            <a href="{% url 'brand_list' %}">Brand details</a>
                         </div>
                     </li>
             </nav>

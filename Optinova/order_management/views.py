@@ -11,6 +11,9 @@ from django.conf import settings
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
+import logging 
+
+logger = logging.getLogger(__name__)
 
 @login_required(login_url='accounts:user_login_view')
 def checkout(request):
@@ -32,7 +35,7 @@ def checkout(request):
                     is_default=True
                 )
             else:
-                address = Address.objects.get(id=address_id)
+                address = get_object_or_404(Address, id=address_id)
 
             payment_method = form.cleaned_data['payment_method']
 
@@ -59,35 +62,42 @@ def checkout(request):
 
             # Calculate total price for the payment
             total_price = int(cart.get_total_price() * 100)  # Convert to paisa
+            logger.debug(f"Total price calculated in paisa: {total_price}")
 
             # Handle payment method: Razorpay, COD, etc.
             if payment_method.lower() == 'razorpay':
-                razorpay_client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
-
-                # Create Razorpay order
                 try:
+                    razorpay_client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
+
+                    # Create Razorpay order
                     razorpay_order = razorpay_client.order.create({
                         "amount": total_price,
                         "currency": "INR",
                         "payment_capture": 1
                     })
-                except Exception as e:
+                    
+                    logger.info(f"Razorpay order created with ID: {razorpay_order['id']}")
+
+                    order.razorpay_order_id = razorpay_order['id']
+                    order.save()
+                    
+                    # Pass Razorpay data to the frontend for payment
+                    return render(request, 'checkout/razorpay_payment.html', {
+                        'order': order,
+                        'razorpay_order_id': order.razorpay_order_id,
+                        'razorpay_key': settings.RAZOR_PAY_KEY_ID,
+                        'total_price': total_price,  # Keep amount in paisa
+                        'user_email': request.user.email,
+                        'user_name': request.user.get_full_name(),
+                    })
+                except razorpay.errors.BadRequestError as e:
+                    logger.error(f"Failed to create Razorpay order: {str(e)}")
                     messages.error(request, "Failed to create Razorpay order. Please try again.")
                     return redirect('cart_detail')
-
-                order.razorpay_order_id = razorpay_order['id']
-                order.save()
-                cart_items.delete()  # Clear cart after creating order
-
-                # Pass Razorpay data to the frontend for payment
-                return render(request, 'checkout/razorpay_payment.html', {
-                    'order': order,
-                    'razorpay_order_id': order.razorpay_order_id,
-                    'razorpay_key': settings.RAZOR_PAY_KEY_ID,
-                    'total_price': total_price,  # Keep amount in paisa
-                    'user_email': request.user.email,
-                    'user_name': request.user.get_full_name(),
-                })
+                except Exception as e:
+                    logger.error(f"An error occurred: {str(e)}")
+                    messages.error(request, "An unexpected error occurred. Please try again.")
+                    return redirect('cart_detail')
 
             elif payment_method.lower() == 'cod':
                 cart_items.delete()  # Clear cart after creating order
@@ -106,30 +116,43 @@ def checkout(request):
 
 
 @csrf_exempt
-def verify_payment(request):
+def verify_razorpay_payment(request):
     if request.method == "POST":
         data = json.loads(request.body)
         order_id = data.get("order_id")
         payment_id = data.get("payment_id")
-        signature = data.get("signature")
 
-        # Verify payment signature
+        logger.debug(f"Verifying Razorpay payment: Order ID - {order_id}, Payment ID - {payment_id}")
+
+        # Skip verification in test mode
+        if settings.RAZORPAY_TEST_MODE:  # Ensure this setting exists
+            order = get_object_or_404(Order, razorpay_order_id=order_id)
+            order.status = 'Paid'
+            order.save()
+            logger.info(f"Order {order.id} marked as paid in test mode")
+            return JsonResponse({'success': True, 'order_id': order.id})
+
+        # Production mode payment verification
         client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
         try:
             client.utility.verify_payment_signature({
                 'order_id': order_id,
                 'payment_id': payment_id,
-                'signature': signature
             })
 
             # Update order status to Paid
             order = get_object_or_404(Order, razorpay_order_id=order_id)
             order.status = 'Paid'
             order.save()
+            logger.info(f"Order {order.id} payment verified and marked as paid")
 
             return JsonResponse({'success': True, 'order_id': order.id})
-        except Exception as e:
+        except razorpay.errors.SignatureVerificationError as e:
+            logger.error(f"Payment verification failed: {str(e)}")
             return JsonResponse({'error': str(e)}, status=400)
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {str(e)}")
+            return JsonResponse({'error': 'An unexpected error occurred.'}, status=400)
 
     return JsonResponse({'error': 'Invalid request.'}, status=400)
 
@@ -138,7 +161,7 @@ def verify_payment(request):
 def order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     total_price = sum(item.quantity * item.variant.price for item in order.items.all())
-    payment_status = "Paid" if order.payment_method == "razorpay" else "Cash on Delivery"
+    payment_status = "Paid" if order.payment_method.lower() == "razorpay" else "Cash on Delivery"
 
     return render(request, 'checkout/order_success.html', {
         'order': order,

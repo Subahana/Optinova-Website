@@ -1,0 +1,19 @@
+{% extends "admin_page/main.html" %}
+{% load static %}
+
+{% block content %}
+<main class="main-wrap">
+    <section class="content-main">
+    <h1>Create Coupon</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Create Coupon</button>
+    </form>
+
+    <a href="{% url 'coupon_list' %}">Back to Coupon List</a>
+    </section>
+</main>
+
+{% endblock %}

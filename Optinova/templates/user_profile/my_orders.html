@@ -30,6 +30,7 @@
                         <th>Products</th>
                         <th>Quantities</th>
                         <th>Status</th>
+                        <th>Payment Status</th>
                         <th>Total Price</th>
                         <th>Order Date</th> <!-- New column for order date -->
                     </tr>
@@ -65,8 +66,10 @@
                                     <span class="badge bg-success">Delivered</span>
                                 {% endif %}
                             </td>
+                            <td>{{ order_detail.payment_status }}</td>  
+
                             <!-- Total Price -->
-                            <td>₹{{ order_detail.total_price }}</td>  <!-- Corrected reference -->
+                            <td>₹{{ order_detail.total_price }}</td>  
                             
                             <td class="order-date">{{ order_detail.created_at|date:"M d, Y" }}</td> <!-- Order date -->                  
                         </tr>

@@ -208,10 +208,15 @@ def update_order_status(request, order_id):
         new_status = request.POST.get('status')
         if new_status:
             order.status = new_status
+            
+            if new_status == 'Delivered':
+                order.payment_status = 'Completed'  
+            
             order.save()
             messages.success(request, 'Order status updated successfully.')
 
     return redirect('list_orders')
+
 
 
 @login_required
@@ -225,7 +230,6 @@ def cancel_order(request, order_id):
         order.cancelled_at = timezone.now()
         order.canceled_by = request.user  # Log admin as the canceller
     else:
-        # User is trying to cancel their own order
         if order.status not in ['Cancelled', 'Delivered']:
             order.status = 'Cancelled'
             order.cancellation_reason = 'Cancelled by User'  # Log user cancellation reason
@@ -245,28 +249,3 @@ def return_order(request, order_id):
     return redirect('order_details', order_id=order_id)
 
 
-@login_required(login_url='accounts:user_login_view')
-def order_details(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-
-    # Calculate total price for the order (all items)
-    total_price = sum(item.total_price() for item in order.items.all())
-    total_price_order = order.total_amount()  # Use the total_amount method
-
-    if request.method == 'POST':
-        if 'cancel_order' in request.POST and order.status in ['Pending', 'Processing']:
-            reason = request.POST.get('cancellation_reason', 'Cancelled by User')
-            order.cancel_order(reason=reason)
-            messages.success(request, "Order has been cancelled.")
-            return redirect('my_orders')
-
-        if 'return_order' in request.POST and order.status == 'Delivered':
-            order.return_order()
-            messages.success(request, "Return request has been submitted.")
-            return redirect('my_orders')
-
-    return render(request, 'checkout/order_details.html', {
-        'order': order,
-        'total_price_order': total_price_order,
-        'total_price': total_price,
-    })

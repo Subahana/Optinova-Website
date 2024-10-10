@@ -185,3 +185,8 @@ class CustomPasswordChangeForm(forms.Form):
         if commit:
             self.user.save()
         return self.user
+
+
+
+class CancellationForm(forms.Form):
+    cancellation_reason = forms.CharField(widget=forms.Textarea, label="Reason for Cancellation", required=True)

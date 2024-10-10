@@ -40,7 +40,6 @@
                 <tbody>
                     {% for item in order.items.all %}
                         <tr>
-                            <!-- Display the first image of the product variant -->
                             <td>
                                 <img src="{{ item.variant.images.first.image.url }}" alt="Product Image" class="img-fluid" style="width: 100px; border-radius: 10px;">
                             </td>
@@ -48,7 +47,7 @@
                             <td>{{ item.variant.color }}</td>
                             <td>{{ item.quantity }}</td>
                             <td>₹{{ item.price }}</td>
-                            <td>₹{{ item.price|floatformat:2 }}</td>
+                            <td>₹{{ item.total_price|floatformat:2 }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -70,7 +69,6 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <!-- Display the first image of the product variant -->
                             <td>
                                 <img src="{{ item.variant.images.first.image.url }}" alt="Product Image" class="img-fluid" style="width: 100px; border-radius: 10px;">
                             </td>
@@ -78,8 +76,7 @@
                             <td>{{ item.variant.color }}</td>
                             <td>{{ item.quantity }}</td>
                             <td>₹{{ item.variant.price }}</td>
-                            <td>₹{{ item.total_price|floatformat:2 }}</td> <!-- Display total price of each item -->
-
+                            <td>₹{{ item.total_price|floatformat:2 }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -96,13 +93,10 @@
         <!-- Actions for Cancel and Return -->
         <div class="order-actions text-center">
             {% if order.status == "Pending" or order.status == "Processing" %}
-                <!-- Cancel Button -->
-                <form method="post" action="{% url 'cancel_order' order.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to cancel this order?');">
-                        Cancel Order
-                    </button>
-                </form>
+                <!-- Link to Cancellation Reason Form -->
+                <a href="{% url 'cancel_order_request' order.id %}" class="btn btn-danger btn-lg">
+                    Cancel Order
+                </a>
             {% endif %}
 
             {% if order.status == "Delivered" %}
@@ -118,33 +112,33 @@
     </div>
 
     <style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        color: #333;
-        background-color: #f4f4f4;
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #f4f4f4;
+        }
 
-    /* Breadcrumb Section */
-    .breadcrumb-option {
-        background-color: #003366; /* Dark blue background */
-        padding: 20px 0;
-    }
+        /* Breadcrumb Section */
+        .breadcrumb-option {
+            background-color: #003366; /* Dark blue background */
+            padding: 20px 0;
+        }
 
-    .breadcrumb__text h4 {
-        font-size: 26px;
-        font-weight: 600;
-        color: #fff;
-    }
+        .breadcrumb__text h4 {
+            font-size: 26px;
+            font-weight: 600;
+            color: #fff;
+        }
 
-    .breadcrumb__links a, 
-    .breadcrumb__links span {
-        font-size: 15px;
-        color: #b0b0b0;
-    }
+        .breadcrumb__links a, 
+        .breadcrumb__links span {
+            font-size: 15px;
+            color: #b0b0b0;
+        }
 
-    .breadcrumb__links a:hover {
-        color: #0099ff; /* Light blue on hover */
-    }
+        .breadcrumb__links a:hover {
+            color: #0099ff; /* Light blue on hover */
+        }
 
         /* Order Details */
         .order-details-container {

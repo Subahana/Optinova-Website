@@ -49,69 +49,69 @@
         </div>
     </div>
 
-<!-- Orders Table Section (Card) -->
-<div class="row">
-    <div class="col">
-        <div class="card shadow-sm">
-            <div class="table-responsive p-3">
-                <table class="table table-hover" id="ordersTable">
-                    <thead class="thead-light">
-                        <tr>
-                            <th scope="col">Order ID</th>
-                            <th scope="col">User</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Payment Method</th>
-                            <th scope="col">Canceled By</th> <!-- New Column -->
-                            <th scope="col">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in orders %}
-                        <tr class="order-row {% if forloop.counter|divisibleby:2 %}table-light{% else %}table-secondary{% endif %}" 
-                            data-date="{{ order.created_at }}" data-status="{{ order.status }}">
-                            <td>#{{ order.id }}</td>
-                            <td>{{ order.user.username }}</td>
-                            <td>
-                                <span class="badge badge-status {% if order.status == 'Cancelled' %}badge-danger{% elif order.status == 'Delivered' %}badge-success{% elif order.status == 'Shipped' %}badge-warning{% else %}badge-info{% endif %}">
-                                    {{ order.status }}
-                                </span>
-                            </td>
-                            <td>{{ order.payment_method }}</td>
-                            <td>
-                                {% if order.canceled_by %}
-                                    {{ order.canceled_by.username }} <!-- Display the user who canceled -->
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if order.status != 'Cancelled' %}
-                                    <form action="{% url 'update_order_status' order.id %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <select name="status" class="form-control form-control-sm shadow-sm" onchange="this.form.submit()">
-                                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
-                                            <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
-                                            <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
-                                            <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
-                                            <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
-                                        </select>
-                                    </form>
-                                {% else %}
-                                    <span class="text-muted">Cannot edit: Cancelled</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center">No orders found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <!-- Orders Table Section (Card) -->
+    <div class="row">
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="table-responsive p-3">
+                    <table class="table table-hover" id="ordersTable">
+                        <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Order ID</th>
+                                <th scope="col">User</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Payment Method</th>
+                                <th scope="col">Canceled By</th> <!-- New Column -->
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr class="order-row {% if forloop.counter|divisibleby:2 %}table-light{% else %}table-secondary{% endif %}" 
+                                data-date="{{ order.created_at }}" data-status="{{ order.status }}">
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.user.username }}</td>
+                                <td>
+                                    <span class="badge badge-status {% if order.status == 'Cancelled' %}badge-danger{% elif order.status == 'Delivered' %}badge-success{% elif order.status == 'Shipped' %}badge-warning{% else %}badge-info{% endif %}">
+                                        {{ order.status }}
+                                    </span>
+                                </td>
+                                <td>{{ order.payment_method }}</td>
+                                <td>
+                                    {% if order.canceled_by %}
+                                        {{ order.canceled_by.username }} <!-- Display the user who canceled -->
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.status != 'Cancelled' %}
+                                        <form action="{% url 'update_order_status' order.id %}" method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <select name="status" class="form-control form-control-sm shadow-sm" onchange="this.form.submit()">
+                                                <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                                <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                                                <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                                <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                                                <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                                            </select>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted">Cannot edit: Cancelled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No orders found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
 </main>
 
@@ -150,6 +150,7 @@
     .table {
         border-radius: 0.5rem;
         background-color: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .table th, .table td {
@@ -199,10 +200,20 @@
         padding: 0.75rem;
     }
 
+    /* Hover effect for table rows */
+    .table-hover tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+
     @media (max-width: 768px) {
         .form-row {
             flex-direction: column;
         }
+
+        .form-row .col-md-4 {
+            margin-bottom: 1rem;
+        }
     }
 </style>
+
 {% endblock %}

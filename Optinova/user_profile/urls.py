@@ -11,5 +11,7 @@ urlpatterns = [
     path('delete_address/<int:address_id>/', views.delete_address, name='delete_address'),
     path('edit_address/<int:address_id>/', views.edit_address, name='edit_address'),
     path('my_orders/', views.my_orders, name='my_orders'),
+    path('order-details/<int:order_id>/', views.order_details, name='order_details'),   
+    path('order/<int:order_id>/cancel/', views.cancel_order_request, name='cancel_order_request'),
 
 ]

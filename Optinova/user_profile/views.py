@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import UserProfileForm,ProfilePictureForm,AddressForm,CustomPasswordChangeForm
+from .forms import UserProfileForm,ProfilePictureForm,AddressForm,CustomPasswordChangeForm,CancellationForm
 from django.http import JsonResponse
 from .models import Address
 from products.models import ProductVariant
@@ -12,6 +12,8 @@ from django.contrib.auth import update_session_auth_hash
 from django.middleware.csrf import get_token
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, F
+from django.urls import reverse
+from django.utils import timezone 
 
 User = get_user_model()
 
@@ -127,6 +129,7 @@ def delete_address(request, address_id):
 def my_orders(request):
     available_variants = ProductVariant.objects.filter(is_active=True)
     query = request.GET.get('query', '')
+    orders = Order.objects.filter(user=request.user)  
 
     # Filter orders that contain available product variants
     orders = Order.objects.filter(
@@ -151,3 +154,57 @@ def my_orders(request):
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'user_profile/my_orders.html', {'page_obj': page_obj, 'query': query})
+
+@login_required(login_url='accounts:user_login_view')
+def order_details(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Calculate total price for the order (all items)
+    total_price = sum(item.total_price() for item in order.items.all())
+    total_price_order = order.total_amount()  # Use the total_amount method
+
+    # Get the cancellation URL
+    cancel_order_url = reverse('cancel_order_request', args=[order.id])
+
+    if request.method == 'POST':
+        if 'cancel_order' in request.POST and order.status in ['Pending', 'Processing']:
+            reason = request.POST.get('cancellation_reason', 'Cancelled by User')
+            order.cancel_order(reason=reason)
+            messages.success(request, "Order has been cancelled.")
+            return redirect('my_orders')
+
+        if 'return_order' in request.POST and order.status == 'Delivered':
+            order.return_order()
+            messages.success(request, "Return request has been submitted.")
+            return redirect('my_orders')
+
+    return render(request, 'checkout/order_details.html', {
+        'order': order,
+        'total_price_order': total_price_order,
+        'total_price': total_price,
+        'cancel_order_url': cancel_order_url,  
+    })
+
+
+@login_required(login_url='accounts:user_login_view')
+def cancel_order_request(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if request.method == 'POST':
+        form = CancellationForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['cancellation_reason']
+            order.status = 'Cancelled'
+            order.cancellation_reason = reason  # Save the reason provided by the user
+            order.cancelled_at = timezone.now()
+            order.canceled_by = request.user  # Log user as the canceller
+            order.save()
+            messages.success(request, "Your order has been cancelled successfully.")
+            return redirect('my_orders')  # Redirect to my orders page
+    else:
+        form = CancellationForm()
+
+    return render(request, 'user_profile/cancel_order.html', {
+        'order': order,
+        'form': form,
+    })

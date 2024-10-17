@@ -28,7 +28,6 @@
                 "currency": "INR",
                 "name": "{{ user_name }}",
                 "description": "Order Payment",
-                "image": "https://your_logo_url.com/logo.png", // Optional logo
                 "order_id": "{{ razorpay_order_id }}", // Razorpay order ID
                 "handler": function (response) {
                     document.getElementById('payment_id').value = response.razorpay_payment_id;

@@ -61,37 +61,49 @@ def add_to_cart(request, variant_id):
         return JsonResponse({'message': 'Invalid request method', 'status': 'error'})
 
 
+
 @login_required(login_url='accounts:user_login_view')
 def cart_detail(request):
     try:
-        # Get or create the cart for the user
+        # Get or create the cart for the logged-in user
         cart, created = Cart.objects.get_or_create(user=request.user)
-
-        # Fetch all cart items for the cart
+        
+        # Retrieve all cart items associated with this cart
         cart_items = CartItem.objects.filter(cart=cart)
-
-        # Calculate total price and total items
-        total_price = sum(item.total_price() for item in cart_items)
-        total_items = sum(item.quantity for item in cart_items)  # Sum of all item quantities
-
-        # Get all product variants and those not in the cart
+        
+        # Calculate original total (before discount), discount amount, and final total (after discount)
+        original_total_price = cart.get_original_total()
+        discount_amount = cart.get_discount()
+        final_total_price = cart.get_total_price()
+        
+        # Calculate the total number of items in the cart
+        total_items = sum(item.quantity for item in cart_items)
+        
+        # Get all product variants, then exclude the ones already in the cart
         all_variants = ProductVariant.objects.all()
-        in_cart_variants = cart_items.values_list('variant_id', flat=True)
-        variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
-
+        in_cart_variants = cart_items.values_list('variant_id', flat=True)  # Get variant IDs in the cart
+        variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)  # Exclude these variants
+        
+        # Prepare context data to be sent to the template
         context = {
-            'cart_items': cart_items,
-            'total_price': total_price,
-            'variants_not_in_cart': variants_not_in_cart,
-            'total_items': total_items,
-            'csrf_token': get_token(request)  # Ensure this matches your frontend
+            'cart_items': cart_items,  # List of items in the cart
+            'original_total_price': original_total_price,  # Total before discount
+            'discount_amount': discount_amount,  # Discount applied (if any)
+            'final_total_price': final_total_price,  # Total after discount
+            'variants_not_in_cart': variants_not_in_cart,  # Variants available to add (not in the cart)
+            'total_items': total_items,  # Total number of items in the cart
+            'csrf_token': get_token(request)  # CSRF token for form protection
         }
 
         return render(request, 'cart_management/cart_detail.html', context)
+    
     except Exception as e:
+        # Print detailed error traceback to console for debugging
         import traceback
         error_message = traceback.format_exc()
         print(f"Error in cart_detail view: {error_message}")
+        
+        # Return a JSON response with error status if something goes wrong
         return JsonResponse({'error': 'An error occurred.'}, status=500)
 
 

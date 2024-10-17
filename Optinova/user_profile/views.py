@@ -155,6 +155,7 @@ def my_orders(request):
 
     return render(request, 'user_profile/my_orders.html', {'page_obj': page_obj, 'query': query})
 
+    
 @login_required(login_url='accounts:user_login_view')
 def order_details(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)

@@ -1,14 +1,36 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import User
 from products.models import Product, ProductVariant
-# Create your models here.
+from coupon_management.models import Coupon 
+
+
 class Cart(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL) 
 
     def __str__(self):
         return f"Cart of {self.user.username}"
+
     def get_total_price(self):
+ 
+        original_total = self.get_original_total()
+        
+        if self.coupon and self.coupon.is_valid():
+            discount = self.coupon.get_discount_amount(original_total) 
+            total = original_total - discount
+        else:
+            total = original_total
+        
+        return total
+
+    def get_discount(self):
+
+        if self.coupon and self.coupon.is_valid():
+            return self.coupon.get_discount_amount(self.get_original_total())
+        return 0
+
+    def get_original_total(self):
+
         return sum(item.quantity * item.variant.price for item in self.cartitem_set.all())
 
 

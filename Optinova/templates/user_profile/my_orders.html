@@ -28,7 +28,6 @@
                     <tr>
                         <th>Order ID</th>
                         <th>Products</th>
-                        <th>Quantities</th>
                         <th>Status</th>
                         <th>Payment Status</th>
                         <th>Total Price</th>
@@ -49,9 +48,7 @@
                                     {{ item.variant.product.name }}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </td>
-                            <td>
-                                {{ order_detail.total_quantity }} <!-- Total items in order -->
-                            </td>
+
                             
                             <td class="order-status">
                                 {% if order_detail.status == "Cancelled" %}

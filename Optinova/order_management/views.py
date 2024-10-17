@@ -24,6 +24,7 @@ def checkout(request):
         form = OrderForm(request.POST, user=request.user)
         
         if form.is_valid():
+            # Get or create address
             address_id = form.cleaned_data.get('address')
             if address_id == 'add_new':
                 address = Address.objects.create(
@@ -39,13 +40,14 @@ def checkout(request):
 
             payment_method = form.cleaned_data['payment_method']
 
-            # Create the order
+            # Create an order
             order = Order.objects.create(
                 user=request.user,
                 address=address,
                 payment_method=payment_method,
             )
 
+            # Fetch cart items
             cart_items = CartItem.objects.filter(cart=cart)
             if not cart_items.exists():
                 messages.error(request, "Your cart is empty.")
@@ -60,16 +62,16 @@ def checkout(request):
                     price=item.variant.price
                 )
 
-            # Calculate total price for the payment
-            total_price = int(cart.get_total_price() * 100)  # Convert to paisa
-            logger.debug(f"Total price calculated in paisa: {total_price}")
+            total_price = int(cart.get_total_price() * 100)  
 
-            # Handle payment method: Razorpay, COD, etc.
+            if total_price <= 0:
+                messages.error(request, "Total price is invalid.")
+                return redirect('cart_detail')
+
             if payment_method.lower() == 'razorpay':
                 try:
                     razorpay_client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
 
-                    # Create Razorpay order
                     razorpay_order = razorpay_client.order.create({
                         "amount": total_price,
                         "currency": "INR",
@@ -81,12 +83,11 @@ def checkout(request):
                     order.razorpay_order_id = razorpay_order['id']
                     order.save()
                     
-                    # Pass Razorpay data to the frontend for payment
                     return render(request, 'checkout/razorpay_payment.html', {
                         'order': order,
                         'razorpay_order_id': order.razorpay_order_id,
                         'razorpay_key': settings.RAZOR_PAY_KEY_ID,
-                        'total_price': total_price,  # Keep amount in paisa
+                        'total_price': total_price, 
                         'user_email': request.user.email,
                         'user_name': request.user.get_full_name(),
                     })
@@ -95,12 +96,12 @@ def checkout(request):
                     messages.error(request, "Failed to create Razorpay order. Please try again.")
                     return redirect('cart_detail')
                 except Exception as e:
-                    logger.error(f"An error occurred: {str(e)}")
+                    logger.error(f"An unexpected error occurred: {str(e)}")
                     messages.error(request, "An unexpected error occurred. Please try again.")
                     return redirect('cart_detail')
 
             elif payment_method.lower() == 'cod':
-                cart_items.delete()  # Clear cart after creating order
+                cart_items.delete()  
                 messages.success(request, "Order placed successfully with Cash on Delivery.")
                 return redirect('order_success', order_id=order.id)
 
@@ -115,46 +116,42 @@ def checkout(request):
     })
 
 
-@csrf_exempt
 def verify_razorpay_payment(request):
     if request.method == "POST":
-        data = json.loads(request.body)
-        order_id = data.get("order_id")
-        payment_id = data.get("payment_id")
+        payment_id = request.POST.get("payment_id")
+        signature = request.POST.get("signature")
+        order_id = request.POST.get("order_id")
 
-        logger.debug(f"Verifying Razorpay payment: Order ID - {order_id}, Payment ID - {payment_id}")
+        # Assuming you have your Razorpay client set up
+        client = razorpay.Client(auth=("YOUR_RAZORPAY_KEY", "YOUR_RAZORPAY_SECRET"))
+        
+        cart_items = CartItem.objects.filter(user=request.user)
+        cart_items.delete()
+        # Create payload for signature verification
+        params_dict = {
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': signature
+        }
 
-        # Skip verification in test mode
-        if settings.RAZORPAY_TEST_MODE:  # Ensure this setting exists
-            order = get_object_or_404(Order, razorpay_order_id=order_id)
-            order.status = 'Paid'
-            order.save()
-            logger.info(f"Order {order.id} marked as paid in test mode")
-            return JsonResponse({'success': True, 'order_id': order.id})
-
-        # Production mode payment verification
-        client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
         try:
-            client.utility.verify_payment_signature({
-                'order_id': order_id,
-                'payment_id': payment_id,
-            })
-
-            # Update order status to Paid
+            # Verify the payment signature using Razorpay's utility
+            client.utility.verify_payment_signature(params_dict)
+            
+            # If verification passes, mark the order as paid
             order = get_object_or_404(Order, razorpay_order_id=order_id)
-            order.status = 'Paid'
+            order.status = 'paid'
             order.save()
-            logger.info(f"Order {order.id} payment verified and marked as paid")
 
-            return JsonResponse({'success': True, 'order_id': order.id})
-        except razorpay.errors.SignatureVerificationError as e:
-            logger.error(f"Payment verification failed: {str(e)}")
-            return JsonResponse({'error': str(e)}, status=400)
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {str(e)}")
-            return JsonResponse({'error': 'An unexpected error occurred.'}, status=400)
 
-    return JsonResponse({'error': 'Invalid request.'}, status=400)
+            messages.success(request, "Payment successful! Your order has been placed.")
+            return redirect('order_success', order_id=order.id)
+
+        except razorpay.errors.SignatureVerificationError:
+            messages.error(request, "Payment verification failed. Please try again.")
+            return redirect('order_failure')
+
+    return redirect('cart')  # Fallback in case of a non-POST request
 
 
 @login_required(login_url='accounts:user_login_view')
@@ -247,5 +244,3 @@ def return_order(request, order_id):
         order.return_order()
         messages.success(request, "Return request has been submitted.")
     return redirect('order_details', order_id=order_id)
-
-

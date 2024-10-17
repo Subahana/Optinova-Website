@@ -1,10 +1,9 @@
 from django.conf import settings
 from django.db import models
-from user_profile.models import Address
 from django.utils import timezone
+from user_profile.models import Address
 from products.models import ProductVariant
-
-
+from coupon_management.models import Coupon  
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -32,27 +31,12 @@ class Order(models.Model):
     razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
 
-    def cancel_order(self, reason=None):
-        """Cancel the order and revert stock."""
-        if not self.is_cancelled:
-            self.is_cancelled = True
-            self.cancelled_at = timezone.now()
-            self.cancellation_reason = reason or 'Cancelled by User'
-            for item in self.items.all():
-                item.variant.increase_stock(item.quantity)
-            self.status = 'Cancelled'
-            self.save()
-
-    def return_order(self):
-        if not self.is_returned and self.status == 'Delivered':
-            self.is_returned = True
-            self.save()
-
     def total_amount(self):
-        return sum(item.total_price() for item in self.items.all())
+        """Calculate the total amount before discount."""
+        total = sum(item.total_price() for item in self.items.all())
+        return total
 
-    def total_quantity(self):
-        return sum(item.quantity for item in self.items.all())
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)

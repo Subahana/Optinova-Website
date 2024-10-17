@@ -88,7 +88,7 @@
                         </table>
                     </div>
                     <div class="cart__total">
-                        <h5>Total: ₹{{ total_price }}</h5>
+                        <h5>Total: ₹{{ original_total_price }}</h5>
                     </div>
                     <div class="row mt-4">
                         <div class="col-lg-6 col-md-6 col-sm-6">
@@ -100,12 +100,23 @@
                 </div>
 
                 <div class="col-lg-4">
+                    <div class="cart__discount">
+                        <h6>Apply Coupon</h6>
+                        <form id="coupon-form" method="post">
+                            {% csrf_token %}
+                            <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code">
+                            <button type="button" id="apply-coupon-btn">Apply Coupon</button>
+                        </form>
+                    </div>
+                    
                     <div class="cart__total">
                         <h6>Cart Total</h6>
                         <ul>
                             <li>Items <span>{{ total_items }}</span></li>
-                            <li>Subtotal <span>₹{{ total_price }}</span></li>
-                            <li>Total <span>₹{{ total_price }}</span></li>
+                            <li>Subtotal <span>₹{{ original_total_price }}</span></li>
+                            <li>discount_amount <span>₹{{ discount_amount }}</span></li>
+                            <li>final_total_price <span>₹{{ final_total_price }}</span></li>
+
                         </ul>
                         <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
                     </div>
@@ -394,6 +405,54 @@
                 });
             });
         });
+
+        document.getElementById('apply-coupon-btn').addEventListener('click', function() {
+    const couponCode = document.getElementById('coupon-code').value;
+
+    if (!couponCode) {
+        alert('Please enter a coupon code.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('coupon_code', couponCode);
+    console.log("Coupon code sent:", couponCode);
+
+    axios.post("{% url 'apply_coupon' %}", formData, {
+        headers: {
+            'X-CSRFToken': csrfToken 
+
+        }
+        
+    })
+    .then(function(response) {
+
+        if (response.data.success) {
+            // Update the discount amount and total price in the DOM
+            const discountElement = document.querySelector('li span.discount-amount');
+            const finalTotalElement = document.querySelector('li span.final-total-price');
+            console.log("Coupon code sent:", couponCode);
+
+            // Update discount amount
+            if (discountElement) {
+                discountElement.textContent = `₹${response.data.discount_amount}`;
+            } else {
+                const discountHtml = `<li>Discount <span class="discount-amount">-₹${response.data.discount_amount}</span></li>`;
+                finalTotalElement.parentNode.insertAdjacentHTML('beforebegin', discountHtml);
+            }
+
+            // Update final total price
+            finalTotalElement.textContent = `₹${response.data.new_total}`;
+        } else {
+            alert(response.data.error);
+        }
+    })
+    .catch(function(error) {
+        console.error('Error applying coupon:', error);
+        alert('Error applying coupon. Please try again.');
+    });
+});
+
     </script>
 
 {% endblock %}

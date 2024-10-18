@@ -1,60 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Razorpay Payment</title>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
+
 <body>
     <h1>Complete Your Payment</h1>
 
-    <form id="razorpay-form" method="POST" action="{% url 'verify_razorpay_payment' %}">
-        {% csrf_token %}
-        <input type="hidden" name="order_id" value="{{ razorpay_order_id }}">
-        <input type="hidden" name="amount" value="{{ total_price }}">
-        <input type="hidden" name="payment_id" id="payment_id">
-        <input type="hidden" name="signature" id="signature">
-    </form>
-
+    <button id="rzp-button1">Pay with Razorpay</button>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            var totalPrice = parseInt("{{ total_price }}"); // Ensure the amount is in paisa
-
-            var options = {
-                "key": "{{ razorpay_key }}", // Razorpay Key ID
-                "amount": totalPrice, // Amount in paisa
-                "currency": "INR",
+        var options = {
+            "key": "{{ razorpay_key }}", // Razorpay Key ID
+            "amount": "{{total_price}}", // Amount in paisa
+            "currency": "INR",
+            "name": "{{ user_name }}",
+            "description": "Order Payment",
+            "order_id": "{{ razorpay_order_id }}", // Razorpay order ID
+            "callback_url": "http://localhost:8000/order_management/verify_razorpay_payment/",
+            "prefill": {
                 "name": "{{ user_name }}",
-                "description": "Order Payment",
-                "order_id": "{{ razorpay_order_id }}", // Razorpay order ID
-                "handler": function (response) {
-                    document.getElementById('payment_id').value = response.razorpay_payment_id;
-                    document.getElementById('razorpay-form').submit(); // Submit the form to verify the payment
-                },
-                "prefill": {
-                    "name": "{{ user_name }}",
-                    "email": "{{ user_email }}",
-                },
-                "theme": {
-                    "color": "#0099ff" // Customize the color
-                },
-                "modal": {
-                    "ondismiss": function() {
-                        window.location.href = "{% url 'order_success' order_id=order.id %}";
-                    }
-                }
-            };
+                "email": "{{ user_email }}",
+            },
+            "theme": {
+                "color": "#0099ff" // Customize the color
+            }
+            // ,
+            // "modal": {
+            //     "ondismiss": function() {
+            //         window.location.href = "{% url 'order_success' order_id=order.id %}";
+            //     }
+            // }
+        };
 
-            var rzp1 = new Razorpay(options);
+        var rzp1 = new Razorpay(options);
+
+        document.getElementById('rzp-button1').onclick = function (e) {
             rzp1.open();
-
-            rzp1.on('payment.failed', function(response) {
-                alert("Payment failed: " + response.error.description);
-                console.error("Payment Error Details:", response.error); // Log the error details
-            });
-        });
+            e.preventDefault();
+        }
     </script>
 </body>
+
 </html>

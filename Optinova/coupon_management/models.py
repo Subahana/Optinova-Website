@@ -17,10 +17,6 @@ class Coupon(models.Model):
     active = models.BooleanField(default=True)
     def is_valid(self):
         now = timezone.now()
-        print("Current time:", now)
-        print("Valid from:", self.valid_from)
-        print("Valid to:", self.valid_to)
-        print("Active status:", self.active)
         return self.active and (self.valid_from <= now <= self.valid_to)
 
     def get_discount_amount(self, total_amount):

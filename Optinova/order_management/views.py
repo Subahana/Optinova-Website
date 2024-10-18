@@ -12,6 +12,8 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 import logging 
+from django.middleware.csrf import get_token
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +83,13 @@ def checkout(request):
                     logger.info(f"Razorpay order created with ID: {razorpay_order['id']}")
 
                     order.razorpay_order_id = razorpay_order['id']
-                    order.save()
                     
+                    order.save()
+                    request.session['razorpay_order_id'] = order.razorpay_order_id
+                    request.session.modified = True  # Explicitly mark the session as modified
+                    print('before razor', order.razorpay_order_id)
+
+
                     return render(request, 'checkout/razorpay_payment.html', {
                         'order': order,
                         'razorpay_order_id': order.razorpay_order_id,
@@ -116,47 +123,58 @@ def checkout(request):
     })
 
 
+
+@csrf_exempt
 def verify_razorpay_payment(request):
     if request.method == "POST":
-        payment_id = request.POST.get("payment_id")
-        signature = request.POST.get("signature")
-        order_id = request.POST.get("order_id")
-
+        payment_id = request.POST.get("razorpay_payment_id")
+        signature = request.POST.get("razorpay_signature")
+        order_id = request.POST.get("razorpay_order_id")
+        print('reached')
         # Assuming you have your Razorpay client set up
         client = razorpay.Client(auth=("YOUR_RAZORPAY_KEY", "YOUR_RAZORPAY_SECRET"))
         
-        cart_items = CartItem.objects.filter(user=request.user)
-        cart_items.delete()
         # Create payload for signature verification
         params_dict = {
             'razorpay_order_id': order_id,
             'razorpay_payment_id': payment_id,
             'razorpay_signature': signature
         }
+        print(params_dict)
+        
 
         try:
+            razorpay_order_id = request.session.get('razorpay_order_id')
+            print('after razorpay razorpay_order_id', razorpay_order_id)
             # Verify the payment signature using Razorpay's utility
             client.utility.verify_payment_signature(params_dict)
             
+            cart = Cart.objects.filter(user=request.user)
+            cart_items = CartItem.objects.filter(cart=cart)
+            cart_items.delete()
             # If verification passes, mark the order as paid
-            order = get_object_or_404(Order, razorpay_order_id=order_id)
+            order = get_object_or_404(Order, razorpay_order_id=order_id, razorpay_payment_id=payment_id)
             order.status = 'paid'
             order.save()
-
-
             messages.success(request, "Payment successful! Your order has been placed.")
-            return redirect('order_success', order_id=order.id)
+            csrf_token = get_token(request)
+            return redirect('order_success', order_id=order_id)
 
         except razorpay.errors.SignatureVerificationError:
             messages.error(request, "Payment verification failed. Please try again.")
-            return redirect('order_failure')
+            metadata_json = request.POST.get('error[metadata]')
+
+            # Parse the JSON string to extract order_id
+            metadata = json.loads(metadata_json)  # Convert JSON string to a dictionary
+            order_id = metadata.get('order_id')  # Extract the order_id
+            print(order_id)
+            return redirect('order_failure', order_id=order_id)
 
     return redirect('cart')  # Fallback in case of a non-POST request
 
 
-@login_required(login_url='accounts:user_login_view')
 def order_success(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    order = get_object_or_404(Order, razorpay_order_id=order_id)
     total_price = sum(item.quantity * item.variant.price for item in order.items.all())
     payment_status = "Paid" if order.payment_method.lower() == "razorpay" else "Cash on Delivery"
 
@@ -165,6 +183,18 @@ def order_success(request, order_id):
         'total_price': total_price,
         'payment_status': payment_status,
     })
+
+def order_failure(request, order_id):
+    order = get_object_or_404(Order, razorpay_order_id=order_id)
+    total_price = sum(item.quantity * item.variant.price for item in order.items.all())
+    payment_status = "Failed"
+
+    return render(request, 'checkout/order_failure.html', {
+        'order': order,
+        'total_price': total_price,
+        'payment_status': payment_status,
+    })
+
 
 
 def list_orders(request):

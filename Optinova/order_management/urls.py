@@ -5,7 +5,8 @@ urlpatterns = [
     # Checkout process
     path('checkout/', views.checkout, name='checkout'),    
     path('verify_razorpay_payment/', views.verify_razorpay_payment, name='verify_razorpay_payment'),    
-    path('order-success/<int:order_id>/', views.order_success, name='order_success'),    
+    path('order-success/<str:order_id>/', views.order_success, name='order_success'),    
+    path('order-failure/<str:order_id>/', views.order_failure, name='order_failure'),    
     path('orders/', views.list_orders, name='list_orders'),   
     path('update-order-status/<int:order_id>/', views.update_order_status, name='update_order_status'),    
     path('cancel-order/<int:order_id>/', views.cancel_order, name='cancel_order'),    

@@ -57,40 +57,42 @@ def add_to_cart(request, variant_id):
 def cart_detail(request):
     try:
         cart, created = Cart.objects.get_or_create(user=request.user)
-        cart_items = CartItem.objects.filter(cart=cart)        
-        original_total_price = cart.get_original_total()
-        coupon_code = request.session.get('coupon_code', None)
+        cart_items = CartItem.objects.filter(cart=cart)
+
+        # Clear the coupon from the cart if no coupon is applied
+        if not request.GET.get('apply_coupon'):
+            cart.coupon = None
+            cart.save()
+
+        # Original total price
+        original_total = cart.get_original_total()
         discount_amount = 0
 
-        if coupon_code:
-            try:
-                coupon = Coupon.objects.get(code=coupon_code, active=True)
-                discount_amount = coupon.get_discount_amount(original_total_price)
-            except Coupon.DoesNotExist:
-                del request.session['coupon_code']
-                discount_amount = 0
+        # Handle coupon logic if a coupon is applied to the cart
+        if cart.coupon:
+            discount_amount = cart.coupon.get_discount_amount(original_total)
 
-        final_total_price = original_total_price - discount_amount
+        new_total = original_total - discount_amount
         total_items = sum(item.quantity for item in cart_items)
+
         all_variants = ProductVariant.objects.all()
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
         variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
 
         context = {
             'cart_items': cart_items,
-            'original_total_price': original_total_price,
+            'original_total':original_total,
             'discount_amount': discount_amount,
-            'final_total_price': final_total_price,
+            'new_total': new_total,
             'variants_not_in_cart': variants_not_in_cart,
             'total_items': total_items,
             'csrf_token': get_token(request),
-            'coupon_code': coupon_code  
+            'coupon_code': cart.coupon.code if cart.coupon else None  
         }
 
         return render(request, 'cart_management/cart_detail.html', context)
 
     except Exception as e:
-        # Handle any errors that occur and print the traceback for debugging
         import traceback
         error_message = traceback.format_exc()
         print(f"Error in cart_detail view: {error_message}")
@@ -111,34 +113,48 @@ def update_cart_item_quantity(request, item_id):
     if request.method == 'POST':
         try:
             new_quantity = int(request.POST.get('quantity'))
-            cart_item = CartItem.objects.get(id=item_id)
+            cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
 
-            available_stock = cart_item.variant.stock 
+            # Check stock availability
+            available_stock = cart_item.variant.stock
             if new_quantity > available_stock:
                 return JsonResponse({
                     'success': False,
                     'error': f"Only {available_stock} items available in stock."
                 })
 
+            # Update quantity if it’s valid
             if new_quantity > 0:
                 cart_item.quantity = new_quantity
                 cart_item.save()
-                item_total_price = cart_item.quantity * cart_item.variant.price
+
+                # Updated item price and cart totals
+                item_total_price = cart_item.total_price()  # Uses the cart item’s quantity
                 cart = cart_item.cart
-                cart_total_price = cart.get_total_price()
+
+                # Calculate original and discounted totals
+                original_total = cart.get_original_total()
+                discount_amount = cart.get_discount() if cart.coupon else 0
+                new_total = original_total - discount_amount
+                total_items = sum(item.quantity for item in cart.cartitem_set.all())
 
                 return JsonResponse({
                     'success': True,
                     'item_quantity': cart_item.quantity,
-                    'item_total': item_total_price,
-                    'cart_total': cart_total_price
+                    'item_total_price': item_total_price,
+                    'total_items': total_items,
+                    'original_total': original_total,
+                    'discount_amount': discount_amount,
+                    'new_total': new_total
                 })
             else:
                 return JsonResponse({'success': False, 'error': 'Quantity must be at least 1.'})
+
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Cart item not found.'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
+
     return JsonResponse({'success': False, 'error': 'Invalid request method.'})
 
 # --------------Wishlist Management---------------#

@@ -70,7 +70,7 @@
                                     </td>
                                     
                                     <!-- Total Price -->
-                                    <td class="cart__price">₹{{ item.total_price }}</td>
+                                    <td><span id="item-total-price-{{ item.id }}" class="item-total-price">₹{{ item.total_price }}</span></td>
                                 
                                     <!-- Remove from cart button -->
                                     <td class="cart__close">
@@ -87,9 +87,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="cart__total">
-                        <h5>Total: ₹{{ original_total_price }}</h5>
-                    </div>
+
                     <div class="row mt-4">
                         <div class="col-lg-6 col-md-6 col-sm-6">
                             <div class="continue__btn">
@@ -105,18 +103,17 @@
                         <form id="coupon-form" method="post">
                             {% csrf_token %}
                             <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code">
-                            <button type="button" id="apply-coupon-btn">Apply Coupon</button>
+                            <button type="button" id="apply-coupon-btn" style="background:#003366 ;">Apply Coupon</button>
                         </form>
                     </div>
-                    
+
                     <div class="cart__total">
                         <h6>Cart Total</h6>
                         <ul>
-                            <li>Items <span>{{ total_items }}</span></li>
-                            <li>Subtotal <span>₹{{ original_total_price }}</span></li>
-                            <li>discount_amount <span>₹{{ discount_amount }}</span></li>
-                            <li>final_total_price <span>₹{{ final_total_price }}</span></li>
-
+                            <li>Total Price:<span class="cart-original-price">₹ {{ original_total }}</span></li>
+                            <li>Items <span class="cart-total-items">{{ total_items }}</span></li>
+                            <li>Discount <span class="cart-discount">₹{{ discount_amount }}</span></li>
+                            <li>Amount to Pay <span class="cart-final-price">₹{{ new_total }}</span></li>
                         </ul>
                         <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
                     </div>
@@ -136,8 +133,181 @@
         </div>
     </section>
     <!-- Shopping Cart Section End -->
-
-    <style>
+    <script>
+        var csrfToken = '{{ csrf_token }}';  // Set CSRF token
+    
+        document.addEventListener('DOMContentLoaded', function() {
+            let appliedCouponCode = '';  // Track applied coupon code
+    
+            // Calculate cart total for UI update
+            function calculateCartTotal() {
+                let total = 0;
+                document.querySelectorAll('.item-total-price').forEach(function(item) {
+                    const priceText = item.textContent.replace('₹', '').trim();
+                    const price = parseFloat(priceText) || 0;
+                    total += price;
+                });
+                return total;
+            }
+    
+            // Update cart totals dynamically in the UI
+            function updateCartTotals(data) {
+                const originalTotal = calculateCartTotal();
+                const discountAmount = parseFloat(data.discount_amount || 0);
+                const finalTotal = originalTotal - discountAmount;
+    
+                // Update cart UI elements
+                document.querySelector('.cart-total-items').textContent = ` ${data.total_items}`;
+                document.querySelector('.cart-original-price').textContent = `₹ ${originalTotal.toFixed(2)}`;
+                document.querySelector('.cart-discount').textContent = ` ₹ ${discountAmount.toFixed(2)}`;
+                document.querySelector('.cart-final-price').textContent = `₹ ${finalTotal.toFixed(2)}`;
+            }
+    
+            // Handle updating quantity
+            function updateQuantity(itemId, quantity) {
+                const formData = new FormData();
+                formData.append('quantity', quantity);
+    
+                axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
+                    headers: { 'X-CSRFToken': csrfToken }
+                })
+                .then(response => {
+                    if (response.data.success) {
+                        document.getElementById(`item-total-price-${itemId}`).textContent = `₹${response.data.item_total_price}`;
+                        updateCartTotals(response.data);
+    
+                        // Reapply coupon if it’s already applied
+                        if (appliedCouponCode) {
+                            applyCoupon(appliedCouponCode);
+                        }
+                    } else {
+                        swal.fire("Error!", response.data.error || "Failed to update the cart.", "error");
+                    }
+                })
+                .catch(error => {
+                    console.log(error);
+                    swal.fire("Error!", "Error updating cart. Please try again.", "error");
+                });
+            }
+    
+            // Handle quantity button click events
+            document.querySelectorAll('.quantity-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const form = this.closest('form');
+                    const input = form.querySelector('input[name="quantity"]');
+                    let quantity = parseInt(input.value, 10);
+                    const itemId = form.dataset.itemId;
+                    const action = this.getAttribute('data-action');
+                    const stock = parseInt(form.dataset.itemStock, 10);
+    
+                    if (action === 'increase' && quantity < stock) {
+                        quantity += 1;
+                    } else if (action === 'decrease' && quantity > 1) {
+                        quantity -= 1;
+                    }
+    
+                    input.value = quantity;
+                    updateQuantity(itemId, quantity);
+                });
+            });
+    
+            function applyCoupon(couponCode) {
+                axios.post("{% url 'apply_coupon' %}", { coupon_code: couponCode }, {
+                    headers: { 'X-CSRFToken': csrfToken }
+                })
+                .then(response => {
+                    if (response.data.success) {
+                        updateCartTotals(response.data);
+                        appliedCouponCode = couponCode;
+                        changeButtonStyle(true); // Change button style to remove coupon
+                    } else {
+                        swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
+                    }
+                })
+                .catch(error => {
+                    swal.fire("Error!", "There was a problem applying the coupon.", "error");
+                });
+            }
+    
+            function removeCoupon() {
+                // Show confirmation dialog
+                swal.fire({
+                    title: "Are you sure?",
+                    text: "Do you really want to remove the coupon?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#0056b3", // Darker blue for the confirm button
+                    cancelButtonColor: "#d33", // Red color for the cancel button
+                    confirmButtonText: "Yes, remove it!",
+                    cancelButtonText: "No, keep it!",
+                    customClass: {
+                        confirmButton: 'swal-confirm-button',
+                        cancelButton: 'swal-cancel-button'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // If confirmed, proceed to remove the coupon
+                        axios.post("{% url 'remove_coupon' %}", {}, {
+                            headers: { 'X-CSRFToken': csrfToken }
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                updateCartTotals(response.data);
+                                appliedCouponCode = '';
+                                changeButtonStyle(false); // Change button style to apply coupon
+                                swal.fire({
+                                    title: "Success!",
+                                    text: "Coupon removed successfully!",
+                                    icon: "success",
+                                    customClass: {
+                                        confirmButton: 'swal-confirm-button'
+                                    }
+                                });
+                            } else {
+                                swal.fire("Error!", response.data.error || "Failed to remove the coupon.", "error");
+                            }
+                        })
+                        .catch(error => {
+                            swal.fire("Error!", "There was a problem removing the coupon.", "error");
+                        });
+                    } else {
+                        // User canceled the action
+                        swal.fire("Cancelled", "Your coupon is safe :)", "info");
+                    }
+                });
+            }
+    
+            function changeButtonStyle(isRemoving) {
+                const button = document.getElementById('apply-coupon-btn');
+                if (isRemoving) {
+                    button.textContent = "Remove Coupon";
+                    button.classList.remove('apply-button'); // Remove the apply button class
+                    button.classList.add('remove-button'); // Add the remove button class
+                    button.style.backgroundColor = "#d9534f"; // Change to red when removing
+                } else {
+                    button.textContent = "Apply Coupon";
+                    button.classList.remove('remove-button'); // Remove the remove button class
+                    button.classList.add('apply-button'); // Add the apply button class
+                    button.style.backgroundColor = "#003366"; // Change to green when applying
+                }
+            }
+    
+            document.getElementById('apply-coupon-btn').addEventListener('click', function() {
+                const couponCode = document.querySelector('input[name="coupon_code"]').value.trim();
+                if (appliedCouponCode) {
+                    removeCoupon();
+                } else if (couponCode) {
+                    applyCoupon(couponCode);
+                } else {
+                    swal.fire("Warning!", "Please enter a valid coupon code.", "warning");
+                }
+            });
+        });
+    </script>
+    
+    
+<style>
     /* General Styles */
     body {
         font-family: 'Poppins', sans-serif;
@@ -345,102 +515,5 @@
     }
 
 </style>
-
-    <script>
-        var csrfToken = '{{ csrf_token }}';  // This line sets the CSRF token
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.quantity-btn').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const form = this.closest('form');
-                    const input = form.querySelector('input[name="quantity"]');
-                    let quantity = parseInt(input.value, 10);
-                    const itemId = form.dataset.itemId;
-                    const action = this.getAttribute('data-action');
-                    const stock = parseInt(form.dataset.itemStock, 10);
-
-                    // Adjust the quantity based on the button clicked
-                    if (action === 'increase') {
-                        if (quantity < stock) {
-                            quantity += 1;
-                        } else {
-                            alert(`Sorry, only ${stock} items available in stock.`);
-                            return;
-                        }
-                    } else if (action === 'decrease' && quantity > 1) {
-                        quantity -= 1;
-                    }
-
-                    // Update the input field with the new quantity
-                    input.value = quantity;
-
-                    const formData = new FormData();
-                    formData.append('quantity', quantity);
-
-                    // Use Axios to send the updated quantity to the server
-                    axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
-                        headers: {
-                            'X-CSRFToken': csrfToken
-                        }
-                    })
-                    .then(function (response) {
-                        if (response.data.success) {
-                            
-                            // Update the UI with new data, such as total price
-                            const itemTotalElement = form.closest('tr').querySelector('.cart__price');
-                            itemTotalElement.textContent = `₹${response.data.item_total}`;
-
-                            const cartTotalElement = document.querySelector('.cart__total h5');
-                            cartTotalElement.textContent = `Total: ₹${response.data.cart_total}`;
-
-                        } else {
-                            alert(`Error: ${response.data.error}`);
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error('Error updating cart:', error);
-                        alert('Error updating cart. Please try again.');
-                    });
-                });
-            });
-        });
-    document.getElementById('apply-coupon-btn').addEventListener('click', function() {
-    const couponCode = document.querySelector('input[name="coupon_code"]').value;
-
-    axios.post("{% url 'apply_coupon' %}", {
-        coupon_code: couponCode  // Send data as JSON
-    }, {
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => {
-        const data = response.data;
-
-        if (data.success) {
-            // Update the total and discount in the DOM
-            document.querySelector('.cart__total li:nth-child(1) span').textContent = `${data.total_items}`;
-            document.querySelector('.cart__total li:nth-child(2) span').textContent = `₹${data.new_total}`;
-            document.querySelector('.cart__total li:nth-child(3) span').textContent = `₹${data.discount_amount}`;
-            document.querySelector('.cart__total li:nth-child(4) span').textContent = `₹${data.new_total - data.discount_amount}`;
-
-            // Show success alert
-            swal.fire("Success!", "Coupon applied successfully!", "success");
-        } else {
-            console.error("Failed to apply coupon.");
-            // Show error alert
-            swal.fire("Error!", data.error || "An error occurred while applying the coupon.", "error");
-        }
-    })
-    .catch(error => {
-        console.error("Error applying coupon:", error);
-        // Show error alert for the catch block
-        swal.fire("Error!", "There was a problem applying the coupon. Please try again.", "error");
-    });
-});
-    
-</script>
 
 {% endblock %}

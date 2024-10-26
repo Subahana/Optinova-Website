@@ -58,53 +58,101 @@ def coupon_status(request, coupon_id):
     return redirect('coupon_list')
 
 
-
 def apply_coupon(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body) 
-            coupon_code = data.get('coupon_code', '').strip()  # Ensure no leading/trailing spaces
+            data = json.loads(request.body)
+            coupon_code = data.get('coupon_code', '').strip()
         except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid data format.'})
+            return JsonResponse({'success': False, 'error': 'Invalid data format.'}, status=400)
 
-        # Get the user's cart
-        user_cart = get_object_or_404(Cart, user=request.user)
-        cart_items = CartItem.objects.filter(cart=user_cart)
-        total_items = sum(item.quantity for item in cart_items)
+        try:
+            # Fetch the user's cart
+            user_cart = get_object_or_404(Cart, user=request.user)
+            cart_items = CartItem.objects.filter(cart=user_cart)
+            total_items = sum(item.quantity for item in cart_items)
 
-        # Check if the cart contains any items
-        if not user_cart.cartitem_set.exists():
-            return JsonResponse({'success': False, 'error': 'Your cart is empty.'})
+            # Check if the cart is empty
+            if not cart_items.exists():
+                return JsonResponse({'success': False, 'error': 'Your cart is empty.'}, status=400)
 
-        original_total = user_cart.get_original_total()  # Calculate original cart total
+            # Calculate the original total price of all items in the cart
+            original_total = user_cart.get_original_total()  # You likely have a method to calculate this
 
-        # Fetch the coupon (case-insensitive search)
-        coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
-        if coupon is None:
-            return JsonResponse({'success': False, 'error': 'Invalid coupon code'})
+            # Fetch the coupon (case-insensitive search)
+            coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
+            if coupon is None:
+                return JsonResponse({'success': False, 'error': 'Invalid coupon code'}, status=400)
 
-        # Check if the coupon is valid (active, within date range)
-        current_time = timezone.now()
-        if coupon.valid_from <= current_time <= coupon.valid_to:
-            # Coupon is valid, apply the discount
-            discount_amount = coupon.get_discount_amount(original_total)
-            discount_amount = min(discount_amount, original_total)  # Ensure discount doesn't exceed total
+            # Check if the coupon is valid (active, within date range)
+            current_time = timezone.now()
+            if coupon.valid_from <= current_time <= coupon.valid_to:
+                # Ensure the user hasn't already used the coupon in a completed order
+                used_coupon = Order.objects.filter(user=request.user, coupon=coupon, status='completed').exists()
+                
+                if used_coupon:
+                    return JsonResponse({'success': False, 'error': 'You have already used this coupon for a completed order.'}, status=400)
 
-            new_total = original_total - discount_amount
+                # Calculate the discount based on the entire cart total
+                discount_amount = coupon.get_discount_amount(original_total)
+                discount_amount = min(discount_amount, original_total)  # Ensure discount doesn't exceed total
 
-            # Save coupon to cart
-            user_cart.coupon = coupon
-            user_cart.save()
+                # Calculate the new total after applying the discount
+                new_total = original_total - discount_amount
 
-            return JsonResponse({
-                'success': True,
-                'new_total': float(new_total),  # Float for proper JSON serialization
-                'discount_amount': float(discount_amount),
-                'total_items': total_items  
+                # Save the coupon to the cart
+                user_cart.coupon = coupon
+                user_cart.save()
 
-            })
-        else:
-            return JsonResponse({'success': False, 'error': 'Coupon is not valid or expired'})
+                return JsonResponse({
+                    'success': True,
+                    'original_total': original_total,
+                    'new_total': float(new_total),
+                    'discount_amount': float(discount_amount),
+                    'total_items': total_items
+                })
 
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Coupon is not valid or expired'}, status=400)
+        
+        except Exception as e:
+            # Log unexpected errors
+            print(f"Error applying coupon: {e}")
+            return JsonResponse({'success': False, 'error': 'Something went wrong on the server.'}, status=500)
 
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+
+
+def remove_coupon(request):
+    if request.method == 'POST':
+        try:
+            # Fetch the user's cart
+            user_cart = get_object_or_404(Cart, user=request.user)
+
+            # Check if a coupon is applied
+            if user_cart.coupon:
+                # Remove the coupon
+                user_cart.coupon = None
+                user_cart.save()
+
+                # Recalculate totals without the discount
+                original_total = user_cart.get_original_total()
+                new_total = original_total  # Since there is no discount now
+                total_items = sum(item.quantity for item in user_cart.cartitem_set.all())
+
+                # Return updated cart data
+                return JsonResponse({
+                    'success': True,
+                    'original_total': original_total,
+                    'new_total': new_total,
+                    'discount_amount': 0,  # No discount after removal
+                    'total_items': total_items
+                })
+
+            return JsonResponse({'success': False, 'error': 'No coupon applied.'}, status=400)
+        
+        except Exception as e:
+            print(f"Error removing coupon: {e}")
+            return JsonResponse({'success': False, 'error': 'Failed to remove the coupon.'}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)

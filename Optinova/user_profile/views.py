@@ -129,7 +129,7 @@ def delete_address(request, address_id):
 def my_orders(request):
     available_variants = ProductVariant.objects.filter(is_active=True)
     query = request.GET.get('query', '')
-    orders = Order.objects.filter(user=request.user)  
+    orders = Order.objects.filter(user=request.user).order_by('id')
 
     # Filter orders that contain available product variants
     orders = Order.objects.filter(

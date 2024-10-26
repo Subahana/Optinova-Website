@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
-from products.models import Product  # Assuming your coupons are related to products
+from products.models import Product  
+from django.conf import settings
+from django.contrib.auth.models import User
 
 class Coupon(models.Model):
     COUPON_TYPES = (
@@ -15,6 +17,8 @@ class Coupon(models.Model):
     valid_from = models.DateTimeField()
     valid_to = models.DateTimeField()
     active = models.BooleanField(default=True)
+    used_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='used_coupons', blank=True)
+
     def is_valid(self):
         now = timezone.now()
         return self.active and (self.valid_from <= now <= self.valid_to)

@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 def checkout(request):
     cart = Cart.objects.get(user=request.user)
     addresses = Address.objects.filter(user=request.user)
-
+    total_price = cart.get_total_price()
+    
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
         
@@ -64,7 +65,7 @@ def checkout(request):
                     price=item.variant.price
                 )
 
-            total_price = int(cart.get_total_price() * 100)  
+            total_price = int(cart.get_total_price() * 100)
 
             if total_price <= 0:
                 messages.error(request, "Total price is invalid.")
@@ -119,7 +120,7 @@ def checkout(request):
         'form': form,
         'addresses': addresses,
         'cart_items': CartItem.objects.filter(cart=cart),
-        'total_price': cart.get_total_price(),
+        'total_price': total_price,
     })
 
 
@@ -130,7 +131,7 @@ def verify_razorpay_payment(request):
         payment_id = request.POST.get("razorpay_payment_id")
         signature = request.POST.get("razorpay_signature")
         order_id = request.POST.get("razorpay_order_id")
-        print('reached')
+        print('reached',order_id)
         # Assuming you have your Razorpay client set up
         client = razorpay.Client(auth=("YOUR_RAZORPAY_KEY", "YOUR_RAZORPAY_SECRET"))
         

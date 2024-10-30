@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'order_management',
     'brand_management',
     'coupon_management',
+    'offer_management',
     'django.contrib.sites',  
     'allauth',
     'allauth.account',

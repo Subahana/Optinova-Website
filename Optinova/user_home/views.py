@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
+from offer_management.models import CategoryOffer
 from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -9,12 +10,11 @@ from django.contrib.auth import logout
 from django.middleware.csrf import get_token
 from django.db.models import Prefetch,Exists, OuterRef,Subquery,F
 from django.http import JsonResponse
-
+from django.db.models import Prefetch
 
 
 
 @login_required(login_url='accounts:user_login_view')
-@never_cache
 def user_product_detail(request, product_id):
     # Get the current product
     product = get_object_or_404(Product, id=product_id)
@@ -54,51 +54,58 @@ def user_product_detail(request, product_id):
 
 
 
-
 def shop(request):
     categories = Category.objects.filter(is_active=True)
-    products = Product.objects.filter(is_active=True)  # Only show active products
+    products = Product.objects.filter(is_active=True)
+    # Get active category offers
+    active_offers = CategoryOffer.objects.filter(is_active=True)
+    categories_with_offers = categories.prefetch_related(Prefetch('offers', queryset=active_offers))
+
+    # Annotate products with offers
+    products_with_offers = products.prefetch_related(
+        'category'
+    )
 
     # Search functionality
     query = request.GET.get('q')
     if query:
-        products = products.filter(name__icontains=query)
+        products_with_offers = products_with_offers.filter(name__icontains=query)
 
     category_id = request.GET.get('category')
     if category_id:
-        products = products.filter(category_id=category_id)
+        products_with_offers = products_with_offers.filter(category_id=category_id)
 
     # Sorting functionality
     sort_option = request.GET.get('sort')
     if sort_option == 'popularity':
-        products = products.order_by('-popularity')
+        products_with_offers = products_with_offers.order_by('-popularity')
     elif sort_option == 'price_low':
-        products = products.order_by('base_price')
+        products_with_offers = products_with_offers.order_by('base_price')
     elif sort_option == 'price_high':
-        products = products.order_by('-base_price')
+        products_with_offers = products_with_offers.order_by('-base_price')
     elif sort_option == 'average_rating':
-        products = products.order_by('-average_rating')
+        products_with_offers = products_with_offers.order_by('-average_rating')
     elif sort_option == 'new_arrivals':
-        products = products.order_by('-created_at')  # Ensure created_at is in your model
+        products_with_offers = products_with_offers.order_by('-created_at')  # Ensure created_at is in your model
     elif sort_option == 'a_to_z':
-        products = products.order_by('name')
+        products_with_offers = products_with_offers.order_by('name')
     elif sort_option == 'z_to_a':
-        products = products.order_by('-name')
+        products_with_offers = products_with_offers.order_by('-name')
 
     # Pagination
-    paginator = Paginator(products,4)  # Show 9 products per page
+    paginator = Paginator(products_with_offers, 4)  # Show 4 products per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
-        'products': page_obj,  # Pass the paginated products to the template
-        'categories': categories,
-        'page_obj': page_obj,  # Pass the page_obj to the template
+        'products': page_obj,
+        'categories': categories_with_offers,  # Include categories with offers
+        'page_obj': page_obj,
     }
     return render(request, 'user_home/shop.html', context)
 
+
 @login_required(login_url='accounts:user_login_view')
-@never_cache
 def user_home(request):
     if request.user.is_superuser:
         messages.error(request, 'Admin users are not allowed to access the user home page.')
@@ -117,7 +124,6 @@ def user_home(request):
 
 # View to handle user logout
 @login_required(login_url='accounts:user_login_view')
-@never_cache
 def logout_view(request):
     if request.user.is_authenticated:
         logout(request)

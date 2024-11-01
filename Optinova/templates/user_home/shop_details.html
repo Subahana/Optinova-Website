@@ -68,8 +68,15 @@
             <div class="col-lg-6 col-md-6">
                 <div class="product-info">
                     <h2 class="product-title">{{ product.name }}</h2>
-                    <h3 class="product-price">₹<span id="product-price">{{ product.main_variant.price }}</span></h3>
-
+                <!-- Main Variant Price Display -->
+                <h3 class="product-price" id="price-container">
+                    {% if main_variant.get_discounted_price and main_variant.get_discounted_price < main_variant.price %}
+                        <del style="color: #888;">₹{{ main_variant.price }}</del>
+                        ₹<span id="product-price">{{ main_variant.get_discounted_price }}</span>
+                    {% else %}
+                        ₹<span id="product-price">{{ main_variant.price }}</span>
+                    {% endif %}
+                </h3>                
                     <!-- Availability -->
                     <div id="availability-message" class="mb-4">
                         <div class="variant-stock" data-variant-id="{{ product.main_variant.id }}">
@@ -90,7 +97,7 @@
                             {% for variant in product.variants.all %}
                             <div class="variant-item p-2 mb-2" 
                                  data-price="{{ variant.price }}" 
-                                 data-stock="{{ variant.stock }}" 
+                                 data-discounted-price="{{ variant.get_discounted_price }}"                                  data-stock="{{ variant.stock }}" 
                                  data-images="{% for img in variant.images.all %}{{ img.image.url }}{% if not forloop.last %}, {% endif %}{% endfor %}"
                                  data-variant-id="{{ variant.id }}"
                                  style="cursor: pointer; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background: #fff; transition: background 0.3s;">
@@ -204,9 +211,6 @@
         </div>
     </div>
 </section>
-
-
-
 
 <style>
      /* General Styles */
@@ -325,13 +329,23 @@
         // Event listener for variant selection
         variantItems.forEach(item => {
             item.addEventListener('click', function () {
-                const newPrice = item.getAttribute('data-price');
-                document.getElementById('product-price').innerText = newPrice;
+                const regularPrice = item.getAttribute('data-price');
+                const discountedPrice = item.getAttribute('data-discounted-price');
 
-                const newStock = item.getAttribute('data-stock');
-                const stockLeft = parseInt(newStock, 10); // Parse stock as integer
+                // Update the price display based on availability of discounted price
+                const priceContainer = document.getElementById('price-container');
+                if (discountedPrice && discountedPrice !== "null" && discountedPrice !== regularPrice) {
+                    // Display discounted price with original price crossed out
+                    priceContainer.innerHTML = `<del style="color: #888;">₹${regularPrice}</del> ₹<span id="product-price">${discountedPrice}</span>`;
+                } else {
+                    // Display only the original price if no discount is available
+                    priceContainer.innerHTML = `₹<span id="product-price">${regularPrice}</span>`;
+                }
 
                 // Update stock information dynamically
+                const newStock = item.getAttribute('data-stock');
+                const stockLeft = parseInt(newStock, 10);
+                
                 if (stockLeft === 0) {
                     stockMessage.innerHTML = '<p class="text-danger font-weight-bold">Out of Stock</p>';
                     quantityInput.disabled = true;
@@ -339,8 +353,8 @@
                 } else {
                     stockMessage.innerHTML = `<p class="text-success font-weight-bold">In Stock: ${stockLeft} left</p>`;
                     quantityInput.disabled = false;
-                    quantityInput.max = stockLeft; // Set max quantity to available stock
-                    quantityInput.value = 1; // Reset the quantity to 1 on variant change
+                    quantityInput.max = stockLeft;
+                    quantityInput.value = 1;
                     updateQuantityButtons(1, stockLeft);
                 }
 
@@ -354,6 +368,7 @@
                 addToCartForm.action = `/cart_management/add_to_cart/${variantId}/`;
             });
         });
+
 
         // Decrement button
         document.getElementById('decrement-btn').addEventListener('click', function () {
@@ -441,9 +456,5 @@
         });
     });
 </script>
-
-
-
-
 
 {% endblock %}

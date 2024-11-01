@@ -5,6 +5,9 @@ from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import sys
 from brand_management.models import Brand
+from django.utils import timezone
+from django.apps import apps
+from decimal import Decimal
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -74,6 +77,24 @@ class ProductVariant(models.Model):
     def clean(self):
         if self.stock < 0:
             raise ValidationError('Stock cannot be negative.')
+
+    def get_discounted_price(self):
+        # Base price of the variant
+        base_price = self.price
+
+        # Get any active offers applicable to this variant
+        offers = self.product.category.offers.filter(is_active=True)
+
+        # Apply the highest discount
+        discount_amount = Decimal('0.00')
+        for offer in offers:
+            if offer.discount_percent:
+                discount_amount = max(discount_amount, (base_price * offer.discount_percent) / Decimal('100'))
+
+        # Calculate the discounted price
+        discounted_price = base_price - discount_amount
+        return discounted_price if discounted_price > 0 else base_price
+
 
 class ProductImage(models.Model):
     variant = models.ForeignKey('ProductVariant', on_delete=models.CASCADE, related_name='images')

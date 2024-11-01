@@ -1,17 +1,21 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from products.models import Category
 from django.utils import timezone
+from django.apps import apps
 
 class CategoryOffer(models.Model):
-    category = models.ForeignKey(Category, related_name='offers', on_delete=models.CASCADE)
+    category = models.ForeignKey(
+        'products.Category',  # Referencing the model as a string avoids direct import
+        related_name='offers', 
+        on_delete=models.CASCADE
+    )
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Discount Percentage")
     start_date = models.DateField(null=True, blank=True, verbose_name="Start Date")
     end_date = models.DateField(null=True, blank=True, verbose_name="End Date")
     is_active = models.BooleanField(default=True, verbose_name="Is Active")
 
     def clean(self):
-        # Check if both dates are provided before comparing
+        # Ensure start and end dates are valid
         if self.start_date and self.end_date:
             if self.start_date > self.end_date:
                 raise ValidationError("End date must be after the start date.")

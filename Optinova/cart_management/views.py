@@ -52,7 +52,6 @@ def add_to_cart(request, variant_id):
         return JsonResponse({'message': 'Invalid request method', 'status': 'error'})
 
 
-
 @login_required(login_url='accounts:user_login_view')
 def cart_detail(request):
     try:
@@ -64,26 +63,52 @@ def cart_detail(request):
             cart.coupon = None
             cart.save()
 
-        # Original total price
-        original_total = cart.get_original_total()
+        # Initialize totals
+        original_total = 0  # Total of original prices
+        offer_total = 0     # Total with offers applied
+        final_total = 0     # Total after coupon discount
+
+        # Calculate individual prices with offers if applicable
+        cart_items_with_offers = []
+        for item in cart_items:
+            # Original price and offer price
+            original_price = item.variant.price
+            offer_price = item.variant.get_discounted_price() if item.variant.get_discounted_price() else original_price
+            total_price_with_offer = offer_price * item.quantity
+
+            # Update the totals
+            original_total += original_price * item.quantity
+            offer_total += total_price_with_offer
+
+            # Add item data with prices to the list
+            cart_items_with_offers.append({
+                'item': item,
+                'original_price': original_price,
+                'offer_price': offer_price,
+                'total_price_with_offer': total_price_with_offer,
+            })
+
+        # Handle coupon discount if a coupon is applied
         discount_amount = 0
-
-        # Handle coupon logic if a coupon is applied to the cart
         if cart.coupon:
-            discount_amount = cart.coupon.get_discount_amount(original_total)
+            discount_amount = cart.coupon.get_discount_amount(offer_total)  # Apply discount on offer total
 
-        new_total = original_total - discount_amount
+        # Final total after applying coupon discount
+        final_total = offer_total - discount_amount
         total_items = sum(item.quantity for item in cart_items)
 
+        # Get variants not in cart
         all_variants = ProductVariant.objects.all()
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
         variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
 
         context = {
             'cart_items': cart_items,
-            'original_total':original_total,
-            'discount_amount': discount_amount,
-            'new_total': new_total,
+            'cart_items_with_offers': cart_items_with_offers,  # Pass updated list with offer-adjusted prices
+            'original_total': original_total,                  # Total of original prices without any offers
+            'offer_total': offer_total,                        # Total with offers applied
+            'discount_amount': discount_amount,                # Discount amount from coupon
+            'final_total': final_total,                        # Final price after coupon discount
             'variants_not_in_cart': variants_not_in_cart,
             'total_items': total_items,
             'csrf_token': get_token(request),
@@ -97,6 +122,7 @@ def cart_detail(request):
         error_message = traceback.format_exc()
         print(f"Error in cart_detail view: {error_message}")
         return JsonResponse({'error': 'An error occurred.'}, status=500)
+
 
 
 @login_required(login_url='accounts:user_login_view')

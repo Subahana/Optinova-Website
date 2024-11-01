@@ -110,10 +110,10 @@
                     <div class="cart__total">
                         <h6>Cart Total</h6>
                         <ul>
-                            <li>Total Price:<span class="cart-original-price">₹ {{ original_total }}</span></li>
+                            <li>Total Price:<span class="cart-original-price">₹ {{ offer_total }}</span></li>
                             <li>Items <span class="cart-total-items">{{ total_items }}</span></li>
                             <li>Discount <span class="cart-discount">₹{{ discount_amount }}</span></li>
-                            <li>Amount to Pay <span class="cart-final-price">₹{{ new_total }}</span></li>
+                            <li>Amount to Pay <span class="cart-final-price">₹{{ final_total }}</span></li>
                         </ul>
                         <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
                     </div>

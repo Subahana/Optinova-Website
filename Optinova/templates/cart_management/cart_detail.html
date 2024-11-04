@@ -3,267 +3,291 @@
 
 {% block content %}
 
-    <!-- Breadcrumb Section Begin -->
-    <section class="breadcrumb-option">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <div class="breadcrumb__text">
-                        <h4>Shopping Cart</h4>
-                        <div class="breadcrumb__links">
-                            <a href="{% url 'user_home' %}">Home</a>
-                            <a href="{% url 'shop' %}">Shop</a>
-                            <span>Shopping Cart</span>
-                        </div>
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>Shopping Cart</h4>
+                    <div class="breadcrumb__links">
+                        <a href="{% url 'user_home' %}">Home</a>
+                        <a href="{% url 'shop' %}">Shop</a>
+                        <span>Shopping Cart</span>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
-    <!-- Breadcrumb Section End -->
-    
-    <!-- Shopping Cart Section Begin -->
-    <section class="shopping-cart spad">
-        <div class="container">
-            <div class="row">
-                {% if cart_items %}
-                <!-- If cart has items, show the cart table -->
-                <div class="col-lg-8">
-                    <div class="shopping__cart__table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Quantity</th>
-                                    <th>Total</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in cart_items %}
-                                <tr>
-                                    <!-- Product Information -->
-                                    <td class="product__cart__item">
-                                        <div class="product__cart__item__pic">
-                                            {% if item.variant.images.exists %}
-                                                <img src="{{ item.variant.images.first.image.url }}" alt="Product Image">
-                                            {% else %}
-                                                <img src="{% static 'img/shopping-cart/default-image.jpg' %}" alt="Default Image">
-                                            {% endif %}
-                                        </div>
-                                        <div class="product__cart__item__text">
-                                            <h6><a href="{% url 'user_product_detail' item.variant.product.id  %}">{{ item.variant.product.name }}</a></h6>
-                                            <h6>{{ item.variant.product.name }} - {{ item.variant.name }}</h6>
-                                            <h5>₹{{ item.variant.price }}</h5>
-                                        </div>
-                                    </td>
-                                    <!-- Quantity with increase/decrease buttons -->
-                                    <td class="quantity__item">
-                                        <form method="post" class="quantity-form" data-item-id="{{ item.id }}" data-item-stock="{{ item.variant.stock }}">
-                                            {% csrf_token %}
-                                            <div class="quantity">
-                                                <button type="button" class="quantity-btn decrease" data-action="decrease">-</button>
-                                                <input type="text" name="quantity" value="{{ item.quantity }}" readonly>
-                                                <button type="button" class="quantity-btn increase" data-action="increase">+</button>
-                                            </div>
-                                        </form>
-                                    </td>
-                                    
-                                    <!-- Total Price -->
-                                    <td><span id="item-total-price-{{ item.id }}" class="item-total-price">₹{{ item.total_price }}</span></td>
-                                
-                                    <!-- Remove from cart button -->
-                                    <td class="cart__close">
-                                        {% if item.id %}
-                                            <a href="{% url 'remove_from_cart' item.id %}">
-                                                <i class="fa fa-close"></i>
-                                            </a>
+    </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<!-- Shopping Cart Section Begin -->
+<section class="shopping-cart spad">
+    <div class="container">
+        <div class="row">
+            {% if cart_items %}
+            <div class="col-lg-8">
+                <div class="shopping__cart__table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                <!-- Product Information -->
+                                <td class="product__cart__item">
+                                    <div class="product__cart__item__pic">
+                                        {% if item.variant.images.exists %}
+                                        <img src="{{ item.variant.images.first.image.url }}" alt="{{ item.variant.product.name }}">
                                         {% else %}
-                                            <span>Invalid item</span>
+                                        <img src="{% static 'img/shopping-cart/default-image.jpg' %}" alt="Default Image">
                                         {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
+                                    <div class="product__cart__item__text">
+                                        <h6><a href="{% url 'user_product_detail' item.variant.product.id %}">{{ item.variant.product.name }}</a></h6>
+                                        {% if item.variant.get_discounted_price < item.variant.price %}
+                                        <h5 style="color: red;">₹{{ item.variant.get_discounted_price }}</h5>
+                                        <h5 style="text-decoration: line-through; color: gray;">₹{{ item.variant.price }}</h5>
+                                        {% else %}
+                                        <h5>₹{{ item.variant.price }}</h5>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <!-- Quantity with increase/decrease buttons -->
+                                <td class="quantity__item">
+                                    <form method="post" class="quantity-form" data-item-id="{{ item.id }}" data-item-stock="{{ item.variant.stock }}">
+                                        {% csrf_token %}
+                                        <div class="quantity">
+                                            <button type="button" class="quantity-btn decrease" data-action="decrease" aria-label="Decrease quantity">-</button>
+                                            <input type="text" name="quantity" value="{{ item.quantity }}" readonly>
+                                            <button type="button" class="quantity-btn increase" data-action="increase" aria-label="Increase quantity">+</button>
+                                        </div>
+                                    </form>
+                                </td>
+                                <td class="item-total-price" id="item-total-price-{{ item.id }}" data-item-id="{{ item.id }}">
+                                    {% if item_total_price < item.variant.price %}
+                                        <h5><span class="cart-items-price">₹{{ item_total_price }}</span></h5>
+                                    {% else %}
+                                        <h5>₹{{ item.variant.price }} </h5>
+                                    {% endif %}
+    
+                                </td>
+                                <!-- Remove from cart button -->
+                                <td class="cart__close">
+                                    {% if item.id %}
+                                    <a href="{% url 'remove_from_cart' item.id %}" aria-label="Remove item from cart">
+                                        <i class="fa fa-close"></i>
+                                    </a>
+                                    {% else %}
+                                    <span>Invalid item</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
 
-                    <div class="row mt-4">
-                        <div class="col-lg-6 col-md-6 col-sm-6">
-                            <div class="continue__btn">
-                                <a href="{% url 'shop' %}">Continue Shopping</a>
-                            </div>
+                <div class="row mt-4">
+                    <div class="col-lg-6 col-md-6 col-sm-6">
+                        <div class="continue__btn">
+                            <a href="{% url 'shop' %}">Continue Shopping</a>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-lg-4">
-                    <div class="cart__discount">
-                        <h6>Apply Coupon</h6>
-                        <form id="coupon-form" method="post">
-                            {% csrf_token %}
-                            <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code">
-                            <button type="button" id="apply-coupon-btn" style="background:#003366 ;">Apply Coupon</button>
-                        </form>
-                    </div>
-
-                    <div class="cart__total">
-                        <h6>Cart Total</h6>
-                        <ul>
-                            <li>Total Price:<span class="cart-original-price">₹ {{ offer_total }}</span></li>
-                            <li>Items <span class="cart-total-items">{{ total_items }}</span></li>
-                            <li>Discount <span class="cart-discount">₹{{ discount_amount }}</span></li>
-                            <li>Amount to Pay <span class="cart-final-price">₹{{ final_total }}</span></li>
-                        </ul>
-                        <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
-                    </div>
-                </div>
-
-                {% else %}
-                <!-- If cart is empty, show a message -->
-                <div class="col-lg-12 text-center">
-                    <h3>Your shopping cart is empty!</h3>
-                    <p>It looks like you haven’t added anything to your cart yet. Start shopping now!</p>
-                    <div class="continue__btn mt-4">
-                        <a href="{% url 'shop' %}" class="primary-btn">Start Shopping</a>
-                    </div>
-                </div>
-                {% endif %}
             </div>
+
+            <div class="col-lg-4">
+                <div class="cart__discount">
+                    <h6>Apply Coupon</h6>
+                    <form id="coupon-form" method="post">
+                        {% csrf_token %}
+                        <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code">
+                        <button type="button" id="apply-coupon-btn" style="background:#003366;">Apply Coupon</button>
+                    </form>
+                </div>
+
+                <div class="cart__total">
+                    <h6>Cart Total</h6>
+                    <ul>
+                        <li>Total Price:<span class="cart-original-price">₹ {{ original_total }}</span></li>
+                        <li>Offer Price:<span class="cart-offer-price">₹ {{ offer_total }}</span></li>
+                        <li>Items <span class="cart-total-items">{{ total_items }}</span></li>
+                        <li>Offer Discount <span class="cart-offer-discount">₹{{ offer_discount_amount }}</span></li>
+                        <li>Coupon Discount <span class="cart-coupon-discount">₹{{ coupon_discount_amount }}</span></li>
+                        <li>Amount to Pay <span class="cart-final-price">₹{{ final_total }}</span></li>
+                    </ul>
+                    <a href="{% url 'checkout' %}" class="primary-btn">Proceed to Checkout</a>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="col-lg-12 text-center">
+                <h3>Your shopping cart is empty!</h3>
+                <p>It looks like you haven’t added anything to your cart yet. Start shopping now!</p>
+                <div class="continue__btn mt-4">
+                    <a href="{% url 'shop' %}" class="primary-btn">Start Shopping</a>
+                </div>
+            </div>
+            {% endif %}
         </div>
-    </section>
-    <!-- Shopping Cart Section End -->
-    <script>
-        var csrfToken = '{{ csrf_token }}';  // Set CSRF token
-    
-        document.addEventListener('DOMContentLoaded', function() {
-            let appliedCouponCode = '';  // Track applied coupon code
-    
-            // Calculate cart total for UI update
-            function calculateCartTotal() {
-                let total = 0;
-                document.querySelectorAll('.item-total-price').forEach(function(item) {
-                    const priceText = item.textContent.replace('₹', '').trim();
-                    const price = parseFloat(priceText) || 0;
-                    total += price;
-                });
-                return total;
+    </div>
+</section>
+
+<!-- Shopping Cart Section End -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let appliedCouponCode = '';  // Track applied coupon code
+
+        const csrfToken = '{{ csrf_token }}';  // CSRF token from Django
+
+        function updateCartTotals(data) {
+        const { final_total, offer_discount_amount, original_total, total_items, item_total_price,offer_total ,coupon_discount_amount} = data;
+
+        const cartItemsPriceElement = document.querySelector('.cart-items-price');
+        const cartTotalItemsElement = document.querySelector('.cart-total-items');
+        const cartOriginalPriceElement = document.querySelector('.cart-original-price');
+        const cartOfferPriceElement = document.querySelector('.cart-offer-price');
+        const cartOfferDiscountElement = document.querySelector('.cart-offer-discount');
+        const cartCouponDiscountElement = document.querySelector('.cart-coupon-discount');
+        const cartFinalPriceElement = document.querySelector('.cart-final-price');
+
+        // Update each element only if it exists
+        if (cartItemsPriceElement) {
+            cartItemsPriceElement.textContent = `₹${item_total_price}`;
+        }
+
+        if (cartTotalItemsElement) {
+            cartTotalItemsElement.textContent = `${total_items}`;
+        }
+
+        if (cartOriginalPriceElement) {
+            cartOriginalPriceElement.textContent = `₹${original_total}`;
+        }
+
+        if (cartOfferPriceElement) {
+            cartOfferPriceElement.textContent = `₹${offer_total}`;
+        }
+
+        if (cartOfferDiscountElement) {
+            cartOfferDiscountElement.textContent = `₹${offer_discount_amount}`;
+        }
+
+        if (cartFinalPriceElement) {
+            cartFinalPriceElement.textContent = `₹${final_total}`;
+        }
+        if (cartCouponDiscountElement) {
+            cartCouponDiscountElement.textContent = `₹${coupon_discount_amount}`;
+        }
+    }
+// {success: true, new_total: 4550, discount_amount: 150, …}discount_amount: 150 new_total: 4550 success: true total_items: 2//
+// {success: true, item_quantity: 3, …}coupon_discount_amount: "0.00" final_total: "3700.0000"item_quantity: 3 offer_discount_amount: "300.0000""success: true total_discount : "300.0000"
+function updateQuantity(itemId, quantity) {
+    const formData = new FormData();
+    formData.append('quantity', quantity);
+
+    axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
+        headers: { 'X-CSRFToken': csrfToken }
+    })
+    .then(response => {
+        console.log(response,"response");
+        
+        if (response.data.success) {
+            const priceElement = document.getElementById(`item-total-price-${itemId}`);
+            if (priceElement) {
+                priceElement.textContent = `₹${response.data.item_total_price}`;
             }
-    
-            // Update cart totals dynamically in the UI
-            function updateCartTotals(data) {
-                const originalTotal = calculateCartTotal();
-                const discountAmount = parseFloat(data.discount_amount || 0);
-                const finalTotal = originalTotal - discountAmount;
-    
-                // Update cart UI elements
-                document.querySelector('.cart-total-items').textContent = ` ${data.total_items}`;
-                document.querySelector('.cart-original-price').textContent = `₹ ${originalTotal.toFixed(2)}`;
-                document.querySelector('.cart-discount').textContent = ` ₹ ${discountAmount.toFixed(2)}`;
-                document.querySelector('.cart-final-price').textContent = `₹ ${finalTotal.toFixed(2)}`;
-            }
-    
-            // Handle updating quantity
-            function updateQuantity(itemId, quantity) {
-                const formData = new FormData();
-                formData.append('quantity', quantity);
-    
-                axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
-                    headers: { 'X-CSRFToken': csrfToken }
-                })
-                .then(response => {
-                    if (response.data.success) {
-                        document.getElementById(`item-total-price-${itemId}`).textContent = `₹${response.data.item_total_price}`;
-                        updateCartTotals(response.data);
-    
-                        // Reapply coupon if it’s already applied
-                        if (appliedCouponCode) {
-                            applyCoupon(appliedCouponCode);
-                        }
-                    } else {
-                        swal.fire("Error!", response.data.error || "Failed to update the cart.", "error");
-                    }
-                })
-                .catch(error => {
-                    console.log(error);
-                    swal.fire("Error!", "Error updating cart. Please try again.", "error");
-                });
-            }
-    
-            // Handle quantity button click events
-            document.querySelectorAll('.quantity-btn').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const form = this.closest('form');
-                    const input = form.querySelector('input[name="quantity"]');
-                    let quantity = parseInt(input.value, 10);
-                    const itemId = form.dataset.itemId;
-                    const action = this.getAttribute('data-action');
-                    const stock = parseInt(form.dataset.itemStock, 10);
-    
-                    if (action === 'increase' && quantity < stock) {
-                        quantity += 1;
-                    } else if (action === 'decrease' && quantity > 1) {
-                        quantity -= 1;
-                    }
-    
-                    input.value = quantity;
-                    updateQuantity(itemId, quantity);
-                });
+            console.log('update', response.data);
+            updateCartTotals(response.data); // Keep this to update totals
+            
+            // Only apply coupon when explicitly done by the user, not automatically here
+        } else {
+            console.log("jui");
+            
+            swal.fire("Error!", response.data.error || "Failed to update the cart.", "error");
+        }
+    })
+    .catch(error => {
+        console.log("Error updating quantity:", error.message)
+        
+        
+        swal.fire("Error!", "Error updating cart. Please try again.", "error");
+    });
+}
+
+
+
+        document.querySelectorAll('.quantity-btn').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                const form = this.closest('form');
+                const input = form.querySelector('input[name="quantity"]');
+                let quantity = parseInt(input.value, 10);
+                const itemId = form.dataset.itemId;
+                const action = this.getAttribute('data-action');
+                const stock = parseInt(form.dataset.itemStock, 10);
+
+                if (action === 'increase' && quantity < stock) {
+                    quantity += 1;
+                } else if (action === 'decrease' && quantity > 1) {
+                    quantity -= 1;
+                }
+                console.log(form.dataset,"hi");
+                
+                input.value = quantity;
+                updateQuantity(itemId, quantity);
             });
-    
-            function applyCoupon(couponCode) {
-                axios.post("{% url 'apply_coupon' %}", { coupon_code: couponCode }, {
-                    headers: { 'X-CSRFToken': csrfToken }
-                })
+        });
+
+        function applyCoupon(couponCode) {
+            axios.post("{% url 'apply_coupon' %}", { coupon_code: couponCode }, {
+                headers: { 'X-CSRFToken': csrfToken }
+            })
                 .then(response => {
                     if (response.data.success) {
                         updateCartTotals(response.data);
+                        console.log(response.data);
+                        
                         appliedCouponCode = couponCode;
-                        changeButtonStyle(true); // Change button style to remove coupon
+                        changeButtonStyle(true);
                     } else {
                         swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
                     }
                 })
                 .catch(error => {
+                    console.error("Error applying coupon:", error); // Log error for debugging
                     swal.fire("Error!", "There was a problem applying the coupon.", "error");
                 });
-            }
-    
-            function removeCoupon() {
-                // Show confirmation dialog
-                swal.fire({
-                    title: "Are you sure?",
-                    text: "Do you really want to remove the coupon?",
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor: "#0056b3", // Darker blue for the confirm button
-                    cancelButtonColor: "#d33", // Red color for the cancel button
-                    confirmButtonText: "Yes, remove it!",
-                    cancelButtonText: "No, keep it!",
-                    customClass: {
-                        confirmButton: 'swal-confirm-button',
-                        cancelButton: 'swal-cancel-button'
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // If confirmed, proceed to remove the coupon
-                        axios.post("{% url 'remove_coupon' %}", {}, {
-                            headers: { 'X-CSRFToken': csrfToken }
-                        })
+        }
+
+        function removeCoupon() {
+            swal.fire({
+                title: "Are you sure?",
+                text: "Do you really want to remove the coupon?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#0056b3",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, remove it!",
+                cancelButtonText: "No, keep it!",
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    axios.post("{% url 'remove_coupon' %}", {}, {
+                        headers: { 'X-CSRFToken': csrfToken }
+                    })
                         .then(response => {
                             if (response.data.success) {
                                 updateCartTotals(response.data);
                                 appliedCouponCode = '';
-                                changeButtonStyle(false); // Change button style to apply coupon
-                                swal.fire({
-                                    title: "Success!",
-                                    text: "Coupon removed successfully!",
-                                    icon: "success",
-                                    customClass: {
-                                        confirmButton: 'swal-confirm-button'
-                                    }
-                                });
+                                changeButtonStyle(false);
+                                swal.fire("Success!", "Coupon removed successfully!", "success");
                             } else {
                                 swal.fire("Error!", response.data.error || "Failed to remove the coupon.", "error");
                             }
@@ -271,42 +295,39 @@
                         .catch(error => {
                             swal.fire("Error!", "There was a problem removing the coupon.", "error");
                         });
-                    } else {
-                        // User canceled the action
-                        swal.fire("Cancelled", "Your coupon is safe :)", "info");
-                    }
-                });
-            }
-    
-            function changeButtonStyle(isRemoving) {
-                const button = document.getElementById('apply-coupon-btn');
-                if (isRemoving) {
-                    button.textContent = "Remove Coupon";
-                    button.classList.remove('apply-button'); // Remove the apply button class
-                    button.classList.add('remove-button'); // Add the remove button class
-                    button.style.backgroundColor = "#d9534f"; // Change to red when removing
-                } else {
-                    button.textContent = "Apply Coupon";
-                    button.classList.remove('remove-button'); // Remove the remove button class
-                    button.classList.add('apply-button'); // Add the apply button class
-                    button.style.backgroundColor = "#003366"; // Change to green when applying
-                }
-            }
-    
-            document.getElementById('apply-coupon-btn').addEventListener('click', function() {
-                const couponCode = document.querySelector('input[name="coupon_code"]').value.trim();
-                if (appliedCouponCode) {
-                    removeCoupon();
-                } else if (couponCode) {
-                    applyCoupon(couponCode);
-                } else {
-                    swal.fire("Warning!", "Please enter a valid coupon code.", "warning");
                 }
             });
+        }
+
+        function changeButtonStyle(isRemoving) {
+            const button = document.getElementById('apply-coupon-btn');
+            if (isRemoving) {
+                button.textContent = "Remove Coupon";
+                button.classList.add('remove-button');
+                button.style.backgroundColor = "#d9534f";
+            } else {
+                button.textContent = "Apply Coupon";
+                button.classList.remove('remove-button');
+                button.style.backgroundColor = "#003366";
+            }
+        }
+
+        document.getElementById('apply-coupon-btn').addEventListener('click', function () {
+            const couponCode = document.querySelector('input[name="coupon_code"]').value.trim();
+            if (appliedCouponCode) {
+                removeCoupon();
+            } else if (couponCode) {
+                applyCoupon(couponCode);
+            } else {
+                swal.fire("Warning!", "Please enter a valid coupon code.", "warning");
+            }
         });
-    </script>
-    
-    
+    });
+</script>
+
+
+
+
 <style>
     /* General Styles */
     body {
@@ -317,7 +338,8 @@
 
     /* Breadcrumb Section */
     .breadcrumb-option {
-        background-color: #003366; /* Dark blue background */
+        background-color: #003366;
+        /* Dark blue background */
         padding: 20px 0;
     }
 
@@ -327,14 +349,15 @@
         color: #fff;
     }
 
-    .breadcrumb__links a, 
+    .breadcrumb__links a,
     .breadcrumb__links span {
         font-size: 15px;
         color: #b0b0b0;
     }
 
     .breadcrumb__links a:hover {
-        color: #0099ff; /* Light blue on hover */
+        color: #0099ff;
+        /* Light blue on hover */
     }
 
     /* Shopping Cart Section */
@@ -349,7 +372,7 @@
         margin-bottom: 30px;
     }
 
-    .shopping__cart__table th, 
+    .shopping__cart__table th,
     .shopping__cart__table td {
         padding: 12px;
         border-bottom: 1px solid #ddd;
@@ -358,7 +381,8 @@
     .shopping__cart__table th {
         text-transform: uppercase;
         font-size: 14px;
-        color: #003366; /* Dark blue text */
+        color: #003366;
+        /* Dark blue text */
     }
 
     .product__cart__item__pic img {
@@ -370,21 +394,25 @@
     .product__cart__item__text h6 {
         font-size: 18px;
         font-weight: 500;
-        color: #003366; /* Dark blue text */
+        color: #003366;
+        /* Dark blue text */
     }
 
     .product__cart__item__text h5 {
-        color: #0099ff; /* Light blue for price */
+        color: #0099ff;
+        /* Light blue for price */
     }
 
     .cart__price {
         font-size: 18px;
         font-weight: 600;
-        color: #0099ff; /* Light blue for price */
+        color: #0099ff;
+        /* Light blue for price */
     }
 
     .cart__close i {
-        color: #e74c3c; /* Red for remove icon */
+        color: #e74c3c;
+        /* Red for remove icon */
         font-size: 18px;
         cursor: pointer;
     }
@@ -401,14 +429,15 @@
     }
 
     /* Discount and Total */
-    .cart__discount h6, 
+    .cart__discount h6,
     .cart__total h6 {
         font-size: 20px;
         font-weight: 600;
-        color: #003366; /* Dark blue headings */
+        color: #003366;
+        /* Dark blue headings */
     }
 
-    .cart__discount input, 
+    .cart__discount input,
     .cart__discount button {
         padding: 10px;
         border-radius: 5px;
@@ -417,7 +446,8 @@
     }
 
     .cart__discount button {
-        background-color: #0099ff; /* Blue button */
+        background-color: #0099ff;
+        /* Blue button */
         color: #fff;
         font-weight: 600;
     }
@@ -436,11 +466,13 @@
 
     .cart__total ul li span {
         float: right;
-        color: #0099ff; /* Light blue for total */
+        color: #0099ff;
+        /* Light blue for total */
     }
 
     .primary-btn {
-        background-color: #003366; /* Dark blue button */
+        background-color: #003366;
+        /* Dark blue button */
         color: #fff;
         text-align: center;
         display: inline-block;
@@ -452,14 +484,16 @@
     }
 
     .primary-btn:hover {
-        background-color: #0099ff; /* Light blue on hover */
+        background-color: #0099ff;
+        /* Light blue on hover */
         color: #fff;
     }
 
     /* Continue Shopping and Update Cart */
-    .continue__btn a, 
+    .continue__btn a,
     .update__btn a {
-        background-color: #003366; /* Dark blue button */
+        background-color: #003366;
+        /* Dark blue button */
         color: #fff;
         padding: 12px 20px;
         border-radius: 5px;
@@ -469,15 +503,17 @@
         transition: background-color 0.3s, color 0.3s;
     }
 
-    .continue__btn a:hover, 
+    .continue__btn a:hover,
     .update__btn a:hover {
-        background-color: #0099ff; /* Light blue on hover */
+        background-color: #0099ff;
+        /* Light blue on hover */
         color: #fff;
     }
 
     /* Hover Effects */
     .shopping__cart__table tbody tr:hover {
-        background-color: #f0f8ff; /* Light blue background on hover */
+        background-color: #f0f8ff;
+        /* Light blue background on hover */
     }
 
     .product__cart__item__pic img:hover {
@@ -489,31 +525,37 @@
         color: #333;
         transition: color 0.3s;
     }
+
     .pro-qty-2 {
         display: flex;
-        align-items: center; /* Vertically align the buttons and input field */
+        align-items: center;
+        /* Vertically align the buttons and input field */
     }
 
     .quantity-btn {
-        padding: 5px 10px; /* Adjust padding to make buttons more visible */
-        background-color: #f0f0f0; /* Optional: Add background color for buttons */
-        border: 1px solid #ccc; /* Optional: Add border for styling */
+        padding: 5px 10px;
+        /* Adjust padding to make buttons more visible */
+        background-color: #f0f0f0;
+        /* Optional: Add background color for buttons */
+        border: 1px solid #ccc;
+        /* Optional: Add border for styling */
         cursor: pointer;
         font-size: 16px;
     }
 
     .quantity-btn:hover {
-        background-color: #ddd; /* Optional: Add hover effect */
+        background-color: #ddd;
+        /* Optional: Add hover effect */
     }
 
     .quantity-form input {
         text-align: center;
         width: 40px;
         height: 30px;
-        margin: 0 5px; /* Space between input and buttons */
+        margin: 0 5px;
+        /* Space between input and buttons */
         border: 1px solid #ccc;
     }
-
 </style>
 
 {% endblock %}

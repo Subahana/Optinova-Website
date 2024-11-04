@@ -70,14 +70,18 @@ def apply_coupon(request):
             # Fetch the user's cart
             user_cart = get_object_or_404(Cart, user=request.user)
             cart_items = CartItem.objects.filter(cart=user_cart)
-            total_items = sum(item.quantity for item in cart_items)
 
             # Check if the cart is empty
             if not cart_items.exists():
                 return JsonResponse({'success': False, 'error': 'Your cart is empty.'}, status=400)
 
             # Calculate the original total price of all items in the cart
-            original_total = user_cart.get_original_total()  # You likely have a method to calculate this
+            # Original total without offers
+            original_total = sum(item.variant.price * item.quantity for item in cart_items)
+
+            # Calculate the total after applying any offer discounts
+            offer_total = sum((item.variant.get_discounted_price() or item.variant.price) * item.quantity for item in cart_items)
+            offer_discount_amount = original_total - offer_total
 
             # Fetch the coupon (case-insensitive search)
             coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
@@ -93,12 +97,12 @@ def apply_coupon(request):
                 if used_coupon:
                     return JsonResponse({'success': False, 'error': 'You have already used this coupon for a completed order.'}, status=400)
 
-                # Calculate the discount based on the entire cart total
-                discount_amount = coupon.get_discount_amount(original_total)
-                discount_amount = min(discount_amount, original_total)  # Ensure discount doesn't exceed total
+                # Calculate the discount based on the offer total
+                coupon_discount_amount = coupon.get_discount_amount(offer_total)
+                coupon_discount_amount = min(coupon_discount_amount, offer_total)  
 
                 # Calculate the new total after applying the discount
-                new_total = original_total - discount_amount
+                final_total = offer_total - coupon_discount_amount
 
                 # Save the coupon to the cart
                 user_cart.coupon = coupon
@@ -107,9 +111,11 @@ def apply_coupon(request):
                 return JsonResponse({
                     'success': True,
                     'original_total': original_total,
-                    'new_total': float(new_total),
-                    'discount_amount': float(discount_amount),
-                    'total_items': total_items
+                    'offer_total': offer_total,
+                    'final_total': float(final_total),
+                    'coupon_discount_amount': float(coupon_discount_amount),
+                    'offer_discount_amount':offer_discount_amount,
+                    'total_items': cart_items.count()  # Count items in the cart
                 })
 
             else:
@@ -137,15 +143,22 @@ def remove_coupon(request):
 
                 # Recalculate totals without the discount
                 original_total = user_cart.get_original_total()
-                new_total = original_total  # Since there is no discount now
-                total_items = sum(item.quantity for item in user_cart.cartitem_set.all())
+                cart_items = CartItem.objects.filter(cart=user_cart)  # Fetch cart items
+                offer_total = sum((item.variant.get_discounted_price() or item.variant.price) * item.quantity for item in cart_items)
+                offer_discount_amount = original_total - offer_total
+
+                # Since coupon is removed, final total is just the original total
+                final_total = original_total  - offer_discount_amount
+                total_items = sum(item.quantity for item in cart_items)
 
                 # Return updated cart data
                 return JsonResponse({
                     'success': True,
                     'original_total': original_total,
-                    'new_total': new_total,
-                    'discount_amount': 0,  # No discount after removal
+                    'offer_total': offer_total,
+                    'offer_discount_amount': offer_discount_amount,
+                    'final_total': final_total,
+                    'coupon_discount_amount': 0,  
                     'total_items': total_items
                 })
 

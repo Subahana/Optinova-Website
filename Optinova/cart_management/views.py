@@ -6,6 +6,8 @@ from products.models import ProductVariant
 from django.contrib import messages
 from django.middleware.csrf import get_token
 import json
+from decimal import Decimal
+from offer_management.models import CategoryOffer
 
 # --------------Cart Management---------------#
 
@@ -58,61 +60,69 @@ def cart_detail(request):
         cart, created = Cart.objects.get_or_create(user=request.user)
         cart_items = CartItem.objects.filter(cart=cart)
 
-        # Clear the coupon from the cart if no coupon is applied
         if not request.GET.get('apply_coupon'):
             cart.coupon = None
             cart.save()
 
         # Initialize totals
-        original_total = 0  # Total of original prices
-        offer_total = 0     # Total with offers applied
-        final_total = 0     # Total after coupon discount
+        original_total = 0
+        offer_total = 0
+        offer_discount_amount = 0
+        coupon_discount_amount = 0
+        total_discount = 0
+        final_total = 0
 
-        # Calculate individual prices with offers if applicable
         cart_items_with_offers = []
+
         for item in cart_items:
-            # Original price and offer price
             original_price = item.variant.price
-            offer_price = item.variant.get_discounted_price() if item.variant.get_discounted_price() else original_price
-            total_price_with_offer = offer_price * item.quantity
+            offer_price = item.variant.get_discounted_price() or original_price
+            quantity = item.quantity
 
-            # Update the totals
-            original_total += original_price * item.quantity
-            offer_total += total_price_with_offer
+            # Calculate item total price based on quantity
+            item_total_price = offer_price * quantity
 
-            # Add item data with prices to the list
+            # Add to overall totals
+            original_total += original_price * quantity
+            offer_total += item_total_price
+
+            # Store item details with item total price
             cart_items_with_offers.append({
                 'item': item,
                 'original_price': original_price,
-                'offer_price': offer_price,
-                'total_price_with_offer': total_price_with_offer,
+                'discounted_price': offer_price,
+                'item_total_price': item_total_price,
             })
-
-        # Handle coupon discount if a coupon is applied
-        discount_amount = 0
+        
+        # Calculate offer discount amount
+        offer_discount_amount = original_total - offer_total
+        # Apply coupon discount if any
         if cart.coupon:
-            discount_amount = cart.coupon.get_discount_amount(offer_total)  # Apply discount on offer total
+            discount_base = offer_total if offer_discount_amount > 0 else original_total
+            coupon_discount_amount = cart.coupon.get_discount_amount(discount_base)
 
-        # Final total after applying coupon discount
-        final_total = offer_total - discount_amount
+        total_discount = offer_discount_amount + coupon_discount_amount
+        final_total = original_total - total_discount
         total_items = sum(item.quantity for item in cart_items)
 
-        # Get variants not in cart
+        # Variants not in cart
         all_variants = ProductVariant.objects.all()
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
         variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
 
         context = {
             'cart_items': cart_items,
-            'cart_items_with_offers': cart_items_with_offers,  # Pass updated list with offer-adjusted prices
-            'original_total': original_total,                  # Total of original prices without any offers
-            'offer_total': offer_total,                        # Total with offers applied
-            'discount_amount': discount_amount,                # Discount amount from coupon
-            'final_total': final_total,                        # Final price after coupon discount
+            'cart_items_with_offers': cart_items_with_offers,
+            'original_total': original_total,
+            'offer_total': offer_total,
+            'offer_discount_amount': offer_discount_amount,
+            'coupon_discount_amount': coupon_discount_amount,
+            'total_discount': total_discount,
+            'final_total': final_total,
             'variants_not_in_cart': variants_not_in_cart,
             'total_items': total_items,
             'csrf_token': get_token(request),
-            'coupon_code': cart.coupon.code if cart.coupon else None  
+            'coupon_code': cart.coupon.code if cart.coupon else None
         }
 
         return render(request, 'cart_management/cart_detail.html', context)
@@ -141,6 +151,10 @@ def update_cart_item_quantity(request, item_id):
             new_quantity = int(request.POST.get('quantity'))
             cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
 
+            # Check if the new quantity is valid
+            if new_quantity < 1:
+                return JsonResponse({'success': False, 'error': 'Quantity must be at least 1.'})
+
             # Check stock availability
             available_stock = cart_item.variant.stock
             if new_quantity > available_stock:
@@ -149,39 +163,54 @@ def update_cart_item_quantity(request, item_id):
                     'error': f"Only {available_stock} items available in stock."
                 })
 
-            # Update quantity if it’s valid
-            if new_quantity > 0:
-                cart_item.quantity = new_quantity
-                cart_item.save()
+            # Update quantity and save
+            cart_item.quantity = new_quantity
+            cart_item.save()
 
-                # Updated item price and cart totals
-                item_total_price = cart_item.total_price()  # Uses the cart item’s quantity
-                cart = cart_item.cart
+            # Calculate item total price
+            item_discounted_price = cart_item.variant.get_discounted_price()
+            item_total_price = cart_item.variant.get_discounted_price() * cart_item.quantity if cart_item.variant.get_discounted_price() < cart_item.variant.price else cart_item.variant.price * cart_item.quantity
+            
+            # Calculate cart totals
+            cart = cart_item.cart
+            
+            # Initialize totals
+            original_total = sum(item.variant.price * item.quantity for item in cart.cartitem_set.all())
+            offer_total = sum(item.variant.get_discounted_price() * item.quantity for item in cart.cartitem_set.all())
+            offer_discount_amount = original_total - offer_total
+            
+            # Coupon discount calculation
+            coupon_discount_amount = Decimal('0.00')
+            if cart.coupon:
+                discount_base = offer_total if offer_discount_amount > 0 else original_total
+                coupon_discount_amount = cart.get_discount()
 
-                # Calculate original and discounted totals
-                original_total = cart.get_original_total()
-                discount_amount = cart.get_discount() if cart.coupon else 0
-                new_total = original_total - discount_amount
-                total_items = sum(item.quantity for item in cart.cartitem_set.all())
+            # Final totals
+            total_discount = offer_discount_amount + coupon_discount_amount
+            final_total = original_total - total_discount
+            total_items = sum(item.quantity for item in cart.cartitem_set.all())
 
-                return JsonResponse({
-                    'success': True,
-                    'item_quantity': cart_item.quantity,
-                    'item_total_price': item_total_price,
-                    'total_items': total_items,
-                    'original_total': original_total,
-                    'discount_amount': discount_amount,
-                    'new_total': new_total
-                })
-            else:
-                return JsonResponse({'success': False, 'error': 'Quantity must be at least 1.'})
-
+            # Return successful response with updated values
+            return JsonResponse({
+                'success': True,
+                'item_quantity': cart_item.quantity,
+                'item_total_price': item_total_price,
+                'total_items': total_items,
+                'original_total': original_total,
+                'offer_total': offer_total,
+                'offer_discount_amount': offer_discount_amount,
+                'coupon_discount_amount': coupon_discount_amount,
+                'total_discount': total_discount,
+                'final_total': final_total
+            })
+        
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Cart item not found.'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Invalid request method.'})
+
 
 # --------------Wishlist Management---------------#
 

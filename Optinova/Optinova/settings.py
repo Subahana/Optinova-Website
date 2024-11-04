@@ -35,11 +35,13 @@ INSTALLED_APPS = [
     'brand_management',
     'coupon_management',
     'offer_management',
+    'sales_report',
     'django.contrib.sites',  
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'paypal.standard.ipn',
 ]
 
 MIDDLEWARE = [

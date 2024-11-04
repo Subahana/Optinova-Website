@@ -3,35 +3,50 @@ from django.conf import settings
 from products.models import Product, ProductVariant
 from coupon_management.models import Coupon 
 
-
 class Cart(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL) 
+    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return f"Cart of {self.user.username}"
 
-    def get_total_price(self):
- 
+    def get_original_total(self):
+        # Sum up original prices without any discount
+        return sum(item.quantity * item.variant.price for item in self.cartitem_set.all())
+
+    def get_offer_total(self):
+        # Sum up prices with any variant-specific discounts applied
+        return sum(
+            item.quantity * (item.variant.get_discounted_price() or item.variant.price)
+            for item in self.cartitem_set.all()
+        )
+
+    def calculate_final_total(self):
         original_total = self.get_original_total()
+        offer_total = self.get_offer_total()
         
+        # Calculate offer-based discount
+        offer_discount_amount = original_total - offer_total
+
+        # Initialize coupon discount amount
+        coupon_discount_amount = 0
+        # Apply coupon if it's valid
         if self.coupon and self.coupon.is_valid():
-            discount = self.coupon.get_discount_amount(original_total) 
-            total = original_total - discount
-        else:
-            total = original_total
-        
-        return total
+            discount_base = offer_total if offer_discount_amount > 0 else original_total
+            coupon_discount_amount = self.coupon.get_discount_amount(discount_base)
+
+        # Total discount is the sum of offer and coupon discounts
+        total_discount = offer_discount_amount + coupon_discount_amount
+        final_total = original_total - total_discount
+        return final_total
+
+    def get_total_price(self):
+        # Calls the calculate_final_total method to return the final price with discounts
+        return self.calculate_final_total()
 
     def get_discount(self):
-
-        if self.coupon and self.coupon.is_valid():
-            return self.coupon.get_discount_amount(self.get_original_total())
-        return 0
-
-    def get_original_total(self):
-
-        return sum(item.quantity * item.variant.price for item in self.cartitem_set.all())
+        # Calls calculate_final_total to fetch total discount applied
+        return self.get_original_total() - self.calculate_final_total()
 
 
 class CartItem(models.Model):

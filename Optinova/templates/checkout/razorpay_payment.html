@@ -12,12 +12,14 @@
 <body>
     <h1>Complete Your Payment</h1>
 
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    
     <button id="rzp-button1">Pay with Razorpay</button>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         var options = {
             "key": "{{ razorpay_key }}", // Razorpay Key ID
-            "amount": "{{total_price}}", // Amount in paisa
+            "amount": "{{ total_price }}", // Amount in paisa
             "currency": "INR",
             "name": "{{ user_name }}",
             "description": "Order Payment",
@@ -30,12 +32,6 @@
             "theme": {
                 "color": "#0099ff" // Customize the color
             }
-            // ,
-            // "modal": {
-            //     "ondismiss": function() {
-            //         window.location.href = "{% url 'order_success' order_id=order.id %}";
-            //     }
-            // }
         };
 
         var rzp1 = new Razorpay(options);
@@ -44,6 +40,31 @@
             rzp1.open();
             e.preventDefault();
         }
+
+        // Handle payment verification
+        window.addEventListener('load', function () {
+            const paymentId = new URLSearchParams(window.location.search).get('razorpay_payment_id');
+            const orderId = new URLSearchParams(window.location.search).get('razorpay_order_id');
+            const signature = new URLSearchParams(window.location.search).get('razorpay_signature');
+
+            if (paymentId && orderId && signature) {
+                console.log(paymentId,orderId,signature);
+                axios.post("{% url 'verify_razorpay_payment' %}", {
+                    razorpay_payment_id: paymentId,
+                    razorpay_order_id: orderId,
+                    razorpay_signature: signature,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                })
+                .then(response => {
+                    // Handle success response
+                    console.log(response.data);
+                })
+                .catch(error => {
+                    // Handle error response
+                    console.error(error);
+                });
+            }
+        });
     </script>
 </body>
 

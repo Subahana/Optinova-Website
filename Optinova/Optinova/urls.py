@@ -8,6 +8,7 @@ urlpatterns = [
     path('', include(('accounts.urls', 'accounts'), namespace='accounts')), 
     path('accounts/', include('allauth.urls')),  
     path('', include('django.contrib.auth.urls')),
+    path('',include('paypal.standard.ipn.urls')),
     path('admin_page/', include('admin_page.urls')),
     path('user_home/', include('user_home.urls')),
     path('products/', include('products.urls')),
@@ -17,6 +18,7 @@ urlpatterns = [
     path('brand_management', include('brand_management.urls')),  
     path('coupon_management', include('coupon_management.urls')),  
     path('offer_management', include('offer_management.urls')),  
+    path('sales_report', include('sales_report.urls')),  
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def checkout(request):
     cart = Cart.objects.get(user=request.user)
     addresses = Address.objects.filter(user=request.user)
-    total_price = cart.get_total_price()
+    total_price = cart.calculate_final_total()  # Use calculate_final_total method
     
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
@@ -98,6 +98,8 @@ def checkout(request):
                         'total_price': total_price, 
                         'user_email': request.user.email,
                         'user_name': request.user.get_full_name(),
+                        'csrf_token': get_token(request),
+
                     })
                 except razorpay.errors.BadRequestError as e:
                     logger.error(f"Failed to create Razorpay order: {str(e)}")
@@ -121,58 +123,72 @@ def checkout(request):
         'addresses': addresses,
         'cart_items': CartItem.objects.filter(cart=cart),
         'total_price': total_price,
+        'csrf_token': get_token(request),
+
     })
 
 
-
 @csrf_exempt
+@login_required(login_url='accounts:user_login_view')
 def verify_razorpay_payment(request):
     if request.method == "POST":
+        print('verify_start')
         payment_id = request.POST.get("razorpay_payment_id")
         signature = request.POST.get("razorpay_signature")
         order_id = request.POST.get("razorpay_order_id")
-        print('reached',order_id)
-        # Assuming you have your Razorpay client set up
+
+        # Ensure all necessary fields are present
+        if not payment_id or not signature or not order_id:
+            messages.error(request, "Missing payment information.")
+            return redirect('cart')
+
+        # Set up Razorpay client
         client = razorpay.Client(auth=("YOUR_RAZORPAY_KEY", "YOUR_RAZORPAY_SECRET"))
-        
-        # Create payload for signature verification
+
         params_dict = {
             'razorpay_order_id': order_id,
             'razorpay_payment_id': payment_id,
             'razorpay_signature': signature
         }
-        print(params_dict)
-        
 
         try:
-            razorpay_order_id = request.session.get('razorpay_order_id')
-            print('after razorpay razorpay_order_id', razorpay_order_id)
-            # Verify the payment signature using Razorpay's utility
+            print('hi')
+            # Verify payment signature
             client.utility.verify_payment_signature(params_dict)
-            
-            cart = Cart.objects.filter(user=request.user)
-            cart_items = CartItem.objects.filter(cart=cart)
-            cart_items.delete()
-            # If verification passes, mark the order as paid
+
+            # Clear the cart items for the user
+            cart = Cart.objects.get(user=request.user)
+            CartItem.objects.filter(cart=cart).delete()
+
+            # Update the order status to 'paid'
             order = get_object_or_404(Order, razorpay_order_id=order_id, razorpay_payment_id=payment_id)
             order.status = 'paid'
             order.save()
             messages.success(request, "Payment successful! Your order has been placed.")
-            csrf_token = get_token(request)
+            print('Payment successful - redirecting to success page.')
+            
+            # Redirect to the order success page
             return redirect('order_success', order_id=order_id)
 
         except razorpay.errors.SignatureVerificationError:
             messages.error(request, "Payment verification failed. Please try again.")
+
+            # Attempt to parse error metadata if present
             metadata_json = request.POST.get('error[metadata]')
+            order_id = None  # Default if parsing fails
 
-            # Parse the JSON string to extract order_id
-            metadata = json.loads(metadata_json)  # Convert JSON string to a dictionary
-            order_id = metadata.get('order_id')  # Extract the order_id
-            print(order_id)
-            return redirect('order_failure', order_id=order_id)
+            if metadata_json:
+                try:
+                    metadata = json.loads(metadata_json)
+                    order_id = metadata.get('order_id')
+                except json.JSONDecodeError:
+                    pass
 
-    return redirect('cart')  # Fallback in case of a non-POST request
+            # Redirect to the order failure page
+            return redirect('order_failure', order_id=order_id if order_id else '')
 
+    # Fallback for non-POST requests
+    return redirect('cart')
 
 def order_success(request, order_id):
     order = get_object_or_404(Order, razorpay_order_id=order_id)
@@ -185,6 +201,7 @@ def order_success(request, order_id):
         'payment_status': payment_status,
     })
 
+@login_required(login_url='accounts:user_login_view')
 def order_failure(request, order_id):
     order = get_object_or_404(Order, razorpay_order_id=order_id)
     total_price = sum(item.quantity * item.variant.price for item in order.items.all())
@@ -195,8 +212,6 @@ def order_failure(request, order_id):
         'total_price': total_price,
         'payment_status': payment_status,
     })
-
-
 
 def list_orders(request):
     orders = Order.objects.filter(items__variant__is_active=True).distinct()
@@ -246,8 +261,7 @@ def update_order_status(request, order_id):
     return redirect('list_orders')
 
 
-
-@login_required
+@login_required(login_url='accounts:user_login_view')
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
 

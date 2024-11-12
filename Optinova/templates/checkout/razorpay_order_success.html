@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Success</title>
+    <style>
+        /* Styling the page for a clean, modern look */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            text-align: center;
+        }
+        .container h1 {
+            color: #4CAF50;
+        }
+        .order-info {
+            font-size: 1.1rem;
+            color: #333;
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+        .order-id {
+            font-weight: bold;
+            color: #555;
+            margin-top: 1rem;
+        }
+        .summary {
+            margin-top: 1.5rem;
+        }
+        .summary ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .summary li {
+            margin-bottom: 0.5rem;
+            color: #777;
+        }
+        .actions {
+            margin-top: 2rem;
+        }
+        .btn {
+            text-decoration: none;
+            color: #fff;
+            background-color: #007BFF;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Thank You! Your Order is Confirmed 🎉</h1>
+    <p class="order-info">Your payment has been successfully processed, and your order is on its way!</p>
+
+    <p class="order-id">Order ID: <span>{{ order_id }}</span></p>
+
+    <!-- Optional: Order summary (populate this dynamically if desired) -->
+    <div class="summary">
+        <h2>Order Summary</h2>
+        <div class="order-items">
+            {% for item in order.items.all %}
+                <div class="order-item mb-4 p-3 bg-light rounded shadow-sm">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Product:</strong> {{ item.variant.product.name }}</p>
+                        </div>
+                        <div class="col-md-3 text-right">
+                            <p class="mb-1"><strong>Quantity:</strong> {{ item.quantity }}</p>
+                            <p class="mb-1 text-success"><strong>Price:</strong> ₹{{ item.variant.price }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">No items found.</p>
+            {% endfor %}
+        </div>
+        <p><strong>Total: ₹2800</strong></p>
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'shop:home' %}" class="btn">Continue Shopping</a>
+    </div>
+</div>
+
+</body>
+</html>

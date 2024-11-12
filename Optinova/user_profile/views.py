@@ -127,54 +127,72 @@ def delete_address(request, address_id):
 
 @login_required(login_url='accounts:user_login_view')
 def my_orders(request):
-    available_variants = ProductVariant.objects.filter(is_active=True)
+    # Get the search query from the request (if any)
     query = request.GET.get('query', '')
-    orders = Order.objects.filter(user=request.user).order_by('id')
 
-    # Filter orders that contain available product variants
+    # Get orders for the logged-in user containing active product variants
     orders = Order.objects.filter(
-        user=request.user,  
-        items__variant__is_active=True
-    ).distinct()
+        user=request.user,
+        items__variant__is_active=True  # Filter orders that contain active variants
+    ).distinct().order_by('id')
 
     # Calculate total price and total quantity for each order
     for order in orders:
+        # Calculate the total price using price and quantity in OrderItem
         order.total_price = order.items.aggregate(
-            total=Sum(F('price') * F('quantity'))  # Use 'price' stored in OrderItem
+            total=Sum(F('price') * F('quantity'))
         )['total'] or 0
         
-        # Calculate total items in the order
+        # Calculate the total quantity of items in the order
         order.total_items = order.items.aggregate(
-            total=Sum('quantity')  # Total quantity of items in this order
+            total=Sum('quantity')
         )['total'] or 0
+        
+        # Add the payment method and payment status
+        if order.payment_details:
+            order.payment_method = order.payment_details.payment_method
+            order.payment_status = order.payment_details.payment_status.status
+            if order.payment_details.payment_method == 'razorpay':
+                order.razorpay_order_id = order.payment_details.razorpay_order_id
+                order.razorpay_payment_id = order.payment_details.razorpay_payment_id
+        else:
+            order.payment_method = 'Not Provided'
+            order.payment_status = 'Pending'
 
     # Pagination (5 orders per page)
     paginator = Paginator(orders, 5)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'user_profile/my_orders.html', {'page_obj': page_obj, 'query': query})
+    return render(request, 'user_profile/my_orders.html', {
+        'page_obj': page_obj,
+        'query': query
+    })
 
-    
+
+
 @login_required(login_url='accounts:user_login_view')
 def order_details(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # Calculate total price for the order (all items)
-    total_price = sum(item.total_price() for item in order.items.all())
-    total_price_order = order.total_amount()  # Use the total_amount method
+    # Calculate total price for all items in the order using the model's method
+    total_price_order = order.total_amount()
 
-    # Get the cancellation URL
+    # Retrieve payment and cancellation details if available
+    payment_status = order.payment_details.payment_status if order.payment_details else "N/A"
+    payment_method = order.payment_details.payment_method if order.payment_details else "N/A"
+
+    # Generate the cancellation URL for the order
     cancel_order_url = reverse('cancel_order_request', args=[order.id])
 
     if request.method == 'POST':
-        if 'cancel_order' in request.POST and order.status in ['Pending', 'Processing']:
+        if 'cancel_order' in request.POST and order.status.status in ['Pending', 'Processing']:
             reason = request.POST.get('cancellation_reason', 'Cancelled by User')
             order.cancel_order(reason=reason)
             messages.success(request, "Order has been cancelled.")
             return redirect('my_orders')
 
-        if 'return_order' in request.POST and order.status == 'Delivered':
+        if 'return_order' in request.POST and order.status.status == 'Delivered':
             order.return_order()
             messages.success(request, "Return request has been submitted.")
             return redirect('my_orders')
@@ -182,9 +200,11 @@ def order_details(request, order_id):
     return render(request, 'checkout/order_details.html', {
         'order': order,
         'total_price_order': total_price_order,
-        'total_price': total_price,
-        'cancel_order_url': cancel_order_url,  
+        'payment_status': payment_status,
+        'payment_method': payment_method,
+        'cancel_order_url': cancel_order_url,
     })
+
 
 
 @login_required(login_url='accounts:user_login_view')

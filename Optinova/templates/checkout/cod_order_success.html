@@ -1,5 +1,6 @@
 {% extends "user_home/main.html" %}
 {% block content %}
+
 <div class="container mt-5">
     <div class="order-success text-center">
         <!-- Success Message with Icon -->
@@ -17,7 +18,14 @@
                     <div class="order-details mb-3">
                         <p><strong>Order ID:</strong> <span class="text-muted">{{ order.id }}</span></p>
                         <p><strong>Status:</strong> <span class="badge badge-info">{{ order.status }}</span></p>
-                        <p><strong>Payment Status:</strong> <span class="badge badge-info">{{ order.payment_status }}</span></p>
+                        <p><strong>Payment Status:</strong> 
+                            {% if order.payment_status|lower == 'completed' %}
+                                <span class="badge badge-success">{{ order.payment_status }}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ order.payment_status }}</span>
+                            {% endif %}
+                        </p>
+                        
                         <p><strong>Date:</strong> <span class="text-muted">{{ order.created_at|date:"M d, Y" }}</span></p>
                     </div>
 
@@ -49,6 +57,23 @@
             </div>
         </div>
 
+<!-- Conditional Payment Button for Pending Payment -->
+{% if order.payment_details.payment_status.status != 'Completed' %}
+    <div class="alert alert-warning mt-4 py-3 shadow-sm">
+        <i class="fas fa-exclamation-circle fa-2x mb-2 text-warning"></i>
+        <p class="lead">Your payment is pending. Complete the payment to confirm your order.</p>
+        <a href="{% url 'complete_payment' order.id %}" class="btn btn-lg btn-success shadow-lg px-5 mt-3">
+            <i class="fas fa-credit-card"></i> Complete Payment
+        </a>
+    </div>
+{% else %}
+    <div class="alert alert-success mt-4 py-3 shadow-sm">
+        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+        <p class="lead">Thank you! Your payment has been successfully completed. Your order is confirmed.</p>
+    </div>
+{% endif %}
+
+
         <!-- Continue Shopping Button -->
         <div class="mt-4">
             <a href="{% url 'shop' %}" class="btn btn-lg btn-primary shadow-lg px-5">
@@ -58,7 +83,6 @@
     </div>
 </div>
 
-<!-- Additional Styles for Premium Look -->
 <style>
     .order-success h2, .order-success p {
         font-family: 'Poppins', sans-serif;
@@ -79,6 +103,16 @@
         background-color: #004AAD;
     }
 
+    .btn-success {
+        background-color: #28a745;
+        border: none;
+        border-radius: 50px;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
     .order-items .order-item {
         transition: all 0.3s ease-in-out;
     }
@@ -93,5 +127,11 @@
         font-weight: bold;
         color: #28a745;
     }
+
+    .alert-warning {
+        font-family: 'Poppins', sans-serif;
+        border-radius: 15px;
+    }
 </style>
+
 {% endblock %}

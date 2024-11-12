@@ -1,12 +1,12 @@
 {% extends "user_home/main.html" %}
 {% block content %}
 <div class="container mt-5">
-    <div class="order-success text-center">
-        <!-- Success Message with Icon -->
-        <div class="alert alert-success py-4 shadow-sm">
-            <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
-            <h2 class="text-success">Thank You for Your Order!</h2>
-            <p class="lead">Your order has been placed failed. A confirmation email is on its way.</p>
+    <div class="order-failure text-center">
+        <!-- Failure Message with Icon -->
+        <div class="alert alert-danger py-4 shadow-sm">
+            <i class="fas fa-times-circle fa-3x mb-3 text-danger"></i>
+            <h2 class="text-danger">Oops! Something Went Wrong.</h2>
+            <p class="lead">Your order could not be completed due to a payment failure. Please try again.</p>
         </div>
 
         <!-- Order Summary Section -->
@@ -16,8 +16,8 @@
                 <div class="card-body py-4">
                     <div class="order-details mb-3">
                         <p><strong>Order ID:</strong> <span class="text-muted">{{ order.id }}</span></p>
-                        <p><strong>Status:</strong> <span class="badge badge-info">{{ order.status }}</span></p>
-                        <p><strong>Payment Status:</strong> <span class="badge badge-info">{{ order.payment_status }}</span></p>
+                        <p><strong>Status:</strong> <span class="badge badge-danger">Payment Failed</span></p>
+                        <p><strong>Payment Status:</strong> <span class="badge badge-danger">Failed</span></p>
                         <p><strong>Date:</strong> <span class="text-muted">{{ order.created_at|date:"M d, Y" }}</span></p>
                     </div>
 
@@ -32,7 +32,7 @@
                                     </div>
                                     <div class="col-md-3 text-right">
                                         <p class="mb-1"><strong>Quantity:</strong> {{ item.quantity }}</p>
-                                        <p class="mb-1 text-success"><strong>Price:</strong> ₹{{ item.variant.price }}</p>
+                                        <p class="mb-1 text-danger"><strong>Price:</strong> ₹{{ item.variant.price }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -43,14 +43,17 @@
 
                     <!-- Total Amount Section -->
                     <div class="total-amount mt-4">
-                        <h4 class="text-dark"><strong>Total Amount to Pay:</strong> <span class="text-success">₹{{ total_price }}</span></h4>
+                        <h4 class="text-dark"><strong>Total Amount Attempted:</strong> <span class="text-danger">₹{{ total_price }}</span></h4>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Continue Shopping Button -->
+        <!-- Retry Payment Button -->
         <div class="mt-4">
+            <a href="{% url 'complete_payment' order.id %}" class="btn btn-lg btn-success shadow-lg px-5 mt-3">
+                <i class="fas fa-credit-card"></i> Retry Payment
+            </a>
             <a href="{% url 'shop' %}" class="btn btn-lg btn-primary shadow-lg px-5">
                 <i class="fas fa-shopping-cart"></i> Continue Shopping
             </a>
@@ -60,13 +63,23 @@
 
 <!-- Additional Styles for Premium Look -->
 <style>
-    .order-success h2, .order-success p {
+    .order-failure h2, .order-failure p {
         font-family: 'Poppins', sans-serif;
     }
 
     .card {
         border-radius: 15px;
         overflow: hidden;
+    }
+
+    .btn-warning {
+        background-color: #FFC107;
+        border: none;
+        border-radius: 50px;
+    }
+
+    .btn-warning:hover {
+        background-color: #FFA000;
     }
 
     .btn-primary {
@@ -91,7 +104,7 @@
     .total-amount {
         font-size: 1.5rem;
         font-weight: bold;
-        color: #28a745;
+        color: #dc3545;
     }
 </style>
 {% endblock %}

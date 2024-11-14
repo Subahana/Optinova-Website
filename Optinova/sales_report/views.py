@@ -1,14 +1,15 @@
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.shortcuts import render
 from django.utils import timezone
-from datetime import timedelta
 from order_management.models import Order
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import pandas as pd
 import openpyxl
+from datetime import datetime, timedelta
 
+# --------------Sales Report---------------#
 
 def sales_report(request):
     today = timezone.now().date()
@@ -64,9 +65,6 @@ def sales_report(request):
 
     return render(request, 'sales_report/sales_report.html', context)
 
-
-
-
 def generate_pdf_report(request):
     # Query the necessary orders for the report
     orders = Order.objects.all()  # Adjust this query as needed
@@ -93,8 +91,6 @@ def generate_pdf_report(request):
     p.showPage()
     p.save()
     return response
-
-
 
 
 def generate_excel_report(request):
@@ -128,3 +124,28 @@ def generate_excel_report(request):
 
     return response
 
+# --------------Sales Chart---------------#
+
+def get_chart_data(request):
+    filter_type = request.GET.get("filter", "yearly")
+    today = datetime.today()
+    data = {}
+
+    if filter_type == "yearly":
+        data = {
+            month: Order.objects.filter(
+                created_at__year=today.year, created_at__month=month
+            ).count()
+            for month in range(1, 13)
+        }
+    elif filter_type == "monthly":
+        days_in_month = (today.replace(day=28) + timedelta(days=4)).day
+        data = {
+            day: Order.objects.filter(
+                created_at__year=today.year, created_at__month=today.month, created_at__day=day
+            ).count()
+            for day in range(1, days_in_month + 1)
+        }
+    # Add more filter types as needed (weekly, daily, etc.)
+
+    return JsonResponse(data)

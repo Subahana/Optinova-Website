@@ -12,6 +12,7 @@ from django.db.models import Prefetch,Exists, OuterRef,Subquery,F
 from django.http import JsonResponse
 from django.db.models import Prefetch
 from django.utils import timezone
+from user_wallet.models import Wallet
 
 
 
@@ -124,6 +125,7 @@ def shop(request):
 
 @login_required(login_url='accounts:user_login_view')
 def user_home(request):
+
     if request.user.is_superuser:
         messages.error(request, 'Admin users are not allowed to access the user home page.')
         return redirect('admin_page')  

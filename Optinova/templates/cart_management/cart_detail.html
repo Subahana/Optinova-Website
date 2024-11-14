@@ -109,10 +109,11 @@
                     <h6>Apply Coupon</h6>
                     <form id="coupon-form" method="post">
                         {% csrf_token %}
-                        <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code">
+                        <input type="text" id="coupon_code" name="coupon_code" placeholder="Enter coupon code">
                         <button type="button" id="apply-coupon-btn" style="background:#003366;">Apply Coupon</button>
                     </form>
                 </div>
+                
 
                 <div class="cart__total">
                     <h6>Cart Total</h6>
@@ -222,8 +223,6 @@ function updateQuantity(itemId, quantity) {
     });
 }
 
-
-
         document.querySelectorAll('.quantity-btn').forEach(button => {
             button.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -247,25 +246,39 @@ function updateQuantity(itemId, quantity) {
         });
 
         function applyCoupon(couponCode) {
-            axios.post("{% url 'apply_coupon' %}", { coupon_code: couponCode }, {
-                headers: { 'X-CSRFToken': csrfToken }
-            })
-                .then(response => {
-                    if (response.data.success) {
-                        updateCartTotals(response.data);
-                        console.log(response.data);
-                        
-                        appliedCouponCode = couponCode;
-                        changeButtonStyle(true);
-                    } else {
-                        swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
-                    }
-                })
-                .catch(error => {
-                    console.error("Error applying coupon:", error); // Log error for debugging
-                    swal.fire("Error!", "There was a problem applying the coupon.", "error");
-                });
-        }
+    axios.post("/coupon_management/apply_coupon/", { coupon_code: couponCode }, {
+        headers: { 'X-CSRFToken': csrfToken }
+    })
+        .then(response => {
+            if (response.data.success) {
+                console.log(couponCode);  // Use correct variable name
+                updateCartTotals(response.data);  // Dynamically update the cart totals
+                console.log(response.data);
+
+                appliedCouponCode = couponCode;  // Update the applied coupon
+                changeButtonStyle(true);  // Change button style to indicate success
+            } else {
+                swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
+            }
+        })
+        .catch(error => {
+    if (error.response) {
+        // The request was made and the server responded with a status code that falls out of range of 2xx
+        console.error('Response error:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+    } else if (error.request) {
+        // The request was made but no response was received
+        console.error('Request error:', error.request);
+    } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('General error:', error.message);
+    }
+    swal.fire("Error!", "There was a problem applying the coupon.", "error");
+});
+
+}
+
 
         function removeCoupon() {
             swal.fire({

@@ -6,9 +6,17 @@
     <div class="bg-image">
         <div class="card custom-card mt-5">
             <div class="card-body">
+                
+                <!-- Centered Logo -->
+                <div class="d-flex justify-content-center mb-4">
+                    <img src="{% static 'img/optinova_logo.png' %}" alt="Optinova Logo" class="img-fluid" style="max-width: 150px;">
+                </div>
+                
                 <h2 class="text-uppercase text-center mb-4">Create an account</h2>
+                
                 <form method="POST">
                     {% csrf_token %}
+                    
                     {% if messages %}
                     <div class="alert">
                         {% for message in messages %}
@@ -75,10 +83,10 @@
                         <button type="submit" class="btn btn-primary btn-block btn-lg gradient-custom-4 text-light" >Register</button>
                     </div>
                 </form>
+                
                 <p class="text-center text-muted mt-4 mb-0">Have already an account? <a href="{% url 'accounts:user_login_view' %}" class="fw-bold text-body"><u>Login here</u></a></p>
             </div>
         </div>
     </div>
 </section>
 {% endblock %}
-

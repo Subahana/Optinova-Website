@@ -8,6 +8,9 @@ from django.http import JsonResponse
 from cart_management.models import Cart ,CartItem
 from django.utils import timezone
 from django.db.models import Q
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_coupon(request):
     if request.method == 'POST':
@@ -58,6 +61,7 @@ def coupon_status(request, coupon_id):
     return redirect('coupon_list')
 
 
+
 def apply_coupon(request):
     if request.method == 'POST':
         try:
@@ -71,40 +75,31 @@ def apply_coupon(request):
             user_cart = get_object_or_404(Cart, user=request.user)
             cart_items = CartItem.objects.filter(cart=user_cart)
 
-            # Check if the cart is empty
             if not cart_items.exists():
                 return JsonResponse({'success': False, 'error': 'Your cart is empty.'}, status=400)
 
-            # Calculate the original total price of all items in the cart
-            # Original total without offers
+            # Calculate the original total price and the offer total
             original_total = sum(item.variant.price * item.quantity for item in cart_items)
-
-            # Calculate the total after applying any offer discounts
             offer_total = sum((item.variant.get_discounted_price() or item.variant.price) * item.quantity for item in cart_items)
             offer_discount_amount = original_total - offer_total
 
-            # Fetch the coupon (case-insensitive search)
             coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
             if coupon is None:
                 return JsonResponse({'success': False, 'error': 'Invalid coupon code'}, status=400)
 
-            # Check if the coupon is valid (active, within date range)
             current_time = timezone.now()
             if coupon.valid_from <= current_time <= coupon.valid_to:
-                # Ensure the user hasn't already used the coupon in a completed order
-                used_coupon = Order.objects.filter(user=request.user, coupon=coupon, status='completed').exists()
+                # Correcting the status filter
+                used_coupon = Order.objects.filter(user=request.user, coupon=coupon, status__status='completed').exists()
                 
                 if used_coupon:
                     return JsonResponse({'success': False, 'error': 'You have already used this coupon for a completed order.'}, status=400)
 
-                # Calculate the discount based on the offer total
                 coupon_discount_amount = coupon.get_discount_amount(offer_total)
-                coupon_discount_amount = min(coupon_discount_amount, offer_total)  
+                coupon_discount_amount = min(coupon_discount_amount, offer_total)  # Ensure the discount doesn't exceed the offer total
 
-                # Calculate the new total after applying the discount
                 final_total = offer_total - coupon_discount_amount
 
-                # Save the coupon to the cart
                 user_cart.coupon = coupon
                 user_cart.save()
 
@@ -114,16 +109,15 @@ def apply_coupon(request):
                     'offer_total': offer_total,
                     'final_total': float(final_total),
                     'coupon_discount_amount': float(coupon_discount_amount),
-                    'offer_discount_amount':offer_discount_amount,
-                    'total_items': cart_items.count()  # Count items in the cart
+                    'offer_discount_amount': offer_discount_amount,
+                    'total_items': cart_items.count()
                 })
 
             else:
                 return JsonResponse({'success': False, 'error': 'Coupon is not valid or expired'}, status=400)
-        
+
         except Exception as e:
-            # Log unexpected errors
-            print(f"Error applying coupon: {e}")
+            logger.error(f"Error applying coupon: {e}", exc_info=True)
             return JsonResponse({'success': False, 'error': 'Something went wrong on the server.'}, status=500)
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)

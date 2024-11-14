@@ -57,6 +57,7 @@ def checkout(request):
                 payment_details=payment_details,  # Associate PaymentDetails with the order
             )
             print(order)
+      
             # Fetch cart items
             cart_items = CartItem.objects.filter(cart=cart)
             if not cart_items.exists():
@@ -99,6 +100,9 @@ def checkout(request):
                     payment_details.razorpay_order_id = razorpay_order['id']  # Correctly assign to PaymentDetails
                     payment_details.save()
                     print('yes payment_details',payment_details)
+                    request.session['order_id'] = order.id  # Save the order ID for later verification
+                    print(request.session['order_id'])
+                    print('befo',request.user)
 
                     return render(request, 'checkout/razorpay_payment.html', {
                         'order': order,
@@ -134,14 +138,18 @@ def checkout(request):
         'total_price': total_price,
         'csrf_token': get_token(request),
     })
+
 @method_decorator(csrf_exempt, name='dispatch')
 class VerifyRazorpayPayment(View):
     def post(self, request):
         # Decode and parse the request body
+        print(request.user,"user")
         decoded_body = request.body.decode('utf-8')
         data = parse_qs(decoded_body)
         data = {k: v[0] for k, v in data.items()}
-
+        print('after',request.user)
+        order_id = request.session.get('order_id')
+        print( request.session.get('order_id'),"verify",order_id)
         payment_id = data.get('razorpay_payment_id')
         razorpay_order_id = data.get('razorpay_order_id')
         signature = data.get('razorpay_signature')
@@ -167,6 +175,7 @@ class VerifyRazorpayPayment(View):
             })
 
             # Retrieve the associated Order
+
             order = get_object_or_404(Order, payment_details=payment_details)
 
             # Retrieve statuses safely, add fallback if not found
@@ -225,7 +234,9 @@ def razorpay_order_success(request, razorpay_order_id):
     logger.info(f"User ID: {request.user.id}")
     # Find the order related to this Razorpay order ID
     order = get_object_or_404(Order, razorpay_order_id=razorpay_order_id, user=request.user)
-    print(order)
+    order_id = request.session.get('order_id')
+
+    print( 'success'.order_id)
     print(razorpay_order_id)
 
     # Payment verification logic if needed (you might have this handled elsewhere already)

@@ -20,7 +20,8 @@
 
         // Set CSRF token in Axios default headers
         axios.defaults.headers.common['X-CSRFToken'] = csrfToken;
-        
+        const OrderId = "{{ order.id }}";
+
         var options = {
             "key": "{{ razorpay_key }}", // Razorpay Key ID
             "amount": "{{ total_price }}"/ 100 , // Amount in paisa
@@ -28,7 +29,7 @@
             "name": "{{ user_name }}",
             "description": "Order Payment",
             "order_id": "{{ razorpay_order_id }}", // Razorpay order ID
-            "callback_url": "http://localhost:8000/order_management/verify_razorpay_payment/",
+            "callback_url": "http://localhost:8000/order_management/verify_razorpay_payment/" + OrderId + "/",
             "prefill": {
                 "name": "{{ user_name }}",
                 "email": "{{ user_email }}",
@@ -53,7 +54,8 @@
         headers: { 'X-CSRFToken': csrfToken }
     }).then((res) => {
         console.log("Payment Verified:", res.data);
-        window.location.href = "/order_success/";  // Redirect only if verification succeeds
+        window.location.href = `/order_management/order/success/razorpay/${response.razorpay_order_id}/${order.id}/`;
+
     }).catch((err) => {
         console.error("Payment Verification Failed:", err);
         alert("Payment verification failed. Please try again.");

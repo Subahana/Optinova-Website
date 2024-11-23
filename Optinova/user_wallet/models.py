@@ -5,14 +5,29 @@ class Wallet(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
+    def __str__(self):
+        return f"Wallet of {self.user.username} - Balance: {self.balance}"
+   
 class WalletTransaction(models.Model):
     TRANSACTION_TYPES = [
-        ('deposit', 'Deposit'),
-        ('purchase', 'Purchase'),
-        ('refund', 'Refund'),
+        ('credit', 'Credit'),
+        ('debit', 'Debit'),
     ]
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    wallet = models.ForeignKey('Wallet', on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField()
+    date = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Update the wallet balance on transaction save
+        if self.pk is None:  # Only update on creation
+            if self.transaction_type == 'credit':
+                self.wallet.balance += self.amount
+            elif self.transaction_type == 'debit':
+                self.wallet.balance -= self.amount
+            self.wallet.save()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.transaction_type.capitalize()} - {self.amount} for {self.description}"

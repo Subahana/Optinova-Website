@@ -110,6 +110,11 @@ def cart_detail(request):
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
         variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
 
+
+        # Save the calculated final price to the Cart model
+        cart.final_price = final_total
+        cart.save()
+        
         context = {
             'cart_items': cart_items,
             'cart_items_with_offers': cart_items_with_offers,

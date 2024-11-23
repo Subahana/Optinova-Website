@@ -62,7 +62,9 @@
     <div class="alert alert-warning mt-4 py-3 shadow-sm">
         <i class="fas fa-exclamation-circle fa-2x mb-2 text-warning"></i>
         <p class="lead">Your payment is pending. Complete the payment to confirm your order.</p>
-        <a href="{% url 'complete_payment' order.id %}" class="btn btn-lg btn-success shadow-lg px-5 mt-3">
+        <p>Order ID: {{ order.id }}</p>
+
+        <a href="{% url 'complete_payment' order.id %}" class="btn btn-success">Complete Payment</a>
             <i class="fas fa-credit-card"></i> Complete Payment
         </a>
     </div>

@@ -8,6 +8,9 @@ from reportlab.pdfgen import canvas
 import pandas as pd
 import openpyxl
 from datetime import datetime, timedelta
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth, TruncDay
+from dateutil.relativedelta import relativedelta
 
 # --------------Sales Report---------------#
 
@@ -124,28 +127,6 @@ def generate_excel_report(request):
 
     return response
 
-# --------------Sales Chart---------------#
 
-def get_chart_data(request):
-    filter_type = request.GET.get("filter", "yearly")
-    today = datetime.today()
-    data = {}
 
-    if filter_type == "yearly":
-        data = {
-            month: Order.objects.filter(
-                created_at__year=today.year, created_at__month=month
-            ).count()
-            for month in range(1, 13)
-        }
-    elif filter_type == "monthly":
-        days_in_month = (today.replace(day=28) + timedelta(days=4)).day
-        data = {
-            day: Order.objects.filter(
-                created_at__year=today.year, created_at__month=today.month, created_at__day=day
-            ).count()
-            for day in range(1, days_in_month + 1)
-        }
-    # Add more filter types as needed (weekly, daily, etc.)
 
-    return JsonResponse(data)

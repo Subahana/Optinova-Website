@@ -11,7 +11,9 @@ class OrderForm(forms.Form):
     payment_method = forms.ChoiceField(
         choices=[
             ('COD', 'Cash on Delivery'), 
-            ('razorpay', 'Online Payment (Razorpay)')
+            ('razorpay', 'Online Payment (Razorpay)'),
+            ('Wallet', 'Wallet Payment'), 
+
         ],
         required=True,
         label='Payment Method'

@@ -26,6 +26,7 @@
                 <tr>
                     <th>Order ID</th>
                     <th>Products</th>
+                    <th>Order Status</th>
                     <th>Payment Status</th>
                     <th>Payment Method</th>
                     <th>Total Price</th>
@@ -51,6 +52,11 @@
                         </td>
 
                         <!-- Order Status -->
+                        <td class="order-status">
+                            <span class="badge bg-{{ order_detail.status.status|lower }}">
+                                {{ order_detail.order_status }}
+                            </span>
+                        </td>
                         <td class="order-status">
                             <span class="badge bg-{{ order_detail.status.status|lower }}">
                                 {{ order_detail.payment_details.payment_status.status }}

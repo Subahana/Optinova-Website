@@ -6,6 +6,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from user_profile.models import Address
+from datetime import datetime, timedelta
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth, TruncDay
+from dateutil.relativedelta import relativedelta
+from order_management.models import Order
+from django.utils.safestring import mark_safe
+import json
 
 # Create your views here.
 
@@ -91,7 +98,76 @@ def user_details_page(request, id):
 
 @login_required(login_url='accounts:admin_login')  
 def admin_page(request):
-    return render(request,'admin_page/index.html')
+    print('hi')
+    filter_option = request.GET.get('filter', 'yearly')
+    today = datetime.today()
+
+    if filter_option == 'yearly':
+        start_date = today.replace(month=1, day=1)
+        end_date = today.replace(month=12, day=31)
+        truncate = TruncMonth  # Monthly breakdown
+    elif filter_option == 'monthly':
+        start_date = today.replace(day=1)
+        end_date = (start_date + relativedelta(months=1)) - timedelta(days=1)
+        truncate = TruncDay  # Daily breakdown
+    elif filter_option == 'weekly':
+        start_date = today - timedelta(days=today.weekday())
+        end_date = start_date + timedelta(days=6)
+        truncate = TruncDay  # Daily breakdown
+    else:
+        start_date = today.replace(month=1, day=1)
+        end_date = today.replace(month=12, day=31)
+        truncate = TruncMonth
+
+    # Debugging filter dates
+    print(f"Filter Option: {filter_option}")
+    print(f"Start Date: {start_date}, End Date: {end_date}")
+
+    # Filter orders by date range
+    orders = Order.objects.filter(created_at__range=(start_date, end_date))
+
+    # Debugging orders fetched
+    print(f"Total Orders: {orders.count()}")
+    for order in orders:
+        print(f"Order ID: {order.id}, Created At: {order.created_at}, Total Price: {order.final_price}")
+
+    # Group data based on truncation (e.g., months, days)
+    sales_data = (
+        orders
+        .annotate(period=truncate('created_at'))
+        .values('period')
+        .annotate(total_sales=Sum('final_price'), total_orders=Count('id'))
+        .order_by('period')
+    )
+    for item in sales_data:
+        print(f"Period: {item['period']}, Total Sales: {item['total_sales']}, Total Orders: {item['total_orders']}")
+
+    # Debugging grouped data
+    print("Sales Data:")
+    for data in sales_data:
+        print(data)
+
+    # Prepare data for the chart
+    labels = [
+        data['period'].strftime('%b %d, %Y') if isinstance(data['period'], datetime) else str(data['period'])
+        for data in sales_data
+    ]
+    sales = [float(data['total_sales']) for data in sales_data]  # Convert Decimal to float
+    orders_count = [data['total_orders'] for data in sales_data]
+
+    # Debugging chart data
+    print("Labels:", labels)
+    print("Sales:", sales)
+    print("Orders Count:", orders_count)
+
+    context = {
+        'labels': mark_safe(json.dumps(labels)),
+        'sales': mark_safe(json.dumps(sales)),
+        'orders_count': mark_safe(json.dumps(orders_count)),
+        'filter_option': filter_option,
+        'sales_data':sales_data,
+    }
+    return render(request, 'admin_page/index.html', context)
 
 @login_required(login_url='accounts:admin_login')  
 def admin_logout_view(request):

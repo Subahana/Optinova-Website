@@ -152,6 +152,7 @@ def my_orders(request):
         if order.payment_details:
             order.payment_method = order.payment_details.payment_method
             order.payment_status = order.payment_details.payment_status.status
+            order.order_status = order.status.status
             if order.payment_details.payment_method == 'razorpay':
                 order.razorpay_order_id = order.payment_details.razorpay_order_id
                 order.razorpay_payment_id = order.payment_details.razorpay_payment_id
@@ -170,62 +171,46 @@ def my_orders(request):
     })
 
 
-
 @login_required(login_url='accounts:user_login_view')
 def order_details(request, order_id):
+    # Fetch the order for the logged-in user
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     # Calculate total price for all items in the order using the model's method
     total_price_order = order.total_amount()
 
-    # Retrieve payment and cancellation details if available
+    # Retrieve payment details or fallback to default values
     payment_status = order.payment_details.payment_status if order.payment_details else "N/A"
     payment_method = order.payment_details.payment_method if order.payment_details else "N/A"
 
-    # Generate the cancellation URL for the order
-    cancel_order_url = reverse('cancel_order_request', args=[order.id])
-
+    # Handle POST requests for canceling or returning the order
     if request.method == 'POST':
-        if 'cancel_order' in request.POST and order.status.status in ['Pending', 'Processing']:
-            reason = request.POST.get('cancellation_reason', 'Cancelled by User')
-            order.cancel_order(reason=reason)
-            messages.success(request, "Order has been cancelled.")
-            return redirect('my_orders')
+        # Cancel Order Logic
+        if 'cancel_order' in request.POST:
+            if order.status.lower() in ['pending', 'processing']:
+                reason = request.POST.get('cancellation_reason', 'Cancelled by User')
+                order.cancel_order(reason=reason)
+                messages.success(request, "Order has been successfully canceled.")
+                return redirect('my_orders')
+            else:
+                messages.error(request, "This order cannot be canceled.")
+                return redirect('order_details', order_id=order.id)
 
-        if 'return_order' in request.POST and order.status.status == 'Delivered':
-            order.return_order()
-            messages.success(request, "Return request has been submitted.")
-            return redirect('my_orders')
+        # Return Order Logic
+        if 'return_order' in request.POST:
+            if order.status.lower() == 'delivered':
+                order.return_order()
+                messages.success(request, "Return request has been submitted.")
+                return redirect('my_orders')
+            else:
+                messages.error(request, "This order cannot be returned.")
+                return redirect('order_details', order_id=order.id)
 
+    # Pass necessary data to the template
     return render(request, 'checkout/order_details.html', {
         'order': order,
         'total_price_order': total_price_order,
         'payment_status': payment_status,
         'payment_method': payment_method,
-        'cancel_order_url': cancel_order_url,
     })
 
-
-
-@login_required(login_url='accounts:user_login_view')
-def cancel_order_request(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-
-    if request.method == 'POST':
-        form = CancellationForm(request.POST)
-        if form.is_valid():
-            reason = form.cleaned_data['cancellation_reason']
-            order.status = 'Cancelled'
-            order.cancellation_reason = reason  # Save the reason provided by the user
-            order.cancelled_at = timezone.now()
-            order.canceled_by = request.user  # Log user as the canceller
-            order.save()
-            messages.success(request, "Your order has been cancelled successfully.")
-            return redirect('my_orders')  # Redirect to my orders page
-    else:
-        form = CancellationForm()
-
-    return render(request, 'user_profile/cancel_order.html', {
-        'order': order,
-        'form': form,
-    })

@@ -12,7 +12,7 @@
                     <tr>
                         <th>Coupon Code</th>
                         <th>Discount</th>
-                        <th>Discount Type</th> <!-- New column for discount type -->
+                        <th>Discount Type</th>
                         <th>Valid From</th>
                         <th>Valid To</th>
                         <th>Active</th>
@@ -36,7 +36,7 @@
                                 {% else %}
                                     Fixed Amount Discount
                                 {% endif %}
-                            </td> <!-- Displaying the discount type -->
+                            </td>
                             <td>{{ coupon.valid_from|date:"Y-m-d H:i" }}</td>
                             <td>{{ coupon.valid_to|date:"Y-m-d H:i" }}</td>
                             <td>
@@ -48,7 +48,7 @@
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm  dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button class="btn btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-list"></i>---
                                     </button>
                                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -59,17 +59,20 @@
                                         </li>
                                         <li>
                                             <a href="{% url 'coupon_status' coupon.id %}" class="dropdown-item">
-                                                {{ coupon.active|yesno:'Deactivate,Activate' }}
+                                                {% if coupon.valid_to < now %}
+                                                    Deactivate  <!-- Show Deactivate if expired -->
+                                                {% else %}
+                                                    {{ coupon.active|yesno:'Deactivate,Activate' }}  <!-- Show Activate/Deactivate based on status -->
+                                                {% endif %}
                                             </a>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
-                            
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center">No coupons available.</td> <!-- Adjusted colspan -->
+                            <td colspan="7" class="text-center">No coupons available.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

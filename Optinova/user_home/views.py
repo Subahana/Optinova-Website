@@ -111,7 +111,7 @@ def shop(request):
         products_with_offers = products_with_offers.order_by('-name')
 
     # Pagination
-    paginator = Paginator(products_with_offers, 4)
+    paginator = Paginator(products_with_offers,6)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 

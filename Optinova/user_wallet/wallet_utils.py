@@ -1,4 +1,8 @@
 from .models import Wallet, WalletTransaction
+import logging
+from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 def ensure_wallet_exists(user):
     """
@@ -9,49 +13,85 @@ def ensure_wallet_exists(user):
 
 
 def credit_wallet(user, amount, description=""):
-    """
-    Credits the user's wallet with the specified amount and logs the transaction.
-    """
     if amount <= 0:
         raise ValueError("Credit amount must be positive.")
-    
-    wallet = ensure_wallet_exists(user)
-    wallet.balance += amount
-    wallet.save()
 
-    WalletTransaction.objects.create(
+    wallet = Wallet.objects.get_or_create(user=user)[0]
+    transaction = WalletTransaction.objects.create(
         wallet=wallet,
-        transaction_type='refund',
-        amount=amount,
+        transaction_type='credit',
+        amount=Decimal(amount),
         description=description
     )
     return wallet.balance
 
+
 def debit_wallet(user, amount, description):
-    """
-    Deducts the specified amount from the user's wallet.
-    """
-    if user.wallet_balance < amount:
-        raise Exception("Insufficient balance in wallet")
+    # Ensure the amount is a Decimal for consistency
+    amount = Decimal(amount)
+    
+    # Access the wallet directly since it's created with the user signal
+    wallet = user.wallet
 
-    user.wallet_balance -= amount
-    user.save()
+    # Check if the wallet balance is sufficient
+    if wallet.balance < amount:
+        raise ValueError("Insufficient balance in wallet.")
 
-    # Create a WalletTransaction record for the debit
+    # Create the debit transaction
     WalletTransaction.objects.create(
-        user=user,
-        amount=-amount,
-        description=description,
-        transaction_type='debit'
+        wallet=wallet,  # Link the wallet to the transaction
+        transaction_type='debit',
+        amount=amount,
+        description=description
     )
-
-    return user.wallet_balance
 
 
 def process_refund_to_wallet(order):
     """
-    Process refund for a returned order, crediting the amount back to the user's wallet.
+    Process the refund for an order. Ensures that refund happens only when necessary.
     """
-    total_refund_amount = sum(item.total_price() for item in order.items.all())
-    description = f"Refund for Order #{order.order_id}"
-    credit_wallet(user=order.user, amount=total_refund_amount, description=description)
+    # Access the payment status string from the PaymentStatus object
+    payment_status = getattr(order.payment_details.payment_status, 'status', '').strip().lower()
+    print(f"Raw Payment Status: '{payment_status}'")
+    
+    # Check if the order has been paid and processed successfully
+    if payment_status != 'completed':
+        raise Exception("Refund can only be processed for paid orders.")
+
+    # Calculate the refund amount
+    refund_amount = calculate_refund_amount(order)
+
+    # Ensure the refund amount is positive
+    if refund_amount <= 0:
+        raise ValueError("Refund amount must be positive.")  # Raise an error or handle the issue
+
+    # Log the refund process
+    logger.debug(f"Processing refund for Order ID {order.id}, Refund Amount: {refund_amount}")
+
+    # Access the user's wallet
+    user_wallet = ensure_wallet_exists(order.user)
+
+    # Add the refund amount to the user's wallet balance
+    user_wallet.balance += refund_amount
+    user_wallet.save()
+
+    # Log the transaction
+    WalletTransaction.objects.create(
+        wallet=user_wallet,
+        transaction_type="refund",
+        amount=refund_amount,
+        description=f"Refund for Order ID {order.order_id}"
+    )
+
+
+def calculate_refund_amount(order):
+    """
+    Calculate the refund amount for the given order.
+    Ensures that the refund amount is positive.
+    """
+    total_amount = order.final_price  # Ensure this field holds the order's total value
+
+    if total_amount <= 0:
+        raise ValueError("Refund amount must be positive.")
+    
+    return total_amount

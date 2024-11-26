@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Order, OrderStatus, PaymentDetails
+from .models import Order, OrderStatus
 
 @receiver(post_save, sender=Order)
 def set_processing_status(sender, instance, created, **kwargs):
@@ -15,9 +15,11 @@ def set_processing_status(sender, instance, created, **kwargs):
             processing_status, _ = OrderStatus.objects.get_or_create(status="Processing")
             instance.status = processing_status
             instance.save()
+            print('cod')
         elif instance.payment_details.payment_method in ["razorpay", "Wallet"]:
             # For online payments, ensure payment status is 'Completed' before setting 'Processing'
             if instance.payment_details.payment_status.status == "Completed":
                 processing_status, _ = OrderStatus.objects.get_or_create(status="Processing")
                 instance.status = processing_status
                 instance.save()
+                print('online')

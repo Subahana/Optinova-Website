@@ -11,7 +11,7 @@
                         <a href="{% url 'user_home' %}">Home</a>
                         <a href="{% url 'user_profile' %}">Profile</a>
                         <a href="{% url 'my_orders' %}">My Orders</a>
-                        <span>Order #{{ order.id }}</span>
+                        <span>Order #{{ order.order_id }}</span>
                     </div>
                 </div>
             </div>
@@ -21,7 +21,7 @@
 
 <div class="order-details-container">
     <h3 class="text-center text-info">Order #{{ order.order_id }}</h3>
-<p>{{ order.status}}</p>
+
     <table class="table table-hover">
         <thead>
             <tr>
@@ -55,7 +55,11 @@
         <p><strong>Total Price:</strong> ₹{{ total_price_order|floatformat:2 }}</p>
         <p><strong>Order Date:</strong> {{ order.created_at|date:"M d, Y" }}</p>
     </div>
+<!-- Template for Order Details or Order Success Page -->
 
+<a href="{% url 'download_invoice' order.id %}" class="btn btn-primary">Download Invoice</a>
+
+    <!-- Status Messages -->
     {% if order.status|lower == "cancelled" %}
     <div class="alert alert-danger mt-4">
         <i class="fas fa-info-circle"></i>
@@ -66,59 +70,171 @@
         <i class="fas fa-exclamation-circle"></i>
         <p>Your order has been returned. Please contact customer support for further assistance.</p>
     </div>
-    {% else %}
-        {% if order.payment_details.payment_status == "Pending" %}
-        <div class="alert alert-warning mt-4 py-3 shadow-sm">
-            <i class="fas fa-exclamation-circle fa-2x mb-2 text-warning"></i>
-            <p class="lead">Your payment is pending. Complete the payment to confirm your order.</p>
-            <a href="{% url 'complete_payment' order.id %}" class="btn btn-lg btn-success shadow-lg px-5 mt-3">
-                <i class="fas fa-credit-card"></i> Complete Payment
-            </a>
-        </div>
-        {% endif %}
     {% endif %}
-
     <div class="order-actions text-center mt-4">
+        <!-- Cancel Order Option -->
         {% if order.status|lower == "pending" or order.status|lower == "processing" %}
-        <a href="{% url 'cancel_order_request' order.id %}" class="btn btn-danger btn-lg" onclick="return confirm('Are you sure you want to cancel this order?');">
-            Cancel Order
-        </a>
-        {% endif %}
-
-        {% if order.status|lower == "delivered" %}
-        <button type="button" class="btn btn-warning btn-lg" data-toggle="modal" data-target="#returnOrderModal">
-            Return Order
-        </button>
+            {% if order.payment_details.payment_status|lower == "pending" %}
+            <!-- Cancel Order Option -->
+            <form method="post" action="{% url 'cancel_order' order.id %}" class="d-inline" id="cancelOrderForm">
+                {% csrf_token %}
+                <button type="button" class="btn btn-lg btn-danger shadow-lg px-5 mt-3" data-toggle="modal" data-target="#cancelOrderModal">
+                    <i class="fas fa-times-circle"></i> Cancel Order
+                </button>
+            </form>
     
-        <!-- Modal for Return Order Reason -->
-        <div class="modal fade" id="returnOrderModal" tabindex="-1" role="dialog" aria-labelledby="returnOrderModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="returnOrderModalLabel">Return Order</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <form method="post" action="{% url 'return_order' order.id %}">
-                        {% csrf_token %}
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label for="return_reason">Please provide a reason for returning the order:</label>
-                                <textarea class="form-control" id="return_reason" name="return_reason" rows="3" required></textarea>
+            <!-- Modal for Cancel Order Reason -->
+            <div class="modal fade" id="cancelOrderModal" tabindex="-1" role="dialog" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="cancelOrderModalLabel">Cancel Order</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form method="post" action="{% url 'cancel_order' order.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="cancel_reason">Please provide a reason for cancelling the order:</label>
+                                    <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required></textarea>
+                                </div>
                             </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                            <button type="submit" class="btn btn-warning">Submit Return</button>
-                        </div>
-                    </form>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-danger">Submit Cancellation</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% endif %}
+            {% elif order.payment_details.payment_status|lower == "completed" %}
+            <!-- Cancel with Refund Option -->
+            <form method="post" action="{% url 'cancel_order_with_refund' order.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="button" class="btn btn-lg btn-warning shadow-lg px-5 mt-3" data-toggle="modal" data-target="#cancelOrderWithRefundModal">
+                    <i class="fas fa-redo"></i> Cancel with Refund
+                </button>
+            </form>
     
+            <!-- Modal for Cancel with Refund Reason -->
+            <div class="modal fade" id="cancelOrderWithRefundModal" tabindex="-1" role="dialog" aria-labelledby="cancelOrderWithRefundModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="cancelOrderWithRefundModalLabel">Cancel Order with Refund</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form method="post" action="{% url 'cancel_order_with_refund' order.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="cancel_reason">Please provide a reason for cancelling the order with refund:</label>
+                                    <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-warning">Submit Refund Cancellation</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    
+        <!-- Return Order Option -->
+        {% if order.status|lower == "delivered" %}
+            {% if order.payment_details.payment_status|lower == "pending" %}
+            <!-- Return Order Option -->
+            <form method="post" action="{% url 'return_order' order.id %}" class="d-inline" id="returnOrderForm">
+                {% csrf_token %}
+                <button type="button" class="btn btn-lg btn-warning shadow-lg px-5 mt-3" data-toggle="modal" data-target="#returnOrderModal">
+                    <i class="fas fa-undo"></i> Return Order
+                </button>
+            </form>
+    
+            <!-- Modal for Return Order Reason -->
+            <div class="modal fade" id="returnOrderModal" tabindex="-1" role="dialog" aria-labelledby="returnOrderModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="returnOrderModalLabel">Return Order</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form method="post" action="{% url 'return_order' order.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="return_reason">Please provide a reason for returning the order:</label>
+                                    <textarea class="form-control" id="return_reason" name="return_reason" rows="3" required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-warning">Submit Return</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% elif order.payment_details.payment_status|lower == "completed" %}
+            <!-- Return with Refund Option -->
+            <button type="button" class="btn btn-warning btn-lg" data-toggle="modal" data-target="#returnOrderWithRefundModal">
+                <i class="fas fa-undo"></i> Return with Refund
+            </button>
+    
+            <!-- Modal for Return with Refund Reason -->
+            <div class="modal fade" id="returnOrderWithRefundModal" tabindex="-1" role="dialog" aria-labelledby="returnOrderWithRefundModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="returnOrderWithRefundModalLabel">Return Order with Refund</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form method="post" action="{% url 'return_order_with_refund' order.id %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="return_reason">Please provide a reason for returning the order with refund:</label>
+                                    <textarea class="form-control" id="return_reason" name="return_reason" rows="3" required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="submit" class="btn btn-warning">Submit Return with Refund</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
     </div>
+    <div class="order-actions text-center mt-4">
+        <!-- Cancel and Return Order Options -->
+    
+        {% if order.payment_details.payment_status|lower != "completed" %}
+        <!-- Complete Payment Option -->
+        <form method="post" action="{% url 'complete_payment' order.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-lg btn-success shadow-lg px-5 mt-3">
+                <i class="fas fa-credit-card"></i> Complete Payment
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    
+
+    
 </div>
 
 <style>

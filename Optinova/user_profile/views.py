@@ -177,7 +177,8 @@ def order_details(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     # Calculate total price for all items in the order using the model's method
-    total_price_order = order.total_amount()
+    total_price_order = order.final_price
+    request.session['total_price_order'] = float(total_price_order)
 
     # Retrieve payment details or fallback to default values
     payment_status = order.payment_details.payment_status if order.payment_details else "N/A"

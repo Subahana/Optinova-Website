@@ -107,7 +107,7 @@
             <div class="col-lg-4">
                 <div class="cart__discount">
                     <h6>Apply Coupon</h6>
-                    <form id="coupon-form" method="post">
+                    <form id="coupon-form" method="post" action="{% url 'apply_coupon' %}">
                         {% csrf_token %}
                         <input type="text" id="coupon_code" name="coupon_code" placeholder="Enter coupon code">
                         <button type="button" id="apply-coupon-btn" style="background:#003366;">Apply Coupon</button>
@@ -145,83 +145,63 @@
 <!-- Shopping Cart Section End -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        let appliedCouponCode = '';  // Track applied coupon code
+        let appliedCouponCode = ''; // Track applied coupon code
+        const csrfToken = '{{ csrf_token }}'; // CSRF token from Django
 
-        const csrfToken = '{{ csrf_token }}';  // CSRF token from Django
+        const axiosInstance = axios.create({
+            headers: { 'X-CSRFToken': csrfToken }
+        });
 
         function updateCartTotals(data) {
-        const { final_total, offer_discount_amount, original_total, total_items, item_total_price,offer_total ,coupon_discount_amount} = data;
+            const { final_total, offer_discount_amount, original_total, total_items, item_total_price, offer_total, coupon_discount_amount } = data;
 
-        const cartItemsPriceElement = document.querySelector('.cart-items-price');
-        const cartTotalItemsElement = document.querySelector('.cart-total-items');
-        const cartOriginalPriceElement = document.querySelector('.cart-original-price');
-        const cartOfferPriceElement = document.querySelector('.cart-offer-price');
-        const cartOfferDiscountElement = document.querySelector('.cart-offer-discount');
-        const cartCouponDiscountElement = document.querySelector('.cart-coupon-discount');
-        const cartFinalPriceElement = document.querySelector('.cart-final-price');
+            const cartElements = {
+                cartItemsPrice: document.querySelector('.cart-items-price'),
+                cartTotalItems: document.querySelector('.cart-total-items'),
+                cartOriginalPrice: document.querySelector('.cart-original-price'),
+                cartOfferPrice: document.querySelector('.cart-offer-price'),
+                cartOfferDiscount: document.querySelector('.cart-offer-discount'),
+                cartCouponDiscount: document.querySelector('.cart-coupon-discount'),
+                cartFinalPrice: document.querySelector('.cart-final-price')
+            };
 
-        // Update each element only if it exists
-        if (cartItemsPriceElement) {
-            cartItemsPriceElement.textContent = `₹${item_total_price}`;
+            // Update each element if it exists
+            if (cartElements.cartItemsPrice) cartElements.cartItemsPrice.textContent = `₹${item_total_price}`;
+            if (cartElements.cartTotalItems) cartElements.cartTotalItems.textContent = `${total_items}`;
+            if (cartElements.cartOriginalPrice) cartElements.cartOriginalPrice.textContent = `₹${original_total}`;
+            if (cartElements.cartOfferPrice) cartElements.cartOfferPrice.textContent = `₹${offer_total}`;
+            if (cartElements.cartOfferDiscount) cartElements.cartOfferDiscount.textContent = `₹${offer_discount_amount}`;
+            if (cartElements.cartCouponDiscount) cartElements.cartCouponDiscount.textContent = `₹${coupon_discount_amount}`;
+            if (cartElements.cartFinalPrice) cartElements.cartFinalPrice.textContent = `₹${final_total}`;
         }
 
-        if (cartTotalItemsElement) {
-            cartTotalItemsElement.textContent = `${total_items}`;
+        function updateQuantity(itemId, quantity) {
+            const formData = new FormData();
+            formData.append('quantity', quantity);
+
+            axiosInstance.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData)
+                .then(response => {
+                    if (response.data.success) {
+                        const priceElement = document.getElementById(`item-total-price-${itemId}`);
+                        if (priceElement) {
+                            priceElement.textContent = `₹${response.data.item_total_price}`;
+                        }
+                        updateCartTotals(response.data);
+                    } else {
+                        swal.fire("Error!", response.data.error || "Failed to update the cart.", "error");
+                    }
+                })
+                .catch(error => {
+                    swal.fire("Error!", "Error updating cart. Please try again.", "error");
+                });
         }
 
-        if (cartOriginalPriceElement) {
-            cartOriginalPriceElement.textContent = `₹${original_total}`;
+        // Debounce helper to limit requests
+        let debounceTimeout;
+        function debounceUpdateQuantity(itemId, quantity) {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => updateQuantity(itemId, quantity), 300);
         }
-
-        if (cartOfferPriceElement) {
-            cartOfferPriceElement.textContent = `₹${offer_total}`;
-        }
-
-        if (cartOfferDiscountElement) {
-            cartOfferDiscountElement.textContent = `₹${offer_discount_amount}`;
-        }
-
-        if (cartFinalPriceElement) {
-            cartFinalPriceElement.textContent = `₹${final_total}`;
-        }
-        if (cartCouponDiscountElement) {
-            cartCouponDiscountElement.textContent = `₹${coupon_discount_amount}`;
-        }
-    }
-// {success: true, new_total: 4550, discount_amount: 150, …}discount_amount: 150 new_total: 4550 success: true total_items: 2//
-// {success: true, item_quantity: 3, …}coupon_discount_amount: "0.00" final_total: "3700.0000"item_quantity: 3 offer_discount_amount: "300.0000""success: true total_discount : "300.0000"
-function updateQuantity(itemId, quantity) {
-    const formData = new FormData();
-    formData.append('quantity', quantity);
-
-    axios.post(`/cart_management/update_cart_item_quantity/${itemId}/`, formData, {
-        headers: { 'X-CSRFToken': csrfToken }
-    })
-    .then(response => {
-        console.log(response,"response");
-        
-        if (response.data.success) {
-            const priceElement = document.getElementById(`item-total-price-${itemId}`);
-            if (priceElement) {
-                priceElement.textContent = `₹${response.data.item_total_price}`;
-            }
-            console.log('update', response.data);
-            updateCartTotals(response.data); // Keep this to update totals
-            
-            // Only apply coupon when explicitly done by the user, not automatically here
-        } else {
-            console.log("jui");
-            
-            swal.fire("Error!", response.data.error || "Failed to update the cart.", "error");
-        }
-    })
-    .catch(error => {
-        console.log("Error updating quantity:", error.message)
-        
-        
-        swal.fire("Error!", "Error updating cart. Please try again.", "error");
-    });
-}
 
         document.querySelectorAll('.quantity-btn').forEach(button => {
             button.addEventListener('click', function (e) {
@@ -238,47 +218,35 @@ function updateQuantity(itemId, quantity) {
                 } else if (action === 'decrease' && quantity > 1) {
                     quantity -= 1;
                 }
-                console.log(form.dataset,"hi");
-                
+
                 input.value = quantity;
-                updateQuantity(itemId, quantity);
+                debounceUpdateQuantity(itemId, quantity);
             });
         });
 
         function applyCoupon(couponCode) {
-    axios.post("/coupon_management/apply_coupon/", { coupon_code: couponCode }, {
-        headers: { 'X-CSRFToken': csrfToken }
-    })
-        .then(response => {
-            if (response.data.success) {
-                console.log(couponCode);  // Use correct variable name
-                updateCartTotals(response.data);  // Dynamically update the cart totals
-                console.log(response.data);
+            const applyCouponUrl = "{% url 'apply_coupon' %}";
 
-                appliedCouponCode = couponCode;  // Update the applied coupon
-                changeButtonStyle(true);  // Change button style to indicate success
-            } else {
-                swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
-            }
-        })
-        .catch(error => {
-    if (error.response) {
-        // The request was made and the server responded with a status code that falls out of range of 2xx
-        console.error('Response error:', error.response.data);
-        console.error('Response status:', error.response.status);
-        console.error('Response headers:', error.response.headers);
-    } else if (error.request) {
-        // The request was made but no response was received
-        console.error('Request error:', error.request);
-    } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('General error:', error.message);
-    }
-    swal.fire("Error!", "There was a problem applying the coupon.", "error");
-});
-
-}
-
+            axiosInstance.post(applyCouponUrl, { coupon_code: couponCode })
+                .then(response => {
+                    if (response.data.success) {
+                        console.log(response.data);
+                        
+                        updateCartTotals(response.data);
+                        appliedCouponCode = couponCode;
+                        changeButtonStyle(true);
+                        swal.fire("Success!", "Coupon applied successfully!", "success");
+                    } else {
+                        swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
+                    }
+                })
+                .catch(error => {                    
+                    console.error('Error:', error.response?.data.error|| error.message);
+                    console.log(error);
+                    
+                    swal.fire("Error!",error.response?.data.error, "error");
+                });
+        }
 
         function removeCoupon() {
             swal.fire({
@@ -289,12 +257,10 @@ function updateQuantity(itemId, quantity) {
                 confirmButtonColor: "#0056b3",
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Yes, remove it!",
-                cancelButtonText: "No, keep it!",
+                cancelButtonText: "No, keep it!"
             }).then((result) => {
                 if (result.isConfirmed) {
-                    axios.post("{% url 'remove_coupon' %}", {}, {
-                        headers: { 'X-CSRFToken': csrfToken }
-                    })
+                    axiosInstance.post("{% url 'remove_coupon' %}")
                         .then(response => {
                             if (response.data.success) {
                                 updateCartTotals(response.data);
@@ -314,15 +280,8 @@ function updateQuantity(itemId, quantity) {
 
         function changeButtonStyle(isRemoving) {
             const button = document.getElementById('apply-coupon-btn');
-            if (isRemoving) {
-                button.textContent = "Remove Coupon";
-                button.classList.add('remove-button');
-                button.style.backgroundColor = "#d9534f";
-            } else {
-                button.textContent = "Apply Coupon";
-                button.classList.remove('remove-button');
-                button.style.backgroundColor = "#003366";
-            }
+            button.textContent = isRemoving ? "Remove Coupon" : "Apply Coupon";
+            button.className = isRemoving ? 'btn btn-danger' : 'btn btn-primary';
         }
 
         document.getElementById('apply-coupon-btn').addEventListener('click', function () {
@@ -337,8 +296,6 @@ function updateQuantity(itemId, quantity) {
         });
     });
 </script>
-
-
 
 
 <style>

@@ -63,13 +63,17 @@ class Order(models.Model):
     )
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_reason = models.CharField(max_length=100, null=True, blank=True)
-    is_returned = models.BooleanField(default=False)  # Add return flag
-    return_reason = models.CharField(max_length=255, null=True, blank=True)  # Field for return reason
+    is_returned = models.BooleanField(default=False)
+    return_reason = models.CharField(max_length=255, null=True, blank=True)
     coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True)
-    final_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # New field
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def save(self, *args, **kwargs):
-        # If the order is cancelled, ensure the status is updated to 'Cancelled'
+        # Ensure a unique order ID is generated only for new orders
+        if not self.order_id:
+            self.order_id = self.generate_order_id()
+
+        # Handle status updates
         if self.is_cancelled and not self.status.status.lower() == 'cancelled':
             cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
             self.status = cancelled_status
@@ -80,8 +84,11 @@ class Order(models.Model):
 
         super().save(*args, **kwargs)
 
-
     def generate_order_id(self):
+        """
+        Generate a unique order ID based on the current year and an incremental number.
+        Format: ORD<year><5-digit-incremental-number>
+        """
         current_year = timezone.now().year
         last_order = Order.objects.filter(created_at__year=current_year).order_by('id').last()
         try:
@@ -93,8 +100,6 @@ class Order(models.Model):
             return f"ORD{current_year}{new_id_number:05d}"
         except (ValueError, AttributeError):
             raise ValueError("Error generating order ID. Please check existing order IDs.")
-
-
 
     def total_amount(self):
         return self.items.aggregate(total=models.Sum(models.F("quantity") * models.F("price")))["total"] or 0

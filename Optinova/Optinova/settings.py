@@ -162,6 +162,7 @@ SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_AGE = 86400  # Session lasts for 24 hours
 SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request
+CSRF_COOKIE_SECURE = True
 
 
 

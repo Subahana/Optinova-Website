@@ -9,6 +9,7 @@ from cart_management.models import Cart ,CartItem
 from django.utils import timezone
 from django.db.models import Q
 import logging
+from django.middleware.csrf import get_token
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,8 @@ def edit_coupon(request, coupon_id):
 
 def coupon_list(request):
     coupons = Coupon.objects.all()  # Retrieve all coupons from the database
+    for coupon in coupons:
+        coupon.deactivate_if_expired()  # Check and deactivate if expired
     context = {
         'coupons': coupons,
     }
@@ -60,68 +63,75 @@ def coupon_status(request, coupon_id):
 
     return redirect('coupon_list')
 
-
-
 def apply_coupon(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            coupon_code = data.get('coupon_code', '').strip()
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid data format.'}, status=400)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method. Please use POST.'}, status=405)
 
-        try:
-            # Fetch the user's cart
-            user_cart = get_object_or_404(Cart, user=request.user)
-            cart_items = CartItem.objects.filter(cart=user_cart)
+    try:
+        # Parse JSON data from the request body
+        data = json.loads(request.body)
+        coupon_code = data.get('coupon_code', '').strip()
+        if not coupon_code:
+            return JsonResponse({'success': False, 'error': {'coupon_code': 'Coupon code is required.'}}, status=400)
 
-            if not cart_items.exists():
-                return JsonResponse({'success': False, 'error': 'Your cart is empty.'}, status=400)
+        # Fetch the user's cart
+        user_cart = get_object_or_404(Cart, user=request.user)
+        cart_items = CartItem.objects.filter(cart=user_cart)
 
-            # Calculate the original total price and the offer total
-            original_total = sum(item.variant.price * item.quantity for item in cart_items)
-            offer_total = sum((item.variant.get_discounted_price() or item.variant.price) * item.quantity for item in cart_items)
-            offer_discount_amount = original_total - offer_total
+        if not cart_items.exists():
+            return JsonResponse({'success': False, 'error': {'cart': 'Your cart is empty.'}}, status=400)
 
-            coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
-            if coupon is None:
-                return JsonResponse({'success': False, 'error': 'Invalid coupon code'}, status=400)
+        # Calculate totals for the cart
+        original_total = sum(item.variant.price * item.quantity for item in cart_items)
+        offer_total = sum(
+            (item.variant.get_discounted_price() or item.variant.price) * item.quantity for item in cart_items
+        )
+        offer_discount_amount = original_total - offer_total
 
-            current_time = timezone.now()
-            if coupon.valid_from <= current_time <= coupon.valid_to:
-                # Correcting the status filter
-                used_coupon = Order.objects.filter(user=request.user, coupon=coupon, status__status='completed').exists()
-                
-                if used_coupon:
-                    return JsonResponse({'success': False, 'error': 'You have already used this coupon for a completed order.'}, status=400)
+        # Validate the coupon
+        coupon = Coupon.objects.filter(code__iexact=coupon_code, active=True).first()
+        if not coupon:
+            return JsonResponse({'success': False, 'error': 'Invalid or expired coupon code.'}, status=400)
 
-                coupon_discount_amount = coupon.get_discount_amount(offer_total)
-                coupon_discount_amount = min(coupon_discount_amount, offer_total)  # Ensure the discount doesn't exceed the offer total
+        # Check coupon validity period
+        current_time = timezone.now()
+        if not (coupon.valid_from <= current_time <= coupon.valid_to):
+            print('yes')
+            return JsonResponse({'success': False, 'error':  'Invalid or expired coupon code.'}, status=403)
 
-                final_total = offer_total - coupon_discount_amount
+        # Check if the user has already used this coupon for a completed order
+        if Order.objects.filter(user=request.user, coupon=coupon, status__status='completed').exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'You have already used this coupon for a completed order.'
+            }, status=400)
 
-                user_cart.coupon = coupon
-                user_cart.save()
+        # Calculate the coupon discount and the final total
+        coupon_discount_amount = coupon.get_discount_amount(offer_total)
+        coupon_discount_amount = min(coupon_discount_amount, offer_total)  # Cap discount at offer total
+        final_total = offer_total - coupon_discount_amount
 
-                return JsonResponse({
-                    'success': True,
-                    'original_total': original_total,
-                    'offer_total': offer_total,
-                    'final_total': float(final_total),
-                    'coupon_discount_amount': float(coupon_discount_amount),
-                    'offer_discount_amount': offer_discount_amount,
-                    'total_items': cart_items.count()
-                })
+        # Save the applied coupon to the cart
+        user_cart.coupon = coupon
+        user_cart.save()
 
-            else:
-                return JsonResponse({'success': False, 'error': 'Coupon is not valid or expired'}, status=400)
+        # Return success response with updated totals
+        return JsonResponse({
+            'success': True,
+            'original_total': float(original_total),
+            'offer_total': float(offer_total),
+            'final_total': float(final_total),
+            'coupon_discount_amount': float(coupon_discount_amount),
+            'offer_discount_amount': float(offer_discount_amount),
+            'total_items': cart_items.count(),
+            'csrf_token': get_token(request),
+        })
 
-        except Exception as e:
-            logger.error(f"Error applying coupon: {e}", exc_info=True)
-            return JsonResponse({'success': False, 'error': 'Something went wrong on the server.'}, status=500)
-
-    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
-
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': {'data': 'Invalid data format. Please ensure your JSON is correctly formatted.'}}, status=400)
+    except Exception as e:
+        logger.error(f"Error applying coupon: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': {'system': 'An unexpected error occurred. Please try again later.'}}, status=500)
 
 def remove_coupon(request):
     if request.method == 'POST':

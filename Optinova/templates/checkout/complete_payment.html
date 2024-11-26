@@ -3,32 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Razorpay Payment</title>
+    <title>Complete Payment</title>
 
-    <!-- Axios for HTTP requests -->
+    <!-- Razorpay and Axios -->
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
-    <!-- Razorpay Checkout.js -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
-    <!-- CSRF Token and Razorpay Key -->
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="razorpay-key" content="{{ razorpay_key }}">
 </head>
 <body>
     <h1>Complete Your Payment</h1>
-    <p> razorpay_key "{{ razorpay_key}}"</p>
+    <p>Select your payment option:</p>
 
-    <form method="POST">
+    <form id="payment-form" method="POST" action="{% url 'complete_payment' order_id=order.id %}">
         {% csrf_token %}
-        <input type="radio" name="payment_option" value="wallet" /> Wallet
-        <input type="radio" name="payment_option" value="razorpay" /> Razorpay
-        <button type="submit">Submit</button>
+        
+        <h3>Select Payment Method</h3>
+        <label>
+            <input type="radio" name="payment_option" value="wallet" required>
+            Pay using Wallet
+        </label><br>
+        <label>
+            <input type="radio" name="payment_option" value="razorpay" required>
+            Pay using Razorpay
+        </label><br>
+        
+        <button type="button" id="proceed-payment-button">Proceed</button>
     </form>
-
+    
     <script>
-         // var csrfToken = "{{ csrf_token }}";  // Django's CSRF token
-         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');    
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');    
 
         // Set CSRF token in Axios default headers
         axios.defaults.headers.common['X-CSRFToken'] = csrfToken;
@@ -51,45 +56,50 @@
             }
         };
 
+
         var rzp1 = new Razorpay(options);
 
-        document.getElementById('rzp-button1').onclick = function (e) {
-            rzp1.open();
-            e.preventDefault();
-        };
+        document.getElementById("proceed-payment-button").addEventListener("click", (e) => {
+            const selectedPaymentOption = document.querySelector('input[name="payment_option"]:checked');
+            
+            if (!selectedPaymentOption) {
+                alert("Please select a payment option.");
+                return;
+            }
+
+            if (selectedPaymentOption.value === "razorpay") {
+                // Prevent form submission
+                rzp1.open();
+                e.preventDefault();
+            } else if (selectedPaymentOption.value === "wallet") {
+                // Handle wallet payment
+                axios.post('/order_management/process_wallet_payment/', {
+                    order_id: "{{ order.id }}",
+                    payment_option: selectedPaymentOption.value
+                }).then((res) => {
+                    alert("Wallet payment successful!");
+                    window.location.href = "/order_success/";
+                }).catch((err) => {
+                    console.error("Wallet payment failed:", err);
+                    alert("Wallet payment failed. Please ensure you have sufficient balance.");
+                });
+            }
+        });
 
         rzp1.on('payment.success', function (response) {
-        axios.post('/order_management/verify_razorpay_payment/', {
-        razorpay_payment_id: response.razorpay_payment_id,
-        razorpay_order_id: response.razorpay_order_id,
-        }, {
-        headers: { 'X-CSRFToken': csrfToken }
-        }).then((res) => {
-        console.log("Payment Verified:", res.data);
-        window.location.href = `/order_management/order/success/razorpay/${response.razorpay_order_id}/${order.id}/`;
-
-        }).catch((err) => {
-        console.error("Payment Verification Failed:", err);
-        alert("Payment verification failed. Please try again.");
-        });
-        });
-
-
-        // Wallet Payment Button
-        document.getElementById('wallet-button').onclick = function (e) {
-            e.preventDefault();
-
-            // Post request to process wallet payment
-            axios.post('/order_management/process_wallet_payment/', {
-                order_id: "{{ order.id }}"
+            axios.post('/order_management/verify_razorpay_payment/', {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id
+            },{       
+                 headers: { 'X-CSRFToken': csrfToken}
             }).then((res) => {
-                console.log("Wallet Payment Successful:", res.data);
-                window.location.href = "/order_success/";
+                alert("Payment successful!");
+                window.location.href = `/order_management/order/success/razorpay/${response.razorpay_order_id}/${order.id}/`;
             }).catch((err) => {
-                console.error("Wallet Payment Failed:", err);
-                alert("Wallet payment failed. Please ensure you have sufficient balance.");
+                console.error("Payment verification failed:", err);
+                alert("Payment verification failed. Please try again.");
             });
-        };
+        });
     </script>
 </body>
 </html>

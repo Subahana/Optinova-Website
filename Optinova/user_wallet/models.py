@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from decimal import Decimal
 
 class Wallet(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -19,15 +20,19 @@ class WalletTransaction(models.Model):
     description = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
 
+
     def save(self, *args, **kwargs):
-        # Update the wallet balance on transaction save
         if self.pk is None:  # Only update on creation
-            if self.transaction_type == 'credit':
-                self.wallet.balance += self.amount
-            elif self.transaction_type == 'debit':
-                self.wallet.balance -= self.amount
+            amount = Decimal(self.amount)
+            if self.transaction_type == 'debit':
+                if self.wallet.balance < amount:
+                    raise ValueError("Insufficient balance in wallet for this transaction.")
+                self.wallet.balance -= amount
+            elif self.transaction_type == 'credit':
+                self.wallet.balance += amount
             self.wallet.save()
         super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.transaction_type.capitalize()} - {self.amount} for {self.description}"

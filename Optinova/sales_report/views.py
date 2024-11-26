@@ -1,5 +1,5 @@
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404
 from django.utils import timezone
 from order_management.models import Order
 from django.http import HttpResponse
@@ -11,6 +11,10 @@ from datetime import datetime, timedelta
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth, TruncDay
 from dateutil.relativedelta import relativedelta
+from .sales_utils import generate_invoice
+from openpyxl.utils import get_column_letter
+from io import BytesIO
+import pytz 
 
 # --------------Sales Report---------------#
 
@@ -96,37 +100,73 @@ def generate_pdf_report(request):
     return response
 
 
+
 def generate_excel_report(request):
-    # Create an Excel workbook and worksheet
-    workbook = openpyxl.Workbook()
-    worksheet = workbook.active
-    worksheet.title = 'Sales Report'
+    # Create a workbook and a worksheet
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Order Report"
 
-    # Define headers
-    headers = ['Order ID', 'Status', 'Amount', 'Discount', 'Date']
-    worksheet.append(headers)
+    # Add headers
+    ws.append(["Order ID", "User Name", "Order Date", "Total Amount", "Status"])
 
-    # Fetch orders
-    orders = Order.objects.all()  # Adjust query if necessary
+    # Get orders (you can filter by a date range or status if needed)
+    orders = Order.objects.all()
 
-    # Populate worksheet with order data
+    # Write order data to Excel
     for order in orders:
-        created_at_naive = order.created_at.replace(tzinfo=None)  # Make datetime naive
-        worksheet.append([
+        # Convert datetime to naive (remove timezone)
+        order_created_at = order.created_at
+        if order_created_at.tzinfo is not None:
+            order_created_at = order_created_at.replace(tzinfo=None)  # Make the datetime naive
+
+        order_status = str(order.status)  # Assuming order.status is a model or choice field
+
+        # Append data for each order to the Excel sheet
+        ws.append([
             order.id,
-            order.status,
-            order.total_amount(),
-            order.coupon.discount if order.coupon else 0,  # Assuming a `discount` field exists in Coupon
-            created_at_naive
+            order.user.get_full_name(),  # Assuming you have a `user` related field
+            order_created_at,  # Naive datetime
+            order.final_price,  # Adjust based on your Order model's field names
+            order_status,
         ])
 
-    # Set up HTTP response with Excel file
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=sales_report.xlsx'
-    workbook.save(response)
+    # Adjust column widths
+    for col in range(1, len(ws[1]) + 1):
+        column = get_column_letter(col)
+        max_length = 0
+        for row in ws.iter_rows():
+            try:
+                if len(str(row[col - 1].value)) > max_length:
+                    max_length = len(row[col - 1].value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Save the workbook to a BytesIO object
+    file = BytesIO()
+    wb.save(file)
+    file.seek(0)
+
+    # Return the response as an Excel file download
+    response = HttpResponse(file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="orders_report.xlsx"'
 
     return response
 
 
+
+
+def download_invoice(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Generate the invoice
+    buffer = generate_invoice(order)
+
+    # Return the PDF as an HTTP response
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{order.id}.pdf"'
+    return response
 
 

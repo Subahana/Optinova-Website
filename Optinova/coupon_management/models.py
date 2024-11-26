@@ -22,6 +22,14 @@ class Coupon(models.Model):
     def is_valid(self):
         now = timezone.now()
         return self.active and (self.valid_from <= now <= self.valid_to)
+        
+    def deactivate_if_expired(self):
+        """
+        Deactivate the coupon if it has expired.
+        """
+        if self.valid_to < timezone.now():
+            self.active = False
+            self.save()
 
     def get_discount_amount(self, total_amount):
         if self.coupon_type == 'percentage' and self.discount_percentage:

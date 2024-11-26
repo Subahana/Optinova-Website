@@ -17,22 +17,16 @@ from razorpay import Client
 import logging
 from urllib.parse import parse_qs
 from user_wallet.models import WalletTransaction
-from user_wallet.wallet_utils import debit_wallet ,credit_wallet ,process_refund_to_wallet
+from user_wallet.wallet_utils import debit_wallet ,credit_wallet ,process_refund_to_wallet,ensure_wallet_exists
 import uuid
 from django.contrib.auth import login, get_backends
+from django.core.paginator import Paginator
+from decimal import Decimal
 
 
 logger = logging.getLogger(__name__)
 
 
-def generate_unique_order_id():
-    """
-    Generate a unique order ID using UUID4. Ensures no conflicts in the database.
-    """
-    order_id = str(uuid.uuid4())  # Generate a random UUID
-    while Order.objects.filter(order_id=order_id).exists():  # Check for uniqueness
-        order_id = str(uuid.uuid4())  # Regenerate if it already exists
-    return order_id
 
 razorpay_client = Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
 
@@ -41,13 +35,12 @@ razorpay_client = Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY
 def checkout(request):
     cart = Cart.objects.get(user=request.user)
     addresses = Address.objects.filter(user=request.user)
-    total_price = cart.final_price  # Use calculate_final_total method
+    total_price = cart.final_price
 
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
 
         if form.is_valid():
-            # Get or create address
             address_id = form.cleaned_data.get('address')
             if address_id == 'add_new':
                 address = Address.objects.create(
@@ -68,124 +61,31 @@ def checkout(request):
                 messages.error(request, "Your cart is empty.")
                 return redirect('cart_detail')
 
-            # Handle wallet payment
-            if payment_method.lower() == 'wallet':
-                try:
-                    # Check wallet balance
-                    wallet = ensure_wallet_exists(request.user)
+            # Determine initial payment status
+            if payment_method.lower() == "cod":
+                payment_status_value = "Pending"
+            elif payment_method.lower() in ["razorpay", "wallet"]:
+                payment_status_value = "Completed"  # Set completed if payment is successful
+            else:
+                payment_status_value = "Pending"  # Default for unknown methods
 
-                    if wallet.balance >= total_price:
-                        # Deduct amount and create order
-                        credit_wallet(request.user, -total_price, "Order Payment")  # Deduct from wallet
+            # Redirect based on payment method
+            if payment_method.lower() == "cod":
+                payment_status, _ = PaymentStatus.objects.get_or_create(
+                status=payment_status_value)
 
-                        # Create PaymentDetails object
-                        payment_details = PaymentDetails.objects.create(
-                            payment_method="Wallet",
-                            payment_status=PaymentStatus.objects.get(status="Completed")
-                        )
-
-                        # Create order after wallet deduction
-                        order = Order.objects.create(
-                            user=request.user,
-                            address=address,
-                            payment_details=payment_details,
-                            order_id=generate_unique_order_id() , # Ensure unique order_id
-                            final_price=total_price  # Store the final price
-
-                        )
-
-                        # Add cart items to the order
-                        for item in cart_items:
-                            OrderItem.objects.create(
-                                order=order,
-                                variant=item.variant,
-                                quantity=item.quantity,
-                                price=item.variant.price
-                            )
-
-                        # Remove cart items after successful payment
-                        cart_items.delete()
-
-                        messages.success(request, "Order placed successfully using wallet!")
-                        return redirect('cod_order_success', order_id=order.id)
-
-                    else:
-                        messages.error(request, "Insufficient wallet balance. Please try another payment method.")
-                        return redirect('checkout')
-
-                except Exception as e:
-                    messages.error(request, f"Error processing wallet payment: {str(e)}")
-                    return redirect('cart_detail')
-
-            # Handle Razorpay payment
-            elif payment_method.lower() == 'razorpay':
-                try:
-                    razorpay_client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
-
-                    # Razorpay order creation
-                    razorpay_order = razorpay_client.order.create({
-                        "amount": int(total_price * 100),  # Convert Decimal to integer (paise)
-                        "currency": "INR",
-                        "payment_capture": 1
-                    })
-
-                    # Create PaymentDetails object
-                    payment_details = PaymentDetails.objects.create(
-                        payment_method="Razorpay",
-                        payment_status=PaymentStatus.objects.get(status="Pending"),
-                        razorpay_order_id=razorpay_order['id']
-                    )
-
-                    # Create order
-                    order = Order.objects.create(
-                        user=request.user,
-                        address=address,
-                        payment_details=payment_details,
-                        order_id=generate_unique_order_id() , # Ensure unique order_id
-                        final_price=total_price  # Store the final price
-
-                    )
-
-                    # Add order ID to session for verification
-                    order.razorpay_order_id = razorpay_order['id']
-                    order.save()
-
-                    # Redirect to Razorpay payment page
-                    return render(request, 'checkout/razorpay_payment.html', {
-                        'order': order,
-                        'razorpay_order_id': razorpay_order['id'],
-                        'razorpay_key': settings.RAZOR_PAY_KEY_ID,
-                        'total_price': total_price * 100,
-                        'user_email': request.user.email,
-                        'user_name': request.user.get_full_name(),
-                        'csrf_token': get_token(request),
-                    })
-
-                except razorpay.errors.BadRequestError as e:
-                    logger.error(f"Failed to create Razorpay order: {str(e)}")
-                    messages.error(request, "Failed to create Razorpay order. Please try again.")
-                    return redirect('checkout')
-                except Exception as e:
-                    logger.error(f"An unexpected error occurred: {str(e)}")
-                    messages.error(request, "An unexpected error occurred. Please try again.")
-                    return redirect('checkout')
-
-            # Handle COD payment
-            elif payment_method.lower() == 'cod':
                 # Create PaymentDetails object
                 payment_details = PaymentDetails.objects.create(
-                    payment_method="COD",
-                    payment_status=PaymentStatus.objects.get(status="Pending")
+                    payment_method=payment_method.capitalize(),
+                    payment_status=payment_status
                 )
 
-                # Create order
+                # Create Order object
                 order = Order.objects.create(
                     user=request.user,
                     address=address,
                     payment_details=payment_details,
-                    order_id=generate_unique_order_id() , # Ensure unique order_id
-                    final_price=total_price  # Store the final price
-
+                    final_price=total_price
                 )
 
                 # Add cart items to the order
@@ -197,12 +97,80 @@ def checkout(request):
                         price=item.variant.price
                     )
 
-                # Remove cart items after order creation
                 cart_items.delete()
-
                 messages.success(request, "Order placed successfully with Cash on Delivery.")
                 return redirect('cod_order_success', order_id=order.id)
+            elif payment_method.lower() == "wallet":
+                if ensure_wallet_exists(request.user).balance >= total_price:
+                    debit_wallet(request.user, total_price, "Order Payment via Wallet")
+                    payment_status, _ = PaymentStatus.objects.get_or_create(
+                    status=payment_status_value)
 
+                    # Create PaymentDetails object
+                    payment_details = PaymentDetails.objects.create(
+                        payment_method=payment_method.capitalize(),
+                        payment_status=payment_status
+                    )
+
+                    # Create Order object
+                    order = Order.objects.create(
+                        user=request.user,
+                        address=address,
+                        payment_details=payment_details,
+                        final_price=total_price
+                    )
+
+                    # Add cart items to the order
+                    for item in cart_items:
+                        OrderItem.objects.create(
+                            order=order,
+                            variant=item.variant,
+                            quantity=item.quantity,
+                            price=item.variant.price
+                        )
+
+                    cart_items.delete()
+                    messages.success(request, "Order placed successfully using Wallet!")
+                    return redirect('cod_order_success', order_id=order.id)
+                else:
+                    messages.error(request, "Insufficient wallet balance.")
+                    return redirect('checkout')
+            elif payment_method.lower() == "razorpay":
+                payment_status, _ = PaymentStatus.objects.get_or_create(status="Pending")
+
+                # Create PaymentDetails object
+                payment_details = PaymentDetails.objects.create(
+                    payment_method=payment_method.capitalize(),
+                    payment_status=payment_status
+                )
+
+                # Create Order object
+                order = Order.objects.create(
+                    user=request.user,
+                    address=address,
+                    payment_details=payment_details,
+                    final_price=total_price
+                )
+                razorpay_client = razorpay.Client(auth=(settings.RAZOR_PAY_KEY_ID, settings.RAZOR_PAY_KEY_SECRET))
+                razorpay_order = razorpay_client.order.create({
+                    "amount": int(total_price * 100),
+                    "currency": "INR",
+                    "payment_capture": 1
+                })
+                
+                order.razorpay_order_id = razorpay_order['id']
+                order.save()
+
+                cart_items.delete()
+                return render(request, 'checkout/razorpay_payment.html', {
+                    'order': order,
+                    'razorpay_order_id': razorpay_order['id'],
+                    'razorpay_key': settings.RAZOR_PAY_KEY_ID,
+                    'total_price': total_price * 100,
+                    'user_email': request.user.email,
+                    'user_name': request.user.get_full_name(),
+                    'csrf_token': get_token(request),
+                })
     else:
         form = OrderForm(user=request.user)
 
@@ -213,6 +181,8 @@ def checkout(request):
         'total_price': total_price,
         'csrf_token': get_token(request),
     })
+
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -230,7 +200,7 @@ class VerifyRazorpayPayment(View):
         signature = data.get('razorpay_signature')
 
         # Retrieve PaymentDetails
-        payment_details = get_object_or_404(PaymentDetails, razorpay_order_id=razorpay_order_id)
+        payment_details = get_object_or_404(PaymentDetails, order__id=order_id)
 
         if not all([payment_id, razorpay_order_id, signature]):
             return JsonResponse({'error': 'Missing payment ID, order ID, or signature'}, status=400)
@@ -250,7 +220,7 @@ class VerifyRazorpayPayment(View):
 
             # Set order status to 'Processing'
             try:
-                processing_status = OrderStatus.objects.get(status='Processing')
+                processing_status = OrderStatus.objects.get(status='Pending')
             except OrderStatus.DoesNotExist:
                 logger.error("OrderStatus with 'Processing' status not found.")
                 return JsonResponse({'error': 'Processing status not found'}, status=500)
@@ -335,7 +305,7 @@ def complete_payment(request, order_id):
         print(f"Order found: {order}")
 
         if not order.payment_details or order.payment_details.payment_status.status != 'Completed':
-            total_price = request.session.get('total_price', 0)
+            total_price = request.session.get('total_price_order', 0)
             print(f"Total price from session: {total_price}")
 
             if request.method == 'POST':
@@ -347,7 +317,7 @@ def complete_payment(request, order_id):
                     print(f"Wallet balance: {wallet_balance}, Total price: {total_price}")
 
                     if wallet_balance >= total_price:
-                        request.user.wallet.balance -= total_price
+                        request.user.wallet.balance -= Decimal(str(total_price))
                         request.user.wallet.save()
                         payment_status = PaymentStatus.objects.get_or_create(status='Completed')[0]
                         payment_details = PaymentDetails.objects.create(
@@ -356,7 +326,7 @@ def complete_payment(request, order_id):
                         )
                         order.payment_details = payment_details
                         order.save()
-                        return render(request, 'checkout/payment_success.html', {
+                        return render(request, 'checkout/cod_order_success.html', {
                             'order': order,
                             'message': "Payment completed using wallet."
                         })
@@ -390,12 +360,13 @@ def complete_payment(request, order_id):
                             }
                         )
                         order.payment_details = payment_details
+                        order.razorpay_order_id = razorpay_order['id']
                         order.save()
 
                         request.session['razorpay_order_id'] = razorpay_order_id
                         return render(request, 'checkout/complete_payment.html', {
                             'order': order,
-                            'razorpay_order_id': razorpay_order_id,
+                            'razorpay_order_id': razorpay_order['id'],
                             'razorpay_key': settings.RAZOR_PAY_KEY_ID,
                             'total_price': total_price * 100,
                             'user_email': request.user.email,
@@ -442,10 +413,11 @@ def cod_order_success(request, order_id):
     order.save()
 
     CartItem.objects.filter(cart__user=request.user).delete()
+    final_price = order.final_price  # Assuming final_price is a field in your Order model
 
     return render(request, 'checkout/cod_order_success.html', {
         'order': order,
-        'total_price':request.session.get('total_price', None),
+        'total_price':final_price,
         'payment_status': "Cash on Delivery",
     })
 
@@ -471,98 +443,211 @@ def list_orders(request):
     elif sort_option == 'status_desc':
         orders = orders.order_by('-status')
 
-    return render(request, 'checkout/list_orders.html', {'orders': orders})
+    # Pagination
+    paginator = Paginator(orders, 10)  # Show 10 orders per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'checkout/list_orders.html', {'orders': orders,'page_obj': page_obj})
+
 
 
 def update_order_status(request, order_id):
+    """
+    Update the status of an order to 'Delivered'.
+    Only accessible to staff members.
+    """
     order = get_object_or_404(Order, id=order_id)
-
-    # Prevent updating status if the order is cancelled by the user
-    if order.status.status == 'Cancelled by User':
-        messages.error(request, 'This order cannot be updated as it has been cancelled by the user.')
-        return redirect('list_orders')
-
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status:
-            # Get the OrderStatus instance corresponding to the new status
-            status_instance = get_object_or_404(OrderStatus, status=new_status)
-            order.status = status_instance  # Assign the status instance
-            if new_status == 'Delivered':
-                order.payment_status = 'Completed'
-            order.save()
-            messages.success(request, 'Order status updated successfully.')
-
-    return redirect('list_orders')
+    
+    try:
+        delivered_status, _ = OrderStatus.objects.get_or_create(status="Delivered")
+        order.status = delivered_status
+        order.save()
+        messages.success(request, f"Order #{order.order_id} status updated to 'Delivered'.")
+    except Exception as e:
+        messages.error(request, f"Failed to update order status: {str(e)}")
+    
+    return redirect("list_orders")
 
 
 
-def cancel_order_request(request, order_id):
+
+def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    print(order)
+    # Debugging: Log the current order status
+    logger.debug(f"Order ID: {order.id}, Current Status: {order.status.status}")
 
-    if order.status.status.lower() in ["pending", "processing"]:
+    # Ensure cancellation is allowed based on status
+    if order.status.status.lower() in ["pending", "processing"] and \
+       (not order.payment_details or order.payment_details.payment_status.status.lower() == "pending"):
+        print(order)
         if request.method == "POST":
-            cancellation_reason = request.POST.get("cancellation_reason")
+            cancellation_reason = request.POST.get("cancel_reason")
+            print(cancellation_reason)
+            logger.debug(f"Cancellation Reason: {cancellation_reason}")  # Log the cancellation reason
 
-            # Set the cancellation details
-            order.is_cancelled = True
-            order.canceled_by = request.user
-            order.cancelled_at = timezone.now()
-            order.cancellation_reason = cancellation_reason
+            if not cancellation_reason:
+                messages.error(request, "Cancellation reason is required.")
+                return redirect('order_details', order_id=order.id)
 
-            # Update the order status to 'Cancelled'
-            cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
-            order.status = cancelled_status
+            # Proceed with cancellation
+            try:
+                order.is_cancelled = True
+                order.canceled_by = request.user
+                order.cancelled_at = timezone.now()
+                order.cancellation_reason = cancellation_reason
 
-            # Refund to wallet if payment is completed
-            if order.payment_details and order.payment_details.payment_status.status == "Completed":
-                try:
-                    refund_amount = order.total_amount()  # Assuming `order.total_amount()` gives the total amount
-                    description = f"Refund for Order #{order.id}"
-                    credit_wallet(user=order.user, amount=refund_amount, description=description)
-                    messages.success(request, f"Refund of {refund_amount} has been credited to your wallet.")
-                except Exception as e:
-                    messages.error(request, f"Refund failed: {str(e)}")
+                # Update order status to 'Cancelled'
+                cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
+                order.status = cancelled_status
 
-            order.save()
+                # Debugging: Log order details after changes
+                logger.debug(f"Order Updated - ID: {order.id}, Status: {order.status.status}, is_cancelled: {order.is_cancelled}")
 
-            messages.success(request, "Your order has been successfully cancelled.")
-            return redirect('my_orders')
-        else:
-            messages.error(request, "Cancellation reason is required.")
-            return redirect('order_details', order_id=order.id)
+                # Save order
+                order.save()
+
+                messages.success(request, "Your order has been successfully canceled.")
+                return redirect('my_orders')
+
+            except Exception as e:
+                logger.error(f"Error saving order cancellation: {e}")
+                messages.error(request, "There was an error processing the cancellation.")
+                return redirect('order_details', order_id=order.id)
+
     else:
         messages.error(request, "You cannot cancel this order at this stage.")
         return redirect('order_details', order_id=order.id)
 
+def cancel_order_with_refund(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+
+    # Debugging: Log current status and payment status
+    logger.debug(f"Order ID: {order.id}, Current Status: {order.status.status}, Payment Status: {order.payment_details.payment_status.status if order.payment_details else 'No Payment Details'}")
+
+    if order.status.status.lower() in ["pending", "processing"] and order.payment_details and order.payment_details.payment_status.status.lower() == "completed":
+        if request.method == "POST":
+            cancellation_reason = request.POST.get("cancel_reason")
+            logger.debug(f"Cancellation Reason: {cancellation_reason}")
+
+            if not cancellation_reason:
+                messages.error(request, "Cancellation reason is required.")
+                return redirect('order_details', order_id=order.id)
+
+            try:
+                # Update order details
+                order.is_cancelled = True
+                order.canceled_by = request.user
+                order.cancelled_at = timezone.now()
+                order.cancellation_reason = cancellation_reason
+                cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
+                order.status = cancelled_status
+
+                # Log the order cancellation
+                logger.debug(f"Order Updated - ID: {order.id}, Status: {order.status.status}, is_cancelled: {order.is_cancelled}")
+
+                # Update the payment status to 'Refund'
+                if order.payment_details:
+                    returned_status, _ = PaymentStatus.objects.get_or_create(status='Refund')
+                    order.payment_details.payment_status = returned_status
+                    order.payment_details.save()
+                # Save the updated order
+                order.save()
+
+                messages.success(request, "Your order has been successfully canceled with a refund.")
+                return redirect('my_orders')
+
+            except Exception as e:
+                logger.error(f"Error processing refund: {e}")
+                messages.error(request, f"Refund failed: {str(e)}")
+                return redirect('order_details', order_id=order.id)
+    else:
+        messages.error(request, "You cannot cancel this order at this stage.")
+        return redirect('order_details', order_id=order.id)
+
+def return_order_with_refund(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+
+    # Debugging: Log the current order status and payment status
+    logger.debug(f"Order ID: {order.id}, Current Status: {order.status.status}, Payment Status: {order.payment_details.payment_status.status if order.payment_details else 'No Payment Details'}")
+
+    # Ensure return is allowed based on order status
+    if order.status.status.lower() == "delivered" and \
+       order.payment_details and order.payment_details.payment_status.status.lower() == "completed":
+
+        if request.method == "POST":
+            return_reason = request.POST.get("return_reason")
+            logger.debug(f"Return Reason: {return_reason}")  # Log the return reason
+
+            if not return_reason:
+                messages.error(request, "Return reason is required.")
+                return redirect('order_details', order_id=order.id)
+
+            # Proceed with return and refund in a transaction
+            try:
+                order.is_returned = True
+                order.return_reason = return_reason
+                order.returned_at = timezone.now()
+
+                # Debugging: Log order details after return
+                logger.debug(f"Order Updated - ID: {order.id}, is_returned: {order.is_returned}")
+
+                # Process the refund to wallet (assuming this is a defined method)
+                process_refund_to_wallet(order)
+
+                # Save order
+                order.save()
+
+                messages.success(request, "Your order has been successfully returned with a refund.")
+                return redirect('my_orders')
+
+            except Exception as e:
+                logger.error(f"Error processing return with refund: {e}")
+                messages.error(request, f"Refund failed: {str(e)}")
+                return redirect('order_details', order_id=order.id)
+
+    else:
+        messages.error(request, "You cannot return this order at this stage.")
+        return redirect('order_details', order_id=order.id)
 
 def return_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
 
-    if order.status.status != "Delivered":
-        messages.error(request, "Only delivered orders can be returned.")
+    # Debugging: Log the current order status
+    logger.debug(f"Order ID: {order.id}, Current Status: {order.status.status}")
+
+    if order.status.status.lower() == "delivered" and \
+       (not order.payment_details or order.payment_details.payment_status.status.lower() == "pending"):
+
+        if request.method == "POST":
+            return_reason = request.POST.get("return_reason")
+            logger.debug(f"Return Reason: {return_reason}")  # Log the return reason
+
+            if not return_reason:
+                messages.error(request, "Return reason is required.")
+                return redirect('order_details', order_id=order.id)
+
+            # Proceed with return
+            try:
+                order.is_returned = True
+                order.return_reason = return_reason
+                order.returned_at = timezone.now()
+
+                # Debugging: Log order details after return
+                logger.debug(f"Order Updated - ID: {order.id}, is_returned: {order.is_returned}")
+
+                # Save order
+                order.save()
+
+                messages.success(request, "Your order has been successfully returned.")
+                return redirect('my_orders')
+
+            except Exception as e:
+                logger.error(f"Error processing return: {e}")
+                messages.error(request, "There was an error processing the return.")
+                return redirect('order_details', order_id=order.id)
+
+    else:
+        messages.error(request, "You cannot return this order at this stage.")
         return redirect('order_details', order_id=order.id)
-
-    if request.method == "POST":
-        return_reason = request.POST.get('return_reason')
-        if return_reason:
-            order.is_returned = True
-            order.return_reason = return_reason
-
-            # Refund to wallet if payment is completed
-            if order.payment_details and order.payment_details.payment_status.status == "Completed":
-                try:
-                    process_refund_to_wallet(order)
-                    messages.success(request, "Refund has been credited to your wallet.")
-                except Exception as e:
-                    messages.error(request, f"Refund failed: {str(e)}")
-
-            order.save()
-
-            messages.success(request, "Your order has been successfully returned.")
-            return redirect('order_details', order_id=order.id)
-        else:
-            messages.error(request, "Please provide a reason for the return.")
-            return redirect('order_details', order_id=order.id)
-
-    return redirect('order_details', order_id=order.id)

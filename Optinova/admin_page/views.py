@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth, TruncDay
 from dateutil.relativedelta import relativedelta
-from order_management.models import Order
+from order_management.models import Order,OrderItem
+from products.models import Product, Category, Brand  
 from django.utils.safestring import mark_safe
 import json
 
@@ -160,12 +161,41 @@ def admin_page(request):
     print("Sales:", sales)
     print("Orders Count:", orders_count)
 
+
+    # Best Selling Product
+    best_selling_products = (
+        OrderItem.objects.filter(order__in=orders)
+        .values('variant__product__name')  # Use variant__product to reach the Product
+        .annotate(total_quantity=Sum('quantity'))
+        .order_by('-total_quantity')[:5]  # Top 5 products
+    )
+
+    # Best Selling Category
+    best_selling_categories = (
+        OrderItem.objects.filter(order__in=orders)
+        .values('variant__product__category__name')  # Use variant__product__category
+        .annotate(total_quantity=Sum('quantity'))
+        .order_by('-total_quantity')[:5]  # Top 5 categories
+    )
+
+    # Best Selling Brand
+    best_selling_brands = (
+        OrderItem.objects.filter(order__in=orders)
+        .values('variant__product__brand__name')  # Use variant__product__brand
+        .annotate(total_quantity=Sum('quantity'))
+        .order_by('-total_quantity')[:5]  # Top 5 brands
+    )
+
+
     context = {
         'labels': mark_safe(json.dumps(labels)),
         'sales': mark_safe(json.dumps(sales)),
         'orders_count': mark_safe(json.dumps(orders_count)),
         'filter_option': filter_option,
         'sales_data':sales_data,
+        'best_selling_products': best_selling_products,
+        'best_selling_categories': best_selling_categories,
+        'best_selling_brands': best_selling_brands,
     }
     return render(request, 'admin_page/index.html', context)
 

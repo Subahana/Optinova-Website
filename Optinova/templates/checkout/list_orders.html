@@ -32,7 +32,7 @@
                                     <option value="">All Statuses</option>
                                     <option value="Pending" {% if request.GET.status_filter == 'Pending' %}selected{% endif %}>Pending</option>
                                     <option value="Processing" {% if request.GET.status_filter == 'Processing' %}selected{% endif %}>Processing</option>
-                                    <option value="Shipped" {% if request.GET.status_filter == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                    <option value="Returned" {% if request.GET.status_filter == 'Returned' %}selected{% endif %}>Returned</option>
                                     <option value="Delivered" {% if request.GET.status_filter == 'Delivered' %}selected{% endif %}>Delivered</option>
                                     <option value="Cancelled" {% if request.GET.status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
                                 </select>
@@ -64,7 +64,7 @@
                                 <th scope="col">User</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Payment Method</th>
-                                <th scope="col">Canceled By</th>
+                                <th scope="col">Payment Status</th>
                                 <th scope="col">Actions</th>
                             </tr>
                         </thead>
@@ -79,7 +79,7 @@
                                     </span>
                                 </td>
                                 <td>{{ order.payment_details.payment_method }}</td>
-                                <td>{% if order.canceled_by %}{{ order.canceled_by.username }}{% else %}N/A{% endif %}</td>
+                                <td>{{ order.payment_details.payment_status }}</td>
                                 <td>
                                     {% if not order.is_cancelled %}
                                     <form action="{% url 'update_order_status' order.id %}" method="post" class="d-inline">
@@ -88,7 +88,7 @@
                                             onchange="this.form.submit()" style="border-color: #1a1a2e;">
                                             <option value="Pending" {% if order.status.status == 'Pending' %}selected{% endif %}>Pending</option>
                                             <option value="Processing" {% if order.status.status == 'Processing' %}selected{% endif %}>Processing</option>
-                                            <option value="Shipped" {% if order.status.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                                            <option value="Returned" {% if order.status.status == 'Returned' %}selected{% endif %}>Returned</option>
                                             <option value="Delivered" {% if order.status.status == 'Delivered' %}selected{% endif %}>Delivered</option>
                                             <option value="Cancelled" {% if order.status.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
                                         </select>

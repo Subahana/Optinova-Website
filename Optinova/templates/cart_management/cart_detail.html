@@ -72,12 +72,9 @@
                                     </form>
                                 </td>
                                 <td class="item-total-price" id="item-total-price-{{ item.id }}" data-item-id="{{ item.id }}">
-                                    {% if item_total_price < item.variant.price %}
-                                        <h5><span class="cart-items-price">₹{{ item_total_price }}</span></h5>
-                                    {% else %}
-                                        <h5>₹{{ item.variant.price }} </h5>
-                                    {% endif %}
-    
+
+                                    <h5>₹{{ item.total_price }} </h5>
+
                                 </td>
                                 <!-- Remove from cart button -->
                                 <td class="cart__close">
@@ -225,28 +222,30 @@
         });
 
         function applyCoupon(couponCode) {
-            const applyCouponUrl = "{% url 'apply_coupon' %}";
+    const applyCouponUrl = "{% url 'apply_coupon' %}";
 
-            axiosInstance.post(applyCouponUrl, { coupon_code: couponCode })
-                .then(response => {
-                    if (response.data.success) {
-                        console.log(response.data);
-                        
-                        updateCartTotals(response.data);
-                        appliedCouponCode = couponCode;
-                        changeButtonStyle(true);
-                        swal.fire("Success!", "Coupon applied successfully!", "success");
-                    } else {
-                        swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
-                    }
-                })
-                .catch(error => {                    
-                    console.error('Error:', error.response?.data.error|| error.message);
-                    console.log(error);
-                    
-                    swal.fire("Error!",error.response?.data.error, "error");
-                });
-        }
+    axiosInstance.post(applyCouponUrl, { coupon_code: couponCode })
+        .then(response => {
+            if (response.data.success) {
+                // Check if the coupon has already been used by the user
+                if (response.data.already_used) {
+                    swal.fire("Error!", "You have already used this coupon.", "error");
+                } else {
+                    // Update the cart totals if the coupon is successfully applied
+                    updateCartTotals(response.data);
+                    appliedCouponCode = couponCode;
+                    changeButtonStyle(true);
+                    swal.fire("Success!", "Coupon applied successfully!", "success");
+                }
+            } else {
+                swal.fire("Error!", response.data.error || "Invalid coupon or expired.", "error");
+            }
+        })
+        .catch(error => {                    
+            console.error('Error:', error.response?.data.error || error.message);
+            swal.fire("Error!", error.response?.data.error, "error");
+        });
+}
 
         function removeCoupon() {
             swal.fire({
@@ -266,6 +265,7 @@
                                 updateCartTotals(response.data);
                                 appliedCouponCode = '';
                                 changeButtonStyle(false);
+                                
                                 swal.fire("Success!", "Coupon removed successfully!", "success");
                             } else {
                                 swal.fire("Error!", response.data.error || "Failed to remove the coupon.", "error");
@@ -296,7 +296,6 @@
         });
     });
 </script>
-
 
 <style>
     /* General Styles */

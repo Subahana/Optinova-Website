@@ -37,6 +37,13 @@ class Product(models.Model):
         main_variant = self.main_variant
         return main_variant.price if main_variant else self.base_price
 
+    def main_image(self):
+        main_variant = self.main_variant
+        if main_variant:
+            image = main_variant.images.first()
+            return image.image.url if image else 'default_image.png'
+        return 'default_image.png'
+
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
     color = models.CharField(max_length=50)
@@ -95,6 +102,10 @@ class ProductVariant(models.Model):
         discounted_price = base_price - discount_amount
         return discounted_price if discounted_price > 0 else base_price
 
+    @property
+    def main_image(self):
+        image = self.images.first()
+        return image.image.url if image else 'default_image.png'
 
 class ProductImage(models.Model):
     variant = models.ForeignKey('ProductVariant', on_delete=models.CASCADE, related_name='images')

@@ -62,7 +62,6 @@ def coupon_status(request, coupon_id):
         messages.warning(request, f'Coupon "{coupon.code}" has been deactivated.')
 
     return redirect('coupon_list')
-
 def apply_coupon(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method. Please use POST.'}, status=405)
@@ -93,18 +92,20 @@ def apply_coupon(request):
         if not coupon:
             return JsonResponse({'success': False, 'error': 'Invalid or expired coupon code.'}, status=400)
 
+        order=Order.objects.filter(user=request.user).values('coupon')
+        print(order)
+
+        # Check if the user has already used this coupon (in any order, including uncompleted ones)
+        if Order.objects.filter(user=request.user, coupon=coupon).exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'You have already used this coupon.'
+            }, status=400)
+
         # Check coupon validity period
         current_time = timezone.now()
         if not (coupon.valid_from <= current_time <= coupon.valid_to):
-            print('yes')
             return JsonResponse({'success': False, 'error':  'Invalid or expired coupon code.'}, status=403)
-
-        # Check if the user has already used this coupon for a completed order
-        if Order.objects.filter(user=request.user, coupon=coupon, status__status='completed').exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'You have already used this coupon for a completed order.'
-            }, status=400)
 
         # Calculate the coupon discount and the final total
         coupon_discount_amount = coupon.get_discount_amount(offer_total)
@@ -113,6 +114,7 @@ def apply_coupon(request):
 
         # Save the applied coupon to the cart
         user_cart.coupon = coupon
+        user_cart.final_price = final_total
         user_cart.save()
 
         # Return success response with updated totals

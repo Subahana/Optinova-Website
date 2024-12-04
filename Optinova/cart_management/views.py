@@ -104,7 +104,7 @@ def cart_detail(request):
         total_discount = offer_discount_amount + coupon_discount_amount
         final_total = original_total - total_discount
         total_items = sum(item.quantity for item in cart_items)
-
+        print(final_total)
         # Variants not in cart
         all_variants = ProductVariant.objects.all()
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
@@ -114,7 +114,7 @@ def cart_detail(request):
         # Save the calculated final price to the Cart model
         cart.final_price = final_total
         cart.save()
-        
+        print(cart.final_price)
         context = {
             'cart_items': cart_items,
             'cart_items_with_offers': cart_items_with_offers,
@@ -170,12 +170,14 @@ def update_cart_item_quantity(request, item_id):
 
             # Update quantity and save
             cart_item.quantity = new_quantity
-            cart_item.save()
 
             # Calculate item total price
             item_discounted_price = cart_item.variant.get_discounted_price()
             item_total_price = cart_item.variant.get_discounted_price() * cart_item.quantity if cart_item.variant.get_discounted_price() < cart_item.variant.price else cart_item.variant.price * cart_item.quantity
-            
+            cart_item.total_price = item_total_price
+            print(cart_item.total_price)
+            cart_item.save()
+
             # Calculate cart totals
             cart = cart_item.cart
             
@@ -194,7 +196,8 @@ def update_cart_item_quantity(request, item_id):
             total_discount = offer_discount_amount + coupon_discount_amount
             final_total = original_total - total_discount
             total_items = sum(item.quantity for item in cart.cartitem_set.all())
-
+            cart.final_price=final_total
+            cart.save()
             # Return successful response with updated values
             return JsonResponse({
                 'success': True,
@@ -231,12 +234,27 @@ def view_wishlist(request):
     }
     return render(request, 'cart_management/wishlist.html', context)
 
+
 @login_required(login_url='accounts:user_login_view')
 def add_to_wishlist(request, variant_id):
-    variant = get_object_or_404(ProductVariant, id=variant_id)
-    wishlist, created = Wishlist.objects.get_or_create(user=request.user)
-    wishlist.variants.add(variant)
-    return redirect('view_wishlist')
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'message': 'User not authenticated.'}, status=403)       
+        try:
+            variant = get_object_or_404(ProductVariant, id=variant_id)
+            wishlist, created = Wishlist.objects.get_or_create(user=request.user)
+            if variant in wishlist.variants.all():
+                wishlist.variants.remove(variant)
+                action = 'removed'
+                message = 'Item removed from wishlist.'
+            else:
+                wishlist.variants.add(variant)
+                action = 'added'
+                message = 'Item added to wishlist.'
+            return JsonResponse({'success': True, 'action': action, 'message': message})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=500)    
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
 
 @login_required(login_url='accounts:user_login_view')
 def remove_from_wishlist(request):

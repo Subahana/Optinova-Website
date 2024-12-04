@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import CategoryOffer
 from .forms import CategoryOfferForm
 from django.contrib import messages
+from django.utils import timezone
 
 
 def create_category_offer(request):
@@ -36,11 +37,21 @@ def offer_list(request):
     return render(request, 'offer/category_offer_list.html', {'offers': offers})
 
 
-
 def offer_status(request, offer_id):
+    # Get the offer instance
     offer = get_object_or_404(CategoryOffer, id=offer_id)
-    offer.is_active = not offer.is_active  # Toggle the current status
+    
+    # Check if the offer has expired
+    if offer.end_date < timezone.now().date():
+        messages.error(request, "This offer has expired and cannot be reactivated.")
+        return redirect('offer_list')  # Redirect to the offers list or another relevant page
+
+    # If the offer is not expired, toggle the current status
+    offer.is_active = not offer.is_active
     offer.save()
+
+    # Prepare the success message
     status = "activated" if offer.is_active else "deactivated"
     messages.success(request, f"The offer has been {status}.")
+
     return redirect('offer_list')  # Redirect to the offers list or another relevant page

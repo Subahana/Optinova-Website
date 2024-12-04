@@ -69,7 +69,7 @@
                         </td>
 
                         <!-- Total Price using Order's total_amount method -->
-                        <td>₹{{ order_detail.total_amount }}</td>
+                        <td>₹{{ order_detail.final_price }}</td>
 
                         <!-- Order Date -->
                         <td class="order-date">{{ order_detail.created_at|date:"M d, Y" }}</td>

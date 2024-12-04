@@ -27,22 +27,23 @@
             <!-- Sidebar Begin -->
             <div class="col-lg-3">
                 <div class="shop__sidebar">
+                    <!-- Search Section -->
                     <div class="shop__sidebar__search mb-4">
-                        <input type="text" placeholder="Search..." id="search-input">
-                        <button><i class="fa fa-search"></i></button>
+                        <input type="text" class="form-control" placeholder="Search for products..." id="search-input">
+                        <button class="btn btn-primary mt-2"><i class="fa fa-search"></i></button>
                     </div>
 
-                    <!-- Categories Accordion -->
+                    <!-- Categories Section -->
                     <div class="shop__sidebar__accordion">
                         <div class="accordion" id="accordionExample">
                             <div class="card">
                                 <div class="card-heading">
-                                    <a data-toggle="collapse" data-target="#collapseOne">Categories</a>
+                                    <a class="card-link" data-toggle="collapse" data-target="#collapseOne">Categories</a>
                                 </div>
                                 <div id="collapseOne" class="collapse show" data-parent="#accordionExample">
                                     <div class="card-body">
                                         <div class="shop__sidebar__categories">
-                                            <ul id="category-list">
+                                            <ul id="category-list" class="list-unstyled">
                                                 <li><a href="#" class="category-filter active" data-category="all">All Categories</a></li>
                                                 {% for category in categories %}
                                                     <li>
@@ -73,10 +74,10 @@
                                 <p>Showing <span id="product-count">{{ products.count }}</span> results</p>
                             </div>
                         </div>
-                        <div class="col-lg-6 col-md-6 col-sm-6">
-                            <div class="shop__product__option__right">
-                                <p>Sort by:</p>
-                                <select id="sort-select">
+                        <div class="col-lg-6 col-md-6 col-sm-6 text-right">
+                            <div class="shop__product__option__right d-inline-block">
+                                <p class="d-inline">Sort by:</p>
+                                <select id="sort-select" class="form-control d-inline-block w-auto ml-2">
                                     <option value="default">Featured</option>
                                     <option value="price_low">Price: Low to High</option>
                                     <option value="price_high">Price: High to Low</option>
@@ -87,49 +88,49 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row" id="product-list">
                     {% for item in products %}
                         <div class="col-lg-4 col-md-6 col-sm-6 mb-4 product-item" 
                              data-price="{{ item.main_variant.price }}" 
                              data-name="{{ item.name }}" 
                              data-category="{{ item.category.id }}">
-                            <div class="product__item">
-                                <div class="product__item__pic">
+                            <div class="product__item border rounded">
+                                <div class="product__item__pic position-relative">
                                     {% if item.main_variant and item.main_variant.images.first %}
-                                        <img src="{{ item.main_variant.images.first.image.url }}" alt="{{ item.name }}">
+                                        <img src="{{ item.main_variant.images.first.image.url }}" alt="{{ item.name }}" class="img-fluid rounded-top">
                                     {% else %}
-                                        <img src="{% static 'img/no-image.jpg' %}" alt="No image available">
+                                        <img src="{% static 'img/no-image.jpg' %}" alt="No image available" class="img-fluid rounded-top">
                                     {% endif %}
-                                    <ul class="product__hover">
-                                        <li>
-                                            {% if item.main_variant %}
-                                                <a href="{% url 'add_to_wishlist' item.main_variant.id %}">
-                                                    <img src="{% static 'img/icon/heart.png' %}" alt="Add to wishlist">
-                                                </a>
-                                            {% else %}
-                                                <p>No main variant available.</p>
-                                            {% endif %}
-                                        </li>
+                                    <ul class="product__hover list-unstyled d-flex justify-content-center mt-3">
+                                  <!-- Add this inside your product hover buttons section -->
+                                  <li>
+                                    {% if item.main_variant %}
+                                    <a href="javascript:void(0);" class="add-to-wishlist btn btn-light" data-variant-id="{{ item.main_variant.id }}">
+                                        <i class="fa fa-heart heart-icon {% if item.main_variant.id in user_wishlist_ids %}filled{% endif %}"></i> Add to wishlist
+                                    </a>
+                                    {% else %}
+                                        <p>No main variant available.</p>
+                                    {% endif %}
+                                </li>
                                     </ul>
-                                
                                 </div>
-                                <div class="product__item__text">
-                                    <h6>{{ item.name }}</h6>
-                                    <a href="{% url 'user_product_detail' item.id %}" class="add-cart">View Details</a>
+                                <div class="product__item__text p-3">
+                                    <h6 class="mb-2">{{ item.name }}</h6>
+                                    <a href="{% url 'user_product_detail' item.id %}" class="btn btn-primary btn-sm mb-2">View Details</a>
                                     {% if item.category.offers.all|length > 0 %}
                                         {% with item.category.offers.all as offers %}
                                             {% with false as offer_found %}
                                                 {% for offer in offers %}
                                                     {% if offer.is_active and not offer_found %}
-                                                        <h5 class="original-price">
+                                                        <h5 class="original-price text-muted">
                                                             ₹{{ item.main_variant.price|floatformat:2 }}
                                                         </h5>
-                                                        <h5 class="discounted-price">
+                                                        <h5 class="discounted-price text-success">
                                                             Offer Price: ₹{{ item.discounted_price|floatformat:2 }}
                                                         </h5>
-                                                        <div class="offer-badge">
-                                                            <h6 style="margin: 0; font-size: 1.1em;">
+                                                        <div class="offer-badge badge badge-success">
+                                                            <h6>
                                                                 <span>{{ offer.discount_percent }}% Off</span>
                                                             </h6>
                                                         </div>
@@ -141,16 +142,16 @@
                                             {% endwith %}
                                         {% endwith %}
                                     {% else %}
-                                        <h5>Price: ₹{{ item.main_variant.price|floatformat:2 }}</h5>
+                                        <h5 class="price">₹{{ item.main_variant.price|floatformat:2 }}</h5>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
                 </div>
-                
+
                 <!-- Pagination Begin -->
-                <div class="pagination__option">
+                <div class="pagination__option mt-4">
                     <nav aria-label="Page navigation">
                         <ul class="pagination justify-content-center">
                             {% if page_obj.has_previous %}
@@ -189,95 +190,222 @@
 </section>
 
 <!-- Shop Section End -->
+
+
+<style>
+/* Style for hover effects, buttons, and more */
+.product-img {
+    width: 100%;
+    transition: transform 0.3s ease-in-out;
+}
+
+.product-img:hover {
+    transform: scale(1.05);
+}
+
+.product__item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    transition: transform 0.2s;
+}
+
+.product__item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.add-to-wishlist {
+    color: #ff6f61;
+    transition: color 0.3s ease-in-out;
+}
+
+.add-to-wishlist:hover {
+    color: #ff3d2e;
+}
+
+.view-details {
+    background-color: #ff6f61;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.view-details:hover {
+    background-color: #e65b4c;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #ff6f61;
+    color: white;
+}
+
+.pagination .page-link {
+    color: #333;
+}
+/* Default color of the heart */
+.heart-icon {
+    color: #ccc; /* Empty heart color */
+    transition: color 0.3s ease;
+}
+
+/* Red color when item is in wishlist */
+.heart-icon.filled {
+    color: red; /* Red color when the item is in the wishlist */
+}
+
+
+</style>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const products = Array.from(document.querySelectorAll('.product-item'));
-        const searchInput = document.getElementById('search-input');
-        const sortSelect = document.getElementById('sort-select');
-        const categoryList = document.getElementById('category-list');
-        const productCount = document.getElementById('product-count');
-        let currentCategory = 'all'; // Keep track of the current category selection
-    
-        // Search functionality
-        searchInput.addEventListener('input', function() {
-            filterAndSortProducts();
-        });
-    
-        // Sort functionality
-        sortSelect.addEventListener('change', function() {
-            filterAndSortProducts();
-        });
-    
-        // Category filtering
-        categoryList.addEventListener('click', function(e) {
-            if (e.target.classList.contains('category-filter')) {
-                e.preventDefault();
-                currentCategory = e.target.getAttribute('data-category');
-                document.querySelectorAll('.category-filter').forEach(el => el.classList.remove('active'));
-                e.target.classList.add('active');
-                filterAndSortProducts(currentCategory);
-            }
-        });
-    
-        // Function to filter and sort products
-        function filterAndSortProducts() {
-            const query = searchInput.value.toLowerCase();
-            const sortBy = sortSelect.value;
-            let filteredProducts = products;
-    
-            // Category filtering
-            if (currentCategory !== 'all') {
-                filteredProducts = filteredProducts.filter(product => product.getAttribute('data-category') === currentCategory);
-            }
-    
-            // Search filtering
-            filteredProducts = filteredProducts.filter(product => {
-                const name = product.getAttribute('data-name').toLowerCase();
-                return name.includes(query);
-            });
-    
-            // Sorting
-            if (sortBy === 'price_low') {
-                filteredProducts.sort((a, b) => parseFloat(a.getAttribute('data-price')) - parseFloat(b.getAttribute('data-price')));
-            } else if (sortBy === 'price_high') {
-                filteredProducts.sort((a, b) => parseFloat(b.getAttribute('data-price')) - parseFloat(a.getAttribute('data-price')));
-            } else if (sortBy === 'a_to_z') {
-                filteredProducts.sort((a, b) => a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')));
-            } else if (sortBy === 'z_to_a') {
-                filteredProducts.sort((a, b) => b.getAttribute('data-name').localeCompare(a.getAttribute('data-name')));
-            }
-    
-            // Update the DOM
-            const productList = document.getElementById('product-list');
-            productList.innerHTML = '';
-            filteredProducts.forEach(product => productList.appendChild(product));
-    
-            // Update product count
-            productCount.textContent = filteredProducts.length;
-    
-            // Animate new products
-            animateProducts();
-        }
-    
-        // Function to animate products
-        function animateProducts() {
-            const products = document.querySelectorAll('.product-item');
-            products.forEach((product, index) => {
-                product.style.opacity = '0';
-                product.style.transform = 'translateY(20px)';
-                setTimeout(() => {
-                    product.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                    product.style.opacity = '1';
-                    product.style.transform = 'translateY(0)';
-                }, index * 100);
-            });
-        }
-    
-        // Initial animation
-        animateProducts();
+    const csrfToken = "{{ csrf_token }}";
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const products = Array.from(document.querySelectorAll('.product-item'));
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const categoryList = document.getElementById('category-list');
+    const productCount = document.getElementById('product-count');
+    let currentCategory = 'all';
+
+    // Debounced search input
+    let debounceTimeout;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(filterAndSortProducts, 300);
     });
-    </script>
-    
+
+    sortSelect.addEventListener('change', filterAndSortProducts);
+
+    categoryList.addEventListener('click', function (e) {
+        if (e.target.classList.contains('category-filter')) {
+            e.preventDefault();
+            currentCategory = e.target.getAttribute('data-category');
+            document.querySelectorAll('.category-filter').forEach(el => el.classList.remove('active'));
+            e.target.classList.add('active');
+            filterAndSortProducts();
+        }
+    });
+
+    function filterAndSortProducts() {
+        const query = searchInput.value.toLowerCase();
+        const sortBy = sortSelect.value;
+
+        let filteredProducts = products;
+
+        if (currentCategory !== 'all') {
+            filteredProducts = filteredProducts.filter(product => product.getAttribute('data-category') === currentCategory);
+        }
+
+        filteredProducts = filteredProducts.filter(product => product.getAttribute('data-name').toLowerCase().includes(query));
+
+        if (sortBy === 'price_low') {
+            filteredProducts.sort((a, b) => parseFloat(a.getAttribute('data-price')) - parseFloat(b.getAttribute('data-price')));
+        } else if (sortBy === 'price_high') {
+            filteredProducts.sort((a, b) => parseFloat(b.getAttribute('data-price')) - parseFloat(a.getAttribute('data-price')));
+        } else if (sortBy === 'a_to_z') {
+            filteredProducts.sort((a, b) => a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')));
+        } else if (sortBy === 'z_to_a') {
+            filteredProducts.sort((a, b) => b.getAttribute('data-name').localeCompare(a.getAttribute('data-name')));
+        }
+
+        updateProductList(filteredProducts);
+    }
+
+    function updateProductList(filteredProducts) {
+        const productList = document.getElementById('product-list');
+        productList.innerHTML = '';
+
+        if (filteredProducts.length === 0) {
+            productList.innerHTML = '<p class="empty-state">No products found.</p>';
+        } else {
+            filteredProducts.forEach(product => productList.appendChild(product));
+        }
+
+        productCount.textContent = filteredProducts.length;
+        animateProducts();
+    }
+
+    function animateProducts() {
+        const products = document.querySelectorAll('.product-item');
+        products.forEach((product, index) => {
+            setTimeout(() => product.classList.add('show'), index * 100);
+        });
+    }
+
+   // Toggle wishlist functionality
+$(document).on('click', '.add-to-wishlist', function (e) {
+    e.preventDefault();
+    const variantId = $(this).data('variant-id');
+    const button = $(this);
+    const heartIcon = button.find('.heart-icon');
+    const url = `/cart_management/wishlist/add/${variantId}/`;
+
+    axios.post(url, {}, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        }
+    })
+    .then(response => {
+        if (response.data.success) {
+            if (response.data.action === 'added') {
+                heartIcon.addClass('filled'); // Add filled class
+                Swal.fire('Success', response.data.message, 'success');
+            } else if (response.data.action === 'removed') {
+                heartIcon.removeClass('filled'); // Remove filled class
+                Swal.fire('Removed', 'Item removed from wishlist.', 'info');
+            }
+
+            // Allow toggling again for removal (add click listener back)
+            button.off('click').on('click', function() {
+                removeFromWishlist(variantId, button, heartIcon);
+            });
+        } else {
+            Swal.fire('Error', 'Could not update wishlist. Try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Wishlist error details: ', error.response || error.message);
+        Swal.fire('Error', 'An error occurred. Please try again later.', 'error');
+    });
+});
+
+    // Function to remove item from wishlist
+    function removeFromWishlist(variantId, button, heartIcon) {
+        const url = `/cart_management/wishlist/remove/${variantId}/`; // Assuming you have a remove URL
+
+        axios.post(url, {}, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            }
+        })
+        .then(response => {
+            if (response.data.success) {
+                heartIcon.attr('src', '{% static "img/icon/heart_empty.png" %}');
+                button.off('click').on('click', function() {
+                    addToWishlist(variantId, button, heartIcon);
+                });
+                Swal.fire('Removed', 'Item removed from wishlist.', 'info');
+            } else {
+                Swal.fire('Error', 'Could not remove item from wishlist. Try again.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing from wishlist:', error.response || error.message);
+            Swal.fire('Error', 'An error occurred. Please try again later.', 'error');
+        });
+    }
+
+    // Initial Animation
+    animateProducts();
+});
+
+</script>
 <style>
     /* General Styles */
 body {

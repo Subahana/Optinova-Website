@@ -18,6 +18,7 @@ class Coupon(models.Model):
     valid_to = models.DateTimeField()
     active = models.BooleanField(default=True)
     used_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='used_coupons', blank=True)
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     def is_valid(self):
         now = timezone.now()

@@ -3,7 +3,6 @@ import os
 import environ
 from decouple import config
 
-
 env = environ.Env()
 environ.Env.read_env() 
 
@@ -54,7 +53,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware', 
-
 ]
 
 ROOT_URLCONF = 'Optinova.urls'
@@ -158,11 +156,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-SESSION_COOKIE_SECURE = True
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_COOKIE_AGE = 86400  # Session lasts for 24 hours
-SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
+SESSION_COOKIE_SECURE = True  # Use secure cookies if you're using HTTPS
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session does not expire when the browser closes
 CSRF_COOKIE_SECURE = True
 
 
+STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 

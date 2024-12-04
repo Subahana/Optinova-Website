@@ -54,12 +54,18 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
     variant = models.ForeignKey(ProductVariant, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # New field
 
     class Meta:
         unique_together = ('cart', 'variant')  # Ensure unique items per variant in each cart
 
-    def total_price(self):
-        return self.variant.price * self.quantity
+    def save(self, *args, **kwargs):
+        """Override save method to automatically update total_price."""
+        # Calculate total price based on variant's discounted or original price
+        discounted_price = self.variant.get_discounted_price()
+        self.total_price = discounted_price * self.quantity if discounted_price < self.variant.price else self.variant.price * self.quantity
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.variant} ({self.quantity}) in Cart"

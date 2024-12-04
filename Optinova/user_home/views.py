@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
 from offer_management.models import CategoryOffer
+from cart_management.models import Wishlist
 from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -73,6 +74,7 @@ def shop(request):
     categories = Category.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)
     active_offers = CategoryOffer.objects.filter(is_active=True)
+    user_wishlist = Wishlist.objects.filter(user=request.user).values_list('variants__id', flat=True)
     categories_with_offers = categories.prefetch_related(Prefetch('offers', queryset=active_offers))
     products_with_offers = products.prefetch_related('category', 'variants')
     products_with_discount = []
@@ -118,7 +120,10 @@ def shop(request):
     context = {
         'products': page_obj,
         'categories': categories_with_offers,
+        'user_wishlist': user_wishlist,
         'page_obj': page_obj,
+        'csrf_token': get_token(request),
+
     }
     return render(request, 'user_home/shop.html', context)
 

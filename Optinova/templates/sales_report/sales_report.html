@@ -2,12 +2,25 @@
 {% load static %}
 
 {% block content %}
+
 <main class="main-wrap">
     <section class="content-main">
         <div class="container my-5">
             <div class="card p-4 shadow-lg">
                 <h2 class="text-center mb-4" style="color: #4a90e2; font-weight: 700;">Sales Report</h2>
-                
+
+                {% if messages %}
+                <div class="alert-container txst-danger">
+                    {% for message in messages %}
+                        {% if "sales_report" in message.tags %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ message }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 <!-- Filter form -->
                 <form method="GET" action="{% url 'sales_report' %}" class="row g-3 justify-content-center">
                     <div class="col-md-3">
@@ -19,13 +32,13 @@
                             <option value="custom" {% if report_type == "custom" %}selected{% endif %}>Custom</option>
                         </select>
                     </div>
-                    
+
                     <!-- Custom date range selection -->
-                    <div id="custom-date-range" class="col-md-3" style="display: {% if report_type == 'custom' %}block{% else %}none{% endif %};">
+                    <div id="custom-start-date" class="col-md-3" style="display: {% if report_type == 'custom' %}block{% else %}none{% endif %};">
                         <label for="start_date" class="form-label">Start Date</label>
                         <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
                     </div>
-                    <div class="col-md-3" style="display: {% if report_type == 'custom' %}block{% else %}none{% endif %};">
+                    <div id="custom-end-date" class="col-md-3" style="display: {% if report_type == 'custom' %}block{% else %}none{% endif %};">
                         <label for="end_date" class="form-label">End Date</label>
                         <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
                     </div>
@@ -34,11 +47,21 @@
                         <button type="submit" class="btn btn-primary w-100">Generate Report</button>
                     </div>
                 </form>
-                
+
                 <script>
                     // Toggle custom date range inputs based on report type selection
                     document.getElementById('report_type').addEventListener('change', function() {
-                        document.getElementById('custom-date-range').style.display = this.value === 'custom' ? 'block' : 'none';
+                        const startDateField = document.getElementById('custom-start-date');
+                        const endDateField = document.getElementById('custom-end-date');
+                        
+                        // Toggle display of the custom date fields
+                        if (this.value === 'custom') {
+                            startDateField.style.display = 'block';
+                            endDateField.style.display = 'block';
+                        } else {
+                            startDateField.style.display = 'none';
+                            endDateField.style.display = 'none';
+                        }
                     });
                 </script>
             </div>
@@ -55,10 +78,6 @@
                         <p>Total Order Amount</p>
                         <h4><strong>₹{{ total_order_amount }}</strong></h4>
                     </div>
-                    <div class="col">
-                        <p>Total Discount</p>
-                        <h4><strong>₹{{ total_discount }}</strong></h4>
-                    </div>
                 </div>
             </div>
 
@@ -72,7 +91,6 @@
                                 <th>Order ID</th>
                                 <th>Status</th>
                                 <th>Amount</th>
-                                <th>Discount</th>
                                 <th>Date</th>
                             </tr>
                         </thead>
@@ -82,7 +100,6 @@
                                 <td>{{ order.id }}</td>
                                 <td>{{ order.status }}</td>
                                 <td>₹{{ order.total_amount }}</td>
-                                <td>₹{{ order.total_discount }}</td>
                                 <td>{{ order.created_at|date:"d M Y" }}</td>
                             </tr>
                             {% empty %}
@@ -107,4 +124,5 @@
         </div>
     </section>
 </main>
+
 {% endblock %}

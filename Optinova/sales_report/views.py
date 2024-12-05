@@ -15,6 +15,8 @@ from .sales_utils import generate_invoice
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import pytz 
+from django.contrib import messages
+from decimal import Decimal
 
 # --------------Sales Report---------------#
 
@@ -36,15 +38,24 @@ def sales_report(request):
         # Get custom dates from user input
         start_date = request.GET.get('start_date', today - timedelta(days=30))
         end_date = request.GET.get('end_date', today)
+        
+        # Check if end_date is after today
+        if isinstance(end_date, str):
+            end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d").date()
+        
+        if end_date > today:
+            # Add an error message if the end date is after today
+            messages.error(request, "End date cannot be in the future.",extra_tags="sales_report")
+            # Optionally, set the start and end date to today if invalid
+            start_date = today
+            end_date = today
     else:
         start_date = today - timedelta(days=30)
         end_date = today
 
-    # Convert custom date inputs to date objects if necessary
+    # Convert start_date to a date object if it's a string
     if isinstance(start_date, str):
         start_date = timezone.datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d").date()
 
     # Fetch orders within the date range and annotate with totals
     orders = (
@@ -58,13 +69,11 @@ def sales_report(request):
     # Calculate overall report values
     total_sales_count = orders.count()
     total_order_amount = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    total_discount = orders.aggregate(Sum('total_discount'))['total_discount__sum'] or 0
 
     context = {
         'orders': orders,
         'total_sales_count': total_sales_count,
         'total_order_amount': total_order_amount,
-        'total_discount': total_discount,
         'start_date': start_date,
         'end_date': end_date,
         'report_type': report_type,

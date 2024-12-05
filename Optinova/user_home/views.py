@@ -4,6 +4,7 @@ from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
 from offer_management.models import CategoryOffer
 from cart_management.models import Wishlist
+from brand_management.models import Brand
 from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -14,6 +15,7 @@ from django.http import JsonResponse
 from django.db.models import Prefetch
 from django.utils import timezone
 from user_wallet.models import Wallet
+from itertools import chain
 
 
 
@@ -71,60 +73,82 @@ def user_product_detail(request, product_id):
 
 
 def shop(request):
+    # Fetch categories, products, brands, and active offers
     categories = Category.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True)
+    brands = Brand.objects.filter(is_active=True)
     active_offers = CategoryOffer.objects.filter(is_active=True)
     user_wishlist = Wishlist.objects.filter(user=request.user).values_list('variants__id', flat=True)
     categories_with_offers = categories.prefetch_related(Prefetch('offers', queryset=active_offers))
     products_with_offers = products.prefetch_related('category', 'variants')
-    products_with_discount = []
+
+    # Apply discount to each product
     for product in products_with_offers:
         main_variant = product.main_variant  # Assuming main_variant returns the main variant object
-        discounted_price = main_variant.get_discounted_price()
-        product.discounted_price = discounted_price  # Ensure this line is executing
-        products_with_discount.append({
-            'product': product,
-            'discounted_price': discounted_price,
-        })
+        product.discounted_price = main_variant.get_discounted_price()
 
+    # Search functionality
     query = request.GET.get('q')
     if query:
         products_with_offers = products_with_offers.filter(name__icontains=query)
 
+    # Filter by category
     category_id = request.GET.get('category')
     if category_id:
         products_with_offers = products_with_offers.filter(category_id=category_id)
 
+    # Filter by brand
+    brand_id = request.GET.get('brand')
+    if brand_id:
+        products_with_offers = products_with_offers.filter(brand_id=brand_id)
+
     # Sorting functionality
     sort_option = request.GET.get('sort')
-    if sort_option == 'popularity':
-        products_with_offers = products_with_offers.order_by('-popularity')
-    elif sort_option == 'price_low':
-        products_with_offers = sorted(products_with_offers, key=lambda product: product.main_variant.get_discounted_price())
+    if sort_option == 'price_low':
+        products_with_offers = products_with_offers.order_by('main_variant__discounted_price')
     elif sort_option == 'price_high':
-        products_with_offers = sorted(products_with_offers, key=lambda product: product.main_variant.get_discounted_price(), reverse=True)
-    elif sort_option == 'average_rating':
-        products_with_offers = products_with_offers.order_by('-average_rating')
-    elif sort_option == 'new_arrivals':
-        products_with_offers = products_with_offers.order_by('-created_at')
+        products_with_offers = products_with_offers.order_by('-main_variant__discounted_price')
     elif sort_option == 'a_to_z':
         products_with_offers = products_with_offers.order_by('name')
     elif sort_option == 'z_to_a':
         products_with_offers = products_with_offers.order_by('-name')
 
-    # Pagination
-    paginator = Paginator(products_with_offers,6)
-    page_number = request.GET.get('page')
+    # Total number of products per page
+    per_page = 6
+
+    # Initialize Paginator with the filtered products and per_page value
+    paginator = Paginator(products_with_offers, per_page)
+
+    # Get the current page number from the request (defaults to 1 if not specified)
+    page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # If the filtered category has fewer than 5 products, adjust pages accordingly
+    if len(page_obj.object_list) < per_page and page_obj.has_next():
+        next_page_obj = paginator.get_page(page_obj.next_page_number())
+        remaining_items_needed = per_page - len(page_obj.object_list)
+        
+        # Add the remaining items from the next page to the first page
+        page_obj.object_list += next_page_obj.object_list[:remaining_items_needed]
+
+        # If you added items to the first page, reduce the remaining items from the next page
+        next_page_obj.object_list = next_page_obj.object_list[remaining_items_needed:]
+
+    # Ensure only products from the filtered category are displayed, no other products
+    # If the category is applied, all products on the second page should also belong to the filtered category
+    if category_id:
+        page_obj.object_list = page_obj.object_list.filter(category_id=category_id)
+
+    # Prepare context for rendering
     context = {
         'products': page_obj,
         'categories': categories_with_offers,
+        'brands': brands,
         'user_wishlist': user_wishlist,
         'page_obj': page_obj,
         'csrf_token': get_token(request),
-
     }
+
     return render(request, 'user_home/shop.html', context)
 
 

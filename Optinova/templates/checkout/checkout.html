@@ -34,7 +34,18 @@
                     <h4>Checkout Details</h4>
                     <form method="post" action="{% url 'checkout' %}">
                         {% csrf_token %}
-
+                        {% if messages %}
+                        <div class="alert-container txst-danger">
+                            {% for message in messages %}
+                                {% if "checkout" in message.tags %}
+                                <div class="alert alert-danger" role="alert">
+                                    {{ message }}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
                         <!-- Address Selection -->
                         <div class="checkout__form__input">
                             <label for="address"><i class="fa fa-map-marker"></i> Select or Add Address</label>

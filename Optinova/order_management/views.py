@@ -19,6 +19,7 @@ from urllib.parse import parse_qs
 from user_wallet.models import WalletTransaction
 from user_wallet.wallet_utils import debit_wallet ,credit_wallet ,process_refund_to_wallet,ensure_wallet_exists
 from .checkout_utils import handle_cod_payment, handle_wallet_payment, handle_razorpay_payment, handle_address_selection
+from sales_report.sales_utils import send_invoice_email
 import uuid
 from django.contrib.auth import login, get_backends
 from django.core.paginator import Paginator
@@ -155,6 +156,7 @@ def razorpay_order_success(request, order_id):
         user = order.user
         print("Order:", order)
         print("User:", user)
+        send_invoice_email(order)
 
         # Calculate the total price using the `total_amount` method
         total_price = order.final_price
@@ -273,6 +275,7 @@ def complete_payment(request, order_id):
 def cod_order_success(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     order.order_date = timezone.now()
+    send_invoice_email(order)
     order.save()
 
     CartItem.objects.filter(cart__user=request.user).delete()
@@ -369,7 +372,10 @@ def cancel_order(request, order_id):
                 # Update order status to 'Cancelled'
                 cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
                 order.status = cancelled_status
-
+                 # Retain stock
+                for item in order.items.all():
+                    item.variant.stock += item.quantity
+                    item.variant.save()
                 # Debugging: Log order details after changes
                 logger.debug(f"Order Updated - ID: {order.id}, Status: {order.status.status}, is_cancelled: {order.is_cancelled}")
 
@@ -414,14 +420,17 @@ def cancel_order_with_refund(request, order_id):
 
                 # Log the order cancellation
                 logger.debug(f"Order Updated - ID: {order.id}, Status: {order.status.status}, is_cancelled: {order.is_cancelled}")
-                process_refund_to_wallet(order)
-
+                # Retain stock
+                for item in order.items.all():
+                    item.variant.stock += item.quantity
+                    item.variant.save()
                 # Update the payment status to 'Refund'
                 if order.payment_details:
                     returned_status, _ = PaymentStatus.objects.get_or_create(status='Refund')
                     order.payment_details.payment_status = returned_status
                     order.payment_details.save()
                 # Save the updated order
+                process_refund_to_wallet(order)
 
                 order.save()
 

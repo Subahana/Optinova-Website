@@ -91,7 +91,7 @@ def handle_wallet_payment(request, cart_items, address, total_price, coupon):
         return redirect('cod_order_success', order_id=order.id)  # Update with your success URL name
 
     # Insufficient wallet balance
-    messages.error(request, "Insufficient wallet balance. Please select another payment method.")
+    messages.error(request, "Insufficient wallet balance. Please select another payment method.",extra_tags="checkout")
     return redirect('checkout')  # Redirect back to the checkout page
 
 

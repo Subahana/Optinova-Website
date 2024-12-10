@@ -151,9 +151,9 @@
 
                             <!-- Product Grid -->
                 <div class="row" id="product-list">
-                {% if page_obj.object_list %}
+                    {% if page_obj.object_list %}
 
-                    {% for item in page_obj %}
+                        {% for item in page_obj %}
                         <div 
                             class="col-lg-4 col-md-6 col-sm-6 mb-4 product-item"
                             data-price="{{ item.main_variant.price }}"
@@ -227,140 +227,112 @@
                     {% endfor %}
                     {% else %}
                     <p class="text-center text-muted">No products found on this page. Loading products from another page...</p>
-                {% endif %}
+                    {% endif %}
                 </div>
 
 
-                        <!-- Pagination -->
-            <div class="pagination__option mt-4">
-                <nav aria-label="Page navigation">
-                    <ul class="pagination justify-content-center">
-                        {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
-                                    &laquo;
-                                </a>
-                            </li>
-                        {% endif %}
-                        {% for num in page_obj.paginator.page_range %}
-                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
-                        {% endfor %}
-                        {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
-                                    &raquo;
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-            </div>
+                                <!-- Pagination -->
+                    <div class="pagination__option mt-4">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                            &laquo;
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% for num in page_obj.paginator.page_range %}
+                                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                            &raquo;
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
         </div>
     </div>
 </section>
 
-
 <script>
     const csrfToken = "{{ csrf_token }}";
-</script>
-<script></script>
-<script>
     document.addEventListener('DOMContentLoaded', function () {
-        const products = Array.from(document.querySelectorAll('.product-item'));
-        const searchInput = document.getElementById('search-input');
-        const sortSelect = document.getElementById('sort-select');
-        const categoryList = document.getElementById('category-list');
-        const brandList = document.getElementById('brand-list');
-        const productCount = document.getElementById('product-count');
-        let currentCategory = 'all';
-        let currentBrand = 'all';
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const categoryFilters = document.querySelectorAll('.category-filter');
+    const brandFilters = document.querySelectorAll('.brand-filter');
 
-        // Debounced search input
-        let debounceTimeout;
-        searchInput.addEventListener('input', function () {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(filterAndSortProducts, 300);
-        });
+    // Function to update URL parameters
+    function updateURLParams(key, value) {
+        const params = new URLSearchParams(window.location.search);
 
-        sortSelect.addEventListener('change', filterAndSortProducts);
-
-        categoryList.addEventListener('click', function (e) {
-            if (e.target.classList.contains('category-filter')) {
-                e.preventDefault();
-                currentCategory = e.target.getAttribute('data-category');
-                document.querySelectorAll('.category-filter').forEach(el => el.classList.remove('active'));
-                e.target.classList.add('active');
-                filterAndSortProducts();
-            }
-        });
-
-        // Add event listener for brand filtering
-        brandList.addEventListener('click', function (e) {
-            if (e.target.classList.contains('brand-filter')) {
-                e.preventDefault();
-                currentBrand = e.target.getAttribute('data-brand');
-                document.querySelectorAll('.brand-filter').forEach(el => el.classList.remove('active'));
-                e.target.classList.add('active');
-                filterAndSortProducts();
-            }
-        });
-
-
-        function filterAndSortProducts() {
-            const query = searchInput.value.toLowerCase();
-            const sortBy = sortSelect.value;
-
-            let filteredProducts = products;
-
-            // Filter by category
-            if (currentCategory !== 'all') {
-                filteredProducts = filteredProducts.filter(product => product.getAttribute('data-category') === currentCategory);
-            }
-
-            // Filter by brand
-            if (currentBrand !== 'all') {
-                filteredProducts = filteredProducts.filter(product => product.getAttribute('data-brand') === currentBrand);
-            }
-
-            // Filter by search query
-            filteredProducts = filteredProducts.filter(product => product.getAttribute('data-name').toLowerCase().includes(query));
-
-            // Sort products
-            if (sortBy === 'price_low') {
-                filteredProducts.sort((a, b) => parseFloat(a.getAttribute('data-price')) - parseFloat(b.getAttribute('data-price')));
-            } else if (sortBy === 'price_high') {
-                filteredProducts.sort((a, b) => parseFloat(b.getAttribute('data-price')) - parseFloat(a.getAttribute('data-price')));
-            } else if (sortBy === 'a_to_z') {
-                filteredProducts.sort((a, b) => a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')));
-            } else if (sortBy === 'z_to_a') {
-                filteredProducts.sort((a, b) => b.getAttribute('data-name').localeCompare(a.getAttribute('data-name')));
-            }
-
-            updateProductList(filteredProducts);
+        // Update the specific parameter
+        if (value === 'all' || value === '') {
+            params.delete(key); // Remove parameter if value is 'all'
+        } else {
+            params.set(key, value); // Set or update the parameter
         }
 
-        function updateProductList(filteredProducts) {
-            const productList = document.getElementById('product-list');
-            productList.innerHTML = '';
+        // Redirect with updated filters
+        window.location.href = `${window.location.pathname}?${params.toString()}`;
+    }
 
-            if (filteredProducts.length === 0) {
-                productList.innerHTML = '<p class="empty-state">No products found.</p>';
+    // Event listener for category filters
+    categoryFilters.forEach(filter => filter.addEventListener('click', function () {
+        const category = this.getAttribute('data-category');
+        updateURLParams('category', category);
+    }));
+
+    // Event listener for brand filters
+    brandFilters.forEach(filter => filter.addEventListener('click', function () {
+        const brand = this.getAttribute('data-brand');
+        updateURLParams('brand', brand);
+    }));
+
+    // Event listener for search input
+    searchInput.addEventListener('input', function () {
+        updateURLParams('q', searchInput.value);
+    });
+
+    // Event listener for sort dropdown
+    sortSelect.addEventListener('change', function () {
+        updateURLParams('sort', sortSelect.value);
+    });
+
+    // Highlight active filters based on URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedCategory = urlParams.get('category');
+    const selectedBrand = urlParams.get('brand');
+
+    if (selectedCategory) {
+        categoryFilters.forEach(filter => {
+            if (filter.getAttribute('data-category') === selectedCategory) {
+                filter.classList.add('active');
             } else {
-                filteredProducts.forEach(product => productList.appendChild(product));
+                filter.classList.remove('active');
             }
+        });
+    }
 
-            productCount.textContent = filteredProducts.length;
-            animateProducts();
-        }
+    if (selectedBrand) {
+        brandFilters.forEach(filter => {
+            if (filter.getAttribute('data-brand') === selectedBrand) {
+                filter.classList.add('active');
+            } else {
+                filter.classList.remove('active');
+            }
+        });
+    }
+});
 
-        function animateProducts() {
-            const products = document.querySelectorAll('.product-item');
-            products.forEach((product, index) => {
-                setTimeout(() => product.classList.add('show'), index * 100);
-            });
-        }
+
 
         $(document).on('click', '.add-to-wishlist', function (e) {
     e.preventDefault();
@@ -396,11 +368,6 @@
     });
 });
 
-        
-
-        // Initial Animation
-        animateProducts();
-    });
 </script>
 <style>
     /* General Styles */

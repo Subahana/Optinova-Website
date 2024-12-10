@@ -3,16 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from products.models import Product, Category,ProductVariant
 from offer_management.models import CategoryOffer
-from cart_management.models import Wishlist
+from cart_management.models import Wishlist,CartItem
 from brand_management.models import Brand
 from products.forms import ProductVariantForm
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Prefetch, F, Q
 from django.contrib.auth import logout
 from django.middleware.csrf import get_token
 from django.db.models import Prefetch,Exists, OuterRef,Subquery,F
 from django.http import JsonResponse
-from django.db.models import Prefetch
 from django.utils import timezone
 from user_wallet.models import Wallet
 from itertools import chain
@@ -74,79 +74,67 @@ def user_product_detail(request, product_id):
 
 def shop(request):
     # Fetch categories, products, brands, and active offers
+    category_id = request.GET.get('category')
+    brand_id = request.GET.get('brand')
+    query = request.GET.get('q', '')
+    sort_option = request.GET.get('sort')
+
     categories = Category.objects.filter(is_active=True)
-    products = Product.objects.filter(is_active=True)
     brands = Brand.objects.filter(is_active=True)
     active_offers = CategoryOffer.objects.filter(is_active=True)
     user_wishlist = Wishlist.objects.filter(user=request.user).values_list('variants__id', flat=True)
-    categories_with_offers = categories.prefetch_related(Prefetch('offers', queryset=active_offers))
-    products_with_offers = products.prefetch_related('category', 'variants')
 
-    # Apply discount to each product
-    for product in products_with_offers:
-        main_variant = product.main_variant  # Assuming main_variant returns the main variant object
-        product.discounted_price = main_variant.get_discounted_price()
-
-    # Search functionality
-    query = request.GET.get('q')
+    # Fetch products and prefetch related fields for optimization
+    products = Product.objects.filter(is_active=True).prefetch_related('category', 'variants')
+    
+    # Apply search filter
     if query:
-        products_with_offers = products_with_offers.filter(name__icontains=query)
+        products = products.filter(name__icontains=query)
+    
+    # Apply category filter if valid
+    if category_id and category_id != 'all':
+        try:
+            category_id = int(category_id)
+            products = products.filter(category_id=category_id)
+        except ValueError:
+            pass  # Ignore invalid category_id
 
-    # Filter by category
-    category_id = request.GET.get('category')
-    if category_id:
-        products_with_offers = products_with_offers.filter(category_id=category_id)
+    # Apply brand filter if valid
+    if brand_id and brand_id != 'all':
+        try:
+            brand_id = int(brand_id)
+            products = products.filter(brand_id=brand_id)
+        except ValueError:
+            pass  # Ignore invalid brand_id
 
-    # Filter by brand
-    brand_id = request.GET.get('brand')
-    if brand_id:
-        products_with_offers = products_with_offers.filter(brand_id=brand_id)
-
-    # Sorting functionality
-    sort_option = request.GET.get('sort')
+      # Sorting functionality based on main_variant price
     if sort_option == 'price_low':
-        products_with_offers = products_with_offers.order_by('main_variant__discounted_price')
+        products = sorted(products, key=lambda p: p.main_variant.price if p.main_variant else p.base_price)
     elif sort_option == 'price_high':
-        products_with_offers = products_with_offers.order_by('-main_variant__discounted_price')
+        products = sorted(products, key=lambda p: p.main_variant.price if p.main_variant else p.base_price, reverse=True)
     elif sort_option == 'a_to_z':
-        products_with_offers = products_with_offers.order_by('name')
+        products = products.order_by('name')  # Alphabetical
     elif sort_option == 'z_to_a':
-        products_with_offers = products_with_offers.order_by('-name')
+        products = products.order_by('-name')  # Reverse Alphabetical
 
-    # Total number of products per page
+    # Pagination logic
     per_page = 6
-
-    # Initialize Paginator with the filtered products and per_page value
-    paginator = Paginator(products_with_offers, per_page)
-
-    # Get the current page number from the request (defaults to 1 if not specified)
+    paginator = Paginator(products, per_page)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
-    # If the filtered category has fewer than 5 products, adjust pages accordingly
-    if len(page_obj.object_list) < per_page and page_obj.has_next():
-        next_page_obj = paginator.get_page(page_obj.next_page_number())
-        remaining_items_needed = per_page - len(page_obj.object_list)
-        
-        # Add the remaining items from the next page to the first page
-        page_obj.object_list += next_page_obj.object_list[:remaining_items_needed]
-
-        # If you added items to the first page, reduce the remaining items from the next page
-        next_page_obj.object_list = next_page_obj.object_list[remaining_items_needed:]
-
-    # Ensure only products from the filtered category are displayed, no other products
-    # If the category is applied, all products on the second page should also belong to the filtered category
-    if category_id:
-        page_obj.object_list = page_obj.object_list.filter(category_id=category_id)
+    # Add discounted price for each product
+    for product in page_obj:
+        main_variant = product.main_variant  # Assuming main_variant is a method/property
+        product.discounted_price = main_variant.get_discounted_price() if main_variant else product.price
 
     # Prepare context for rendering
     context = {
         'products': page_obj,
-        'categories': categories_with_offers,
+        'categories': categories,
         'brands': brands,
         'user_wishlist': user_wishlist,
         'page_obj': page_obj,
-        'csrf_token': get_token(request),
     }
 
     return render(request, 'user_home/shop.html', context)
@@ -159,18 +147,25 @@ def user_home(request):
         messages.error(request, 'Admin users are not allowed to access the user home page.')
         return redirect('admin_page')  
 
-    products = Product.objects.filter(
-        is_active=True,
-        category__is_active=True
-    ).prefetch_related('variants') 
-    # Fetch active offers for the categories of the products
-    active_offers = CategoryOffer.objects.filter(
-        category__in=products.values_list('category', flat=True),
-        is_active=True
-    )
+    categories = Category.objects.filter(is_active=True)
+    brands = Brand.objects.filter(is_active=True)
+    active_offers = CategoryOffer.objects.filter(is_active=True)
+    user_wishlist = Wishlist.objects.filter(user=request.user).values_list('variants__id', flat=True)
+
+    # Fetch products and prefetch related fields for optimization
+    products = Product.objects.filter(is_active=True).prefetch_related('category', 'variants')
+    paginator = Paginator(products, 3)  # Show 6 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    # Add discounted price for each product
+    for product in page_obj:
+        main_variant = product.main_variant  # Assuming main_variant is a method/property
+        product.discounted_price = main_variant.get_discounted_price() if main_variant else product.price
+
     context = {
         'products': products,
         'active_offers': active_offers,
+        'page_obj': page_obj,
     }
     return render(request, 'user_home/index.html', context)
 

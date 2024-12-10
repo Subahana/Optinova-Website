@@ -2,175 +2,210 @@
 {% load static %}
 
 {% block content %}
-<section class="product spad">
+<section class="hero spad position-relative">
     <div class="container">
-        <div class="row">
-            {% if products %}
-                {% for product in products %}
-                    <div class="col-lg-4 col-md-6 col-sm-6 mb-5">
-                        <a href="{% url 'user_product_detail' product.id %}" class="text-decoration-none">
-                            <div class="product__item shadow p-4 mb-5 bg-white rounded h-100 d-flex flex-column justify-content-between">
-                                <!-- Main Variant Image -->
-                                {% if product.main_variant and product.main_variant.images.all %}
-                                    <div class="product__item__pic position-relative text-center">
-                                        <img src="{{ product.main_variant.images.all.0.image.url }}" alt="{{ product.name }}" class="img-fluid rounded product-img">
-                                        <ul class="product__hover position-absolute d-flex justify-content-center align-items-center">
-                                            <li>
-                                                {% if product.main_variant %}
-                                                    <a href="{% url 'add_to_wishlist' product.main_variant.id %}">
-                                                        <img src="{% static 'img/icon/heart.png' %}" alt="Add to wishlist">
-                                                    </a>
-                                                {% else %}
-                                                    <p>No main variant available.</p>
-                                                {% endif %}
-                                            </li>
-                                        </ul>
-                                    </div>
-                                {% else %}
-                                    <p class="text-muted text-center">No images available for the main variant.</p>
-                                {% endif %}
-
-                                <div class="product__item__text text-center mt-4">
-                                    <!-- Product Name -->
-                                    <h5 class="text-dark mb-2">{{ product.name }}</h5>
-
-                                    <!-- Display Product Variants -->
-                                    {% if product.variants.all %}
-                                        <div class="product__variants mt-3 d-flex justify-content-center">
-                                            {% for variant in product.variants.all %}
-                                                <div class="variant-item mx-1 d-flex align-items-center justify-content-center p-2 border rounded-circle" style="width: 50px; height: 50px;">
-                                                    <div class="variant-color" style="background-color: {{ variant.color|default:'#FFFFFF' }};"></div>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    
-                                    <!-- Main Variant Price -->
-                                    <div class="price mt-3">
-                                        <h6 class="text-success">₹{{ product.main_variant.price }}</h6>
-                                    </div>
-
-                                    <a href="{% url 'user_product_detail' product.id %}" class="add-cart mt-3 btn btn-primary">View Details</a>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted text-center">No products available.</p>
-            {% endif %}
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="hero__text">
+                    <h1 class="display-5 font-weight-bold text-dark">Find Your Perfect Spectacles</h1>
+                    <p class="text-muted">Explore a wide range of stylish and functional frames to suit your personality and lifestyle.</p>
+                    <a href="{% url 'shop' %}" class="btn btn-dark btn-sm px-4 rounded-pill shadow">Shop Now</a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="{% static 'img/hero-image.png' %}" alt="Spectacles" class="img-fluid rounded shadow-sm">
+            </div>
         </div>
     </div>
 </section>
 
+<section class="product spad bg-light">
+    <div class="container">
+        <h2 class="text-center font-weight-bold mb-4 text-uppercase" style="font-size: 1.5rem; color: #1a436d;">Our Best Sellers</h2>
+        <div class="row" id="product-list">
+            {% if page_obj.object_list %}
+                {% for item in page_obj %}
+                <div class="col-lg-4 col-md-6 col-sm-6 mb-3 product-item">
+                    <div class="product__item bg-white shadow-sm rounded">
+                        <!-- Product Image -->
+                        <div class="product__item__pic position-relative" style="height: 250px; overflow: hidden;">
+                            {% if item.main_variant and item.main_variant.images.first %}
+                                <img 
+                                    src="{{ item.main_variant.images.first.image.url }}" 
+                                    alt="{{ item.name }}" 
+                                    class="img-fluid rounded-top" style="object-fit: cover; height: 100%;">
+                            {% else %}
+                                <img 
+                                    src="{% static 'img/no-image.jpg' %}" 
+                                    alt="No image available" 
+                                    class="img-fluid rounded-top" style="object-fit: cover; height: 100%;">
+                            {% endif %}
+                        </div>
+                        <hr>
+                        <a href="{% url 'user_product_detail' item.id %}">
+                            <h6 class="text-primary mt-1 ml-2">{{ item.name }}</h6>
+                        </a>
+                        {% if item.category.offers.all|length > 0 %}
+                                {% for offer in item.category.offers.all %}
+                                    {% if offer.is_active %}
+                                        <h6 class="original-price " style="font-size: 0.9rem;">
+                                            <del>₹{{ item.main_variant.price|floatformat:2 }}</del>
+                                        </h6>
+                                        <h6 class="discounted-price text-success" style="font-size: 1rem;">
+                                            ₹{{ item.discounted_price|floatformat:2 }}
+                                        </h6>
+                                        <div class="offer-badge badge badge-success">
+                                            {{ offer.discount_percent }}% Off
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <h6 class="price text-dark" style="font-size: 1rem;">₹{{ item.main_variant.price|floatformat:2 }}</h6>
+                            {% endif %}                        
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="text-center text-muted">No products found on this page. Loading products from another page...</p>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination justify-content-center mt-3">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</section>
+
+
+<section class="features spad">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-4">
+                <img src="{% static 'img/icon/free-delivery.png' %}" alt="Free Delivery" class="mb-2" style="width: 50px; height: 50px;">
+                <h6 class="font-weight-bold">Free Shipping</h6>
+                <p class="text-muted" style="font-size: 0.9rem;">Enjoy free delivery on all orders.</p>
+            </div>
+            <div class="col-lg-4">
+                <img src="{% static 'img/icon/quality.png' %}" alt="Quality Assurance" class="mb-2" style="width: 50px; height: 50px;">
+                <h6 class="font-weight-bold">Premium Quality</h6>
+                <p class="text-muted" style="font-size: 0.9rem;">Top-notch materials and craftsmanship.</p>
+            </div>
+            <div class="col-lg-4">
+                <img src="{% static 'img/icon/returns.png' %}" alt="Easy Returns" class="mb-2" style="width: 50px; height: 50px;">
+                <h6 class="font-weight-bold">Easy Returns</h6>
+                <p class="text-muted" style="font-size: 0.9rem;">Hassle-free returns and exchanges.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
 <style>
-    /* Card hover and image scaling */
-    .product__item {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-radius: 15px;
-        background-color: #fff;
-    }
+/* General Styling */
+body {
+    font-family: 'Poppins', sans-serif;
+}
 
-    .product__item:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    }
+/* Hero Section */
+.hero {
+    padding: 60px 0;
+    background-color: #f8f9fa;
+}
+.hero__text h1 {
+    font-size: 2.2rem;
+}
+.hero__text p {
+    font-size: 1rem;
+    margin-top: 5px;
+}
+.product__item {
+    background-color: #d1c9c9;
+    height: 450px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid #282939;
+}
+.product__item__pic {
+    height: 250px;
+    margin: 20px;
+    overflow: hidden;
+    position: relative;
+}
 
-    .product-img {
-        border-radius: 15px;
-        transition: transform 0.4s ease;
-        max-height: 250px;
-        object-fit: cover;
-    }
+.product__item__pic img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
 
-    .product__item__pic:hover img {
-        transform: scale(1.1);
-    }
+.product__item__text {
+    padding: 10px;
+}
 
-    /* Hover effect for icon */
-    .product__hover {
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 15px;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
+.product__item__text .price,
+.product__item__text .original-price {
+    font-size: 1rem;
+    font-weight: bold;
+}
 
-    .product__item__pic:hover .product__hover {
-        display: flex;
-        opacity: 1;
-    }
+.product__item__text .discounted-price {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #28a745;
+}
 
-    .product__hover li a img {
-        width: 30px;
-        height: 30px;
-        filter: invert(1);
-    }
+.offer-badge {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+}
 
-    /* Typography improvements */
-    .product__item__text h5 {
-        font-family: 'Poppins', sans-serif;
-        font-weight: 700;
-        font-size: 1.2rem;
-    }
+.product__hover li {
+    margin: 0 10px;
+}
 
-    /* Variant design */
-    .variant-item {
-        transition: background-color 0.3s ease, transform 0.3s ease;
-        border: 2px solid #ddd;
-        background-color: #f8f9fa;
-    }
+.product__hover a {
+    text-decoration: none;
+}
 
-    .variant-item:hover {
-        background-color: #e9ecef;
-        transform: scale(1.1);
-    }
 
-    .variant-color {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-    }
+/* Features Section */
+.features h6 {
+    margin-top: 10px;
+    font-size: 1rem;
+    color: #0056b3;
+}
 
-    /* Price styling */
-    .price h6 {
-        font-size: 1.5rem;
-        color: #28a745;
-        font-family: 'Poppins', sans-serif;
-        font-weight: 600;
-    }
+/* CTA Section */
+.cta h2 {
+    font-size: 1.8rem;
+}
 
-    /* Button design */
-    .add-cart {
-        padding: 10px 20px;
-        border-radius: 30px;
-        font-family: 'Poppins', sans-serif;
-        font-size: 0.9rem;
-        transition: background-color 0.3s ease, transform 0.3s ease;
-    }
-
-    .add-cart:hover {
-        background-color: #0056b3;
-        border-color: #0056b3;
-        transform: scale(1.05);
-    }
-
-    /* Container margin and padding */
-    .product__item__text {
-        margin-top: 10px;
-    }
-
-    /* Align product details and variants */
-    .product__variants {
-        display: flex;
-        justify-content: center;
-        margin-top: 15px;
-    }
 </style>
 {% endblock %}

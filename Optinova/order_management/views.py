@@ -319,7 +319,7 @@ def list_orders(request):
         orders = orders.order_by('-status')
 
     # Pagination
-    paginator = Paginator(orders, 10)  # Show 10 orders per page
+    paginator = Paginator(orders,6)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -348,29 +348,36 @@ def update_order_status(request, order_id):
                 messages.success(request, f"Order #{order.order_id} status updated to 'Delivered'.")
             
             elif new_status == "Cancelled":
-            # Handle 'Cancelled' status
+                # Handle 'Cancelled' status
                 cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
                 order.status = cancelled_status
                 order.is_cancelled = True
                 order.cancelled_at = timezone.now()
                 order.cancellation_reason = 'Cancelled by admin.'
-                
-                process_refund_to_wallet(order)
 
-                # Update payment status to 'Refund' and process refund
-                if order.payment_details:
+                # Check if payment is completed before processing the refund
+                if order.payment_details and order.payment_details.payment_status.status == "Completed":
+                    process_refund_to_wallet(order)
+
+                    # Update payment status to 'Refund' and process refund
                     refund_status, _ = PaymentStatus.objects.get_or_create(status="Refund")
                     order.payment_details.payment_status = refund_status
                     order.payment_details.save()
 
-                # Process refund logic
+                    # Process refund logic
+                else:
+                    # Handle the case where payment is not completed
+                    # You could log a message or handle it in another way if needed
+                    pass
+
+                    # Save the order after the changes
                 order.save()
+
 
                 messages.success(
                     request,
                     f"Order #{order.order_id} has been canceled and a refund of ₹{refund_amount} processed."
                 )
-        
             else:
                 messages.error(request, "Invalid status update request.")
         except Exception as e:

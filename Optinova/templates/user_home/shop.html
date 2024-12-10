@@ -190,11 +190,13 @@
                                                 data-variant-id="{{ item.main_variant.id }}"
                                             >
                                                 <i 
-                                                    class="fa fa-heart heart-icon {% if item.main_variant.id in user_wishlist_ids %}filled{% endif %}"
+                                                    class="fa fa-heart heart-icon {% if item.main_variant.id in user_wishlist %}filled{% endif %}" 
+                                                    data-variant-id="{{ item.main_variant.id }}"
                                                 ></i>
                                             </a>
                                         {% endif %}
                                     </li>
+                                    
                                         <a href="{% url 'user_product_detail' item.id %}">
                                             <h6 class=" text-primary mt-2 ml-3 ">{{ item.name }}</h6>
                                         </a>
@@ -360,70 +362,39 @@
             });
         }
 
-        // Toggle wishlist functionality
         $(document).on('click', '.add-to-wishlist', function (e) {
-            e.preventDefault();
-            const variantId = $(this).data('variant-id');
-            const button = $(this);
-            const heartIcon = button.find('.heart-icon');
-            const url = `/cart_management/wishlist/add/${variantId}/`;
+    e.preventDefault();
+    const variantId = $(this).data('variant-id');
+    const button = $(this);
+    const heartIcon = button.find('.heart-icon');
+    const url = `/cart_management/wishlist/add/${variantId}/`;
 
-            axios.post(url, {}, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                }
-            })
-            .then(response => {
-                if (response.data.success) {
-                    if (response.data.action === 'added') {
-                        heartIcon.addClass('filled'); // Add filled class
-                        Swal.fire('Success', response.data.message, 'success');
-                    } else if (response.data.action === 'removed') {
-                        heartIcon.removeClass('filled'); // Remove filled class
-                        Swal.fire('Removed', 'Item removed from wishlist.', 'info');
-                    }
-
-                    // Allow toggling again for removal (add click listener back)
-                    button.off('click').on('click', function() {
-                        removeFromWishlist(variantId, button, heartIcon);
-                    });
-                } else {
-                    Swal.fire('Error', 'Could not update wishlist. Try again.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Wishlist error details: ', error.response || error.message);
-                Swal.fire('Error', 'An error occurred. Please try again later.', 'error');
-            });
-        });
-
-        // Function to remove item from wishlist
-        function removeFromWishlist(variantId, button, heartIcon) {
-            const url = `/cart_management/wishlist/remove/${variantId}/`; // Assuming you have a remove URL
-
-            axios.post(url, {}, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                }
-            })
-            .then(response => {
-                if (response.data.success) {
-                    heartIcon.removeClass('filled'); // Remove filled class
-                    button.off('click').on('click', function() {
-                        addToWishlist(variantId, button, heartIcon);
-                    });
-                    Swal.fire('Removed', 'Item removed from wishlist.', 'info');
-                } else {
-                    Swal.fire('Error', 'Could not remove item from wishlist. Try again.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error removing from wishlist:', error.response || error.message);
-                Swal.fire('Error', 'An error occurred. Please try again later.', 'error');
-            });
+    axios.post(url, {}, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken, // Ensure this is defined globally
         }
+    })
+    .then(response => {
+        if (response.data.success) {
+            if (response.data.action === 'added') {
+                heartIcon.addClass('filled'); // Add 'filled' class
+                heartIcon.css('color', 'red'); // Change color to red
+                Swal.fire('Success', response.data.message, 'success');
+            } else if (response.data.action === 'removed') {
+                heartIcon.removeClass('filled'); // Remove 'filled' class
+                heartIcon.css('color', 'grey'); // Change color to grey
+                Swal.fire('Removed', 'Item removed from wishlist.', 'info');
+            }
+        } else {
+            Swal.fire('Error', 'Could not update wishlist. Try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Wishlist error details:', error.response || error.message);
+        Swal.fire('Error', 'An error occurred. Please try again later.', 'error');
+    });
+});
 
         
 
@@ -676,6 +647,15 @@ body {
 .add-to-wishlist:hover {
     color: #ff3d2e;
 }
+.heart-icon {
+    color: grey; /* Default color */
+    transition: color 0.3s ease; /* Smooth transition */
+}
+
+.heart-icon.filled {
+    color: red; /* Color when added to wishlist */
+}
+
 
 .view-details {
     background-color: #ff6f61;

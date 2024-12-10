@@ -325,22 +325,57 @@ def list_orders(request):
 
     return render(request, 'checkout/list_orders.html', {'orders': orders, 'page_obj': page_obj})
 
-
 def update_order_status(request, order_id):
     """
-    Update the status of an order to 'Delivered'.
-    Only accessible to staff members.
+    Update the status of an order to 'Delivered' or 'Cancelled' using a pop-up for cancellation reason.
     """
     order = get_object_or_404(Order, id=order_id)
-    
-    try:
-        delivered_status, _ = OrderStatus.objects.get_or_create(status="Delivered")
-        order.status = delivered_status
-        order.save()
-        messages.success(request, f"Order #{order.order_id} status updated to 'Delivered'.")
-    except Exception as e:
-        messages.error(request, f"Failed to update order status: {str(e)}")
-    
+
+    if request.method == "POST":
+        new_status = request.POST.get("status")
+        try:
+            if new_status == "Delivered":
+                # Handle 'Delivered' status
+                delivered_status, _ = OrderStatus.objects.get_or_create(status="Delivered")
+                order.status = delivered_status
+                                # Update payment status to 'Complete'
+                if order.payment_details:
+                    complete_status, _ = PaymentStatus.objects.get_or_create(status="Complete")
+                    order.payment_details.payment_status = complete_status
+                    order.payment_details.save()
+
+                order.save()
+                messages.success(request, f"Order #{order.order_id} status updated to 'Delivered'.")
+            
+            elif new_status == "Cancelled":
+            # Handle 'Cancelled' status
+                cancelled_status, _ = OrderStatus.objects.get_or_create(status="Cancelled")
+                order.status = cancelled_status
+                order.is_cancelled = True
+                order.cancelled_at = timezone.now()
+                order.cancellation_reason = 'Cancelled by admin.'
+                
+                process_refund_to_wallet(order)
+
+                # Update payment status to 'Refund' and process refund
+                if order.payment_details:
+                    refund_status, _ = PaymentStatus.objects.get_or_create(status="Refund")
+                    order.payment_details.payment_status = refund_status
+                    order.payment_details.save()
+
+                # Process refund logic
+                order.save()
+
+                messages.success(
+                    request,
+                    f"Order #{order.order_id} has been canceled and a refund of ₹{refund_amount} processed."
+                )
+        
+            else:
+                messages.error(request, "Invalid status update request.")
+        except Exception as e:
+            messages.error(request, f"Failed to update order status: {str(e)}")
+
     return redirect("list_orders")
 
 def cancel_order(request, order_id):
@@ -429,7 +464,7 @@ def cancel_order_with_refund(request, order_id):
                     returned_status, _ = PaymentStatus.objects.get_or_create(status='Refund')
                     order.payment_details.payment_status = returned_status
                     order.payment_details.save()
-                # Save the updated order
+                #Refund Process
                 process_refund_to_wallet(order)
 
                 order.save()

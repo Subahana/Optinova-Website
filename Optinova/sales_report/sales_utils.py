@@ -100,10 +100,5 @@ def send_invoice_email(order):
 
     # Create an email message
     email = EmailMessage(subject, message, from_email, [to_email])
-
-    # Attach the generated invoice PDF
-    # Since invoice_pdf is a BytesIO buffer, we read from it directly
     email.attach(f"invoice_{order.order_id}.pdf", invoice_pdf.getvalue(), 'application/pdf')
-
-    # Send the email
     email.send()

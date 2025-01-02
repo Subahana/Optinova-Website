@@ -6,7 +6,9 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from .forms import UserSignupForm
 from .models import OtpToken
-from products.models import Product
+from products.models import Product,Category
+from brand_management.models import Brand
+from offer_management.models import CategoryOffer
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.mail import send_mail
@@ -14,10 +16,10 @@ from django.http import JsonResponse
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 import logging
+from django.core.paginator import Paginator
+from allauth.socialaccount.models import SocialAccount
 
 logger = logging.getLogger(__name__)
-
-
 User = get_user_model()
 
 @never_cache
@@ -67,7 +69,6 @@ def password_reset_verify(request, username):
 
     return render(request, 'accounts/password_reset_verify.html', {'user': user})
 
-
 @never_cache
 def password_reset_form(request, username):
     if request.user.is_authenticated:
@@ -87,7 +88,6 @@ def password_reset_form(request, username):
 
     return render(request, 'accounts/password_reset_form.html', {'user': user})
 
-
 @never_cache
 def registration_view(request):
     if request.user.is_authenticated:
@@ -97,8 +97,18 @@ def registration_view(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.is_active = True  
-            user.save()
-            # Signal will handle OTP creation and email sending
+            user.save()  # Save the user instance before querying SocialAccount
+
+            # Check if the user signed up through Google authentication
+            google_account = SocialAccount.objects.filter(user=user).first()
+            if google_account:
+                # If Google account, activate the user immediately (skip OTP)
+                user.is_active = True
+                user.save()
+
+                # Optionally: You can add any custom logic you need for Google users
+                messages.success(request, 'Account created successfully via Google. You can now log in.')
+                return redirect('user_home')  # Redirect after Google login
 
             messages.success(request, 'Account created successfully! Please check your email to verify your account.')
             return redirect('accounts:otp_verify', username=user.username)
@@ -207,7 +217,6 @@ def admin_login(request):
     context = {'form': form}
     return render(request, 'admin_page/admin_login.html', context)
 
-
 @never_cache
 def user_login_view(request):
     if request.user.is_authenticated:
@@ -225,7 +234,6 @@ def user_login_view(request):
                 return render(request,'accounts/user_login_view.html') 
             else:
                 login(request, user)
-                messages.success(request, 'You have successfully logged in.')
                 return redirect('user_home')
         else:
             messages.error(request, "Invalid username or password.")
@@ -237,8 +245,23 @@ def user_login_view(request):
 def first_page(request):
     if request.user.is_authenticated and request.user.is_superuser:
         return redirect('admin_page')  
-    products = Product.objects.all()  # Fetch all products
+    categories = Category.objects.filter(is_active=True)
+    brands = Brand.objects.filter(is_active=True)
+    active_offers = CategoryOffer.objects.filter(is_active=True)
+
+    # Fetch products and prefetch related fields for optimization
+    products = Product.objects.filter(is_active=True).prefetch_related('category', 'variants')
+    paginator = Paginator(products, 3)  # Show 6 products per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    # Add discounted price for each product
+    for product in page_obj:
+        main_variant = product.main_variant  # Assuming main_variant is a method/property
+        product.discounted_price = main_variant.get_discounted_price() if main_variant else product.price
+
     context = {
         'products': products,
+        'active_offers': active_offers,
+        'page_obj': page_obj,
     }
     return render(request, 'user_home/index.html',context)

@@ -16,9 +16,11 @@ from django.http import JsonResponse
 from django.utils import timezone
 from user_wallet.models import Wallet
 from itertools import chain
+from django.core.mail import send_mail
+from django.contrib import messages
+from django.conf import settings
 
-
-
+@never_cache
 @login_required(login_url='accounts:user_login_view')
 def user_product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -32,7 +34,12 @@ def user_product_detail(request, product_id):
         return redirect('shop')
 
     main_variant = product.variants.first()  # Fetch the main variant
-
+    variant_id = request.GET.get('variant')  # Fetch selected variant from the query parameter
+    selected_variant = (
+        product.variants.filter(id=variant_id).first()
+        if variant_id
+        else product.main_variant
+    )
     # Get active offers for the product's category
     active_offers = CategoryOffer.objects.filter(
         category=product.category,
@@ -62,7 +69,8 @@ def user_product_detail(request, product_id):
         
     context = {
         'product': product,
-        'main_variant': main_variant,
+        'main_variant': main_variant,  # Main variant (default)
+        'selected_variant': selected_variant,  # The selected variant (if any)
         'variant_prices': variant_prices,  # Pass variant prices to the template
         'related_products': related_products,
         'active_offers': active_offers,
@@ -71,7 +79,8 @@ def user_product_detail(request, product_id):
 
     return render(request, 'user_home/shop_details.html', context)
 
-
+@never_cache
+@login_required(login_url='accounts:user_login_view')
 def shop(request):
     # Fetch categories, products, brands, and active offers
     category_id = request.GET.get('category')
@@ -130,7 +139,7 @@ def shop(request):
 
     # Prepare context for rendering
     context = {
-        'products': page_obj,
+        'products': products,
         'categories': categories,
         'brands': brands,
         'user_wishlist': user_wishlist,
@@ -139,7 +148,7 @@ def shop(request):
 
     return render(request, 'user_home/shop.html', context)
 
-
+@never_cache
 @login_required(login_url='accounts:user_login_view')
 def user_home(request):
 
@@ -169,11 +178,14 @@ def user_home(request):
     }
     return render(request, 'user_home/index.html', context)
 
-
+def about_us(request):
+    return render(request,'user_home/about_us.html')
 # View to handle user logout
+@never_cache
 @login_required(login_url='accounts:user_login_view')
 def logout_view(request):
     if request.user.is_authenticated:
+        request.session.flush()
         logout(request)
     # Redirect to a specific page after logout or default to home
     return redirect(request.GET.get('next', 'accounts:first_page'))

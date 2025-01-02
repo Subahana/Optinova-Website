@@ -7,7 +7,7 @@ from django.utils import timezone
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', null=True, blank=True)
+    is_google_user = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'  
     REQUIRED_FIELDS = ['username']  

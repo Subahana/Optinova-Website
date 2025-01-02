@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from django.contrib import messages
-from .forms import UserProfileForm,ProfilePictureForm,AddressForm,CustomPasswordChangeForm,CancellationForm
+from .forms import UserProfileForm,AddressForm,CustomPasswordChangeForm,CancellationForm
 from django.http import JsonResponse
 from .models import Address
 from products.models import ProductVariant
@@ -17,22 +17,13 @@ from django.utils import timezone
 
 User = get_user_model()
 
-@login_required(login_url='accounts:user_login_view')
-def upload_profile_picture(request):
-    if request.method == 'POST':
-        form = ProfilePictureForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('user_profile')  # Redirect to profile page after saving
-    else:
-        form = ProfilePictureForm(instance=request.user)
-    return render(request, 'user_profile/upload_profile_picture.html', {'form': form})
 
+# --------------Profile---------------#
 
 @login_required(login_url='accounts:user_login_view')
 def user_profile(request):
     user = request.user
-    addresses = user.addresses.all()
+    addresses = Address.objects.filter(user=request.user, is_deleted=False)
     orders = Order.objects.filter(user=user)
 
     if request.method == 'POST':
@@ -51,7 +42,6 @@ def user_profile(request):
 
     }
     return render(request, 'user_profile/user_profile_page.html', context)
-
 
 @login_required(login_url='accounts:user_login_view')
 def edit_profile(request):
@@ -73,6 +63,9 @@ def edit_profile(request):
         'profile': user,  # Pass the user instance directly to the template
     })
 
+
+# --------------change_password---------------#
+
 @login_required
 def change_password(request):
     if request.method == 'POST':
@@ -90,6 +83,7 @@ def change_password(request):
     return render(request, 'user_profile/change_password.html', {'form': form})
 
 
+# --------------Address---------------#
 
 @login_required(login_url='accounts:user_login_view')
 def add_address(request):
@@ -118,12 +112,15 @@ def edit_address(request, address_id):
 
 @login_required(login_url='accounts:user_login_view')
 def delete_address(request, address_id):
-    address = get_object_or_404(Address, id=address_id)
+    address = get_object_or_404(Address, id=address_id, user=request.user, is_deleted=False)
     if request.method == 'POST':
-        address.delete()
+        address.soft_delete()  # Call the custom soft delete method
         messages.success(request, 'Address deleted successfully.')
         return redirect('user_profile')  # or wherever you want to redirect after deletion
     return redirect('user_profile')
+
+
+# --------------Order---------------#
 
 @login_required(login_url='accounts:user_login_view')
 def my_orders(request):
@@ -134,7 +131,7 @@ def my_orders(request):
     orders = Order.objects.filter(
         user=request.user,
         items__variant__is_active=True  # Filter orders that contain active variants
-    ).distinct().order_by('id')
+    ).distinct().order_by('-id')
 
     # Calculate total price and total quantity for each order
     for order in orders:
@@ -151,7 +148,7 @@ def my_orders(request):
         # Add the payment method and payment status
         if order.payment_details:
             order.payment_method = order.payment_details.payment_method
-            order.payment_status = order.payment_details.payment_status.status
+            order.payment_status = order.payment_details.payment_status
             order.order_status = order.status.status
             if order.payment_details.payment_method == 'razorpay':
                 order.razorpay_order_id = order.payment_details.razorpay_order_id
@@ -159,7 +156,8 @@ def my_orders(request):
         else:
             order.payment_method = 'Not Provided'
             order.payment_status = 'Pending'
-
+    first_item = order.items.first()  # Fetch the first item from the order
+    print(first_item)
     # Pagination (5 orders per page)
     paginator = Paginator(orders, 5)
     page_number = request.GET.get('page')
@@ -167,6 +165,7 @@ def my_orders(request):
 
     return render(request, 'user_profile/my_orders.html', {
         'page_obj': page_obj,
+        'first_item': first_item,
         'query': query
     })
 
@@ -198,7 +197,7 @@ def order_details(request, order_id):
                 return redirect('order_details', order_id=order.id)
 
         # Return Order Logic
-        if 'return_order' in request.POST:
+        elif 'return_order' in request.POST:
             if order.status.lower() == 'delivered':
                 order.return_order()
                 messages.success(request, "Return request has been submitted.")
@@ -206,6 +205,9 @@ def order_details(request, order_id):
             else:
                 messages.error(request, "This order cannot be returned.")
                 return redirect('order_details', order_id=order.id)
+        # Proceed to Payment Logic
+        elif 'proceed_to_payment' in request.POST:
+            return redirect('complete_payment', order_id=order.id)
 
     # Pass necessary data to the template
     return render(request, 'checkout/order_details.html', {

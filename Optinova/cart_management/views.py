@@ -8,6 +8,8 @@ from django.middleware.csrf import get_token
 import json
 from decimal import Decimal
 from offer_management.models import CategoryOffer
+from django.views.decorators.cache import never_cache
+from django.utils import timezone
 
 # --------------Cart Management---------------#
 
@@ -53,12 +55,13 @@ def add_to_cart(request, variant_id):
     else:
         return JsonResponse({'message': 'Invalid request method', 'status': 'error'})
 
-
+@never_cache
 @login_required(login_url='accounts:user_login_view')
 def cart_detail(request):
     try:
         cart, created = Cart.objects.get_or_create(user=request.user)
         cart_items = CartItem.objects.filter(cart=cart)
+        available_coupons = Coupon.objects.filter(active=True, valid_to__gte=timezone.now())
 
         if not request.GET.get('apply_coupon'):
             cart.coupon = None
@@ -104,17 +107,13 @@ def cart_detail(request):
         total_discount = offer_discount_amount + coupon_discount_amount
         final_total = original_total - total_discount
         total_items = sum(item.quantity for item in cart_items)
-        print(final_total)
         # Variants not in cart
         all_variants = ProductVariant.objects.all()
         in_cart_variants = cart_items.values_list('variant_id', flat=True)
         variants_not_in_cart = all_variants.exclude(id__in=in_cart_variants)
-
-
-        # Save the calculated final price to the Cart model
         cart.final_price = final_total
+        cart.total_discount = total_discount
         cart.save()
-        print(cart.final_price)
         context = {
             'cart_items': cart_items,
             'cart_items_with_offers': cart_items_with_offers,
@@ -127,6 +126,7 @@ def cart_detail(request):
             'variants_not_in_cart': variants_not_in_cart,
             'total_items': total_items,
             'csrf_token': get_token(request),
+            'available_coupons': available_coupons,
             'coupon_code': cart.coupon.code if cart.coupon else None
         }
 
@@ -137,7 +137,6 @@ def cart_detail(request):
         error_message = traceback.format_exc()
         print(f"Error in cart_detail view: {error_message}")
         return JsonResponse({'error': 'An error occurred.'}, status=500)
-
 
 
 @login_required(login_url='accounts:user_login_view')
@@ -221,15 +220,17 @@ def update_cart_item_quantity(request, item_id):
 
 
 # --------------Wishlist Management---------------#
-
+@never_cache
 @login_required(login_url='accounts:user_login_view')
 def view_wishlist(request):
     wishlist = request.user.wishlist
     wishlist_items = wishlist.variants.all()
+    is_empty = not wishlist_items.exists()
 
     context = {
         'wishlist_items': wishlist_items,
         'wishlist': wishlist,
+        'is_empty': is_empty,
         'csrf_token': get_token(request) 
     }
     return render(request, 'cart_management/wishlist.html', context)

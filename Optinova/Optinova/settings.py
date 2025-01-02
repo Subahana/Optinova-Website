@@ -3,8 +3,7 @@ import os
 import environ
 from decouple import config
 
-env = environ.Env()
-environ.Env.read_env() 
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,7 +40,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-    'paypal.standard.ipn',
 ]
 
 MIDDLEWARE = [
@@ -136,7 +134,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
-SITE_ID = 3
+SITE_ID = 4
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
@@ -162,7 +160,5 @@ SESSION_COOKIE_SECURE = True  # Use secure cookies if you're using HTTPS
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Session does not expire when the browser closes
 CSRF_COOKIE_SECURE = True
 
-
-STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
-STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
-
+TIME_ZONE = 'UTC'  # Or your desired time zone, e.g., 'Asia/Kolkata'
+USE_TZ = True      # Enable time zone support

@@ -8,7 +8,6 @@ urlpatterns = [
     path('', include(('accounts.urls', 'accounts'), namespace='accounts')), 
     path('accounts/', include('allauth.urls')),  
     path('', include('django.contrib.auth.urls')),
-    path('',include('paypal.standard.ipn.urls')),
     path('admin_page/', include('admin_page.urls')),
     path('user_home/', include('user_home.urls')),
     path('products/', include('products.urls')),
